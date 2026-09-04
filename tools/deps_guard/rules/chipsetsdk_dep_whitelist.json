@@ -14088,5 +14088,12 @@
         "dep_file_name": "libhwsched_client.z.so",
         "dep_file_path": "",
         "description": "system only module libsurface.z.so depends on libhwsched_client.z.so which is unknown so type"
+    },
+    {
+        "so_file_name": "libEGL.so",
+        "so_file_path": "system/lib64/platformsdk/libEGL.so",
+        "dep_file_name": "libmali-g7p0-ohos.so",
+        "dep_file_path": "vendor/lib64/chipsetsdk/libmali-g7p0-ohos.so",
+        "description": "libEGL.so with innerapi_tags [llndk] cannot depend vendor only file libmali-g7p0-ohos.so"
     }
 ]
