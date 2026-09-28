@@ -365,7 +365,8 @@
     "acls": [
         "ohos.permission.DUMP",
         "ohos.permission.MANAGE_MISSIONS",
-        "ohos.permission.CONNECT_IME_ABILITY"
+        "ohos.permission.CONNECT_IME_ABILITY",
+        "ohos.permission.MANAGE_WIFI_CONNECTION"
     ]
   },
   {
