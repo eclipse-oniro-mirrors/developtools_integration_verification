@@ -11,6 +11,12 @@ class Test:
     def test(self, setup_teardown, device):
         t = time.time()
 
+        result = device.hdc_shell('atm dump -t -b ohos.global.systemres')
+        try:
+            data = json.loads(result)
+        except json.JSONDecodeError as e:
+            logging.error(result)
+            assert False, 'Failed to retrieve application (ohos. global. systems) information'.format(e)
         check_list_file = os.path.join(device.resource_path, 'acl_whitelist.json')
         assert os.path.exists(check_list_file), '{} not exist'.format(check_list_file)
         logging.info('reading {} content'.format(check_list_file))
