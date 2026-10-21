@@ -78,6 +78,7 @@ def check_fields(record, locations, issue):
 
 
 def extract(inputs, record, path):
+    """Extract component declarations from a manifest file."""
     name = record['name']
     record['manifest'] = path.relative_to(inputs.workspace).as_posix()
     obj, error = read_manifest(inputs, path)
@@ -90,38 +91,62 @@ def extract(inputs, record, path):
         return
     bundle = path.name == 'bundle.json'
     prefix = '/component' if bundle else '/parts/' + pointer(name)
+    source = _resolve_source(inputs, obj, name, path, bundle, prefix)
+    if source is None:
+        return
+    _check_subsystem(inputs, record, source, obj, name, path, bundle, prefix)
+    locations = _project_fields(inputs, record, source, name, path,
+                                 bundle, prefix)
+    check_fields(record, locations,
+                  lambda code, ptr: inputs.issue(path, code, ptr,
+                                                 component=name))
+
+
+def _resolve_source(inputs, obj, name, path, bundle, prefix):
+    """Find the source object in the manifest. Returns None on error."""
     if bundle:
         source = obj.get('component')
     else:
         parts = obj.get('parts')
         if not isinstance(parts, dict):
-            inputs.issue(path, 'MANIFEST_SHAPE', '/parts', component=name)
-            return
+            inputs.issue(path, 'MANIFEST_SHAPE', '/parts',
+                         component=name)
+            return None
         if name not in parts:
-            inputs.issue(path, 'COMPONENT_NAME_MISMATCH', prefix, component=name)
-            return
+            inputs.issue(path, 'COMPONENT_NAME_MISMATCH', prefix,
+                         component=name)
+            return None
         source = parts[name]
     if not isinstance(source, dict):
         inputs.issue(path, 'MANIFEST_SHAPE', prefix, component=name)
-        return
+        return None
     if bundle and source.get('name') != name:
-        inputs.issue(path, 'COMPONENT_NAME_MISMATCH', prefix + '/name', component=name)
-        return
-    subsystem = source.get('subsystem') if bundle else obj.get('subsystem')
-    location = '/component/subsystem' if bundle else '/subsystem'
+        inputs.issue(path, 'COMPONENT_NAME_MISMATCH',
+                     prefix + '/name', component=name)
+        return None
+    return source
+
+
+def _check_subsystem(inputs, record, source, obj, name, path, bundle,
+                      prefix):
+    """Verify the subsystem field against the index."""
+    subsystem = (source.get('subsystem') if bundle
+                 else obj.get('subsystem'))
+    location = ('/component/subsystem' if bundle else '/subsystem')
     if not isinstance(subsystem, str) or not subsystem:
-        inputs.issue(path, 'SOURCE_FIELD_TYPE', location, component=name)
+        inputs.issue(path, 'SOURCE_FIELD_TYPE', location,
+                     component=name)
     elif 'subsystem' in record and subsystem != record['subsystem']:
-        # Advisory: both files were read perfectly, they simply disagree. The
-        # index wins, and the disagreement is a fact about the product.
-        inputs.issue(path, 'SUBSYSTEM_DIFFERS', location, severity='info', component=name,
-                     advisory=True,
-                     details=dict(index_value=record['subsystem'], source_value=subsystem))
+        inputs.issue(path, 'SUBSYSTEM_DIFFERS', location,
+                     severity='info', component=name, advisory=True,
+                     details=dict(index_value=record['subsystem'],
+                                  source_value=subsystem))
+
+
+def _project_fields(inputs, record, source, name, path, bundle, prefix):
+    """Copy declared fields into the record. Returns locations dict."""
     locations = {}
     if bundle:
-        # The whole component object is kept verbatim; the projections below are
-        # only an index over it. ohos.build keeps the historical minimal subset:
-        # that format is being retired, so it is not worth preserving in full.
         record['source'] = source
         for key in RAW_KEYS:
             if key in source:
@@ -131,20 +156,23 @@ def extract(inputs, record, path):
         if 'deps' in source:
             record['deps'] = source['deps']
             locations['deps'] = prefix + '/deps'
-        build = {key: source[key] for key in BUILD_KEYS if key in source}
+        build = {key: source[key] for key in BUILD_KEYS
+                 if key in source}
         if build:
             record['build'] = build
             locations['build'] = prefix
-        for field, native in (('features', 'feature_list'), ('syscap', 'system_capabilities')):
+        for field, native in (('features', 'feature_list'),
+                              ('syscap', 'system_capabilities')):
             key = native if native in source else field
             if key in source:
                 record[field] = source[key]
                 locations[field] = prefix + '/' + key
-            if native in source and field in source and not equal(source[native], source[field]):
-                inputs.issue(path, 'FIELD_ALIAS_CONFLICT', prefix + '/' + field, component=name)
-        # Same column as the bundle.json path, holding the minimal subset this
-        # retired format is kept at, so no field needs a column of its own.
-        basic = {key: record[key] for key in RAW_KEYS if key in record}
+            if (native in source and field in source
+                    and not equal(source[native], source[field])):
+                inputs.issue(path, 'FIELD_ALIAS_CONFLICT',
+                             prefix + '/' + field, component=name)
+        basic = {key: record[key] for key in RAW_KEYS
+                 if key in record}
         if basic:
             record['source'] = basic
-    check_fields(record, locations, lambda code, ptr: inputs.issue(path, code, ptr, component=name))
+    return locations

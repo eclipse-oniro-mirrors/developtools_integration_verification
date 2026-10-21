@@ -131,99 +131,91 @@ def expand(ctx, records, path):
     Two declarations feed it: `dest[]` (the artifact) and `symlink_file[]`
     (links the module creates). See symlink-design.md -- the two keys point in
     opposite directions, but both land in the image, so both become rows.
-
-    Also reports a dest claimed by more than one module: the build installs both
-    and the later one wins at image-assembly time, so neither declaration can be
-    dropped and the ambiguity belongs in the issue list.
     """
     seen = {}
     for position, (record, pointer) in enumerate(records):
-        dests = record.get('dest')
-        if not isinstance(dests, list):
-            ctx.issue(path, 'MODULE_ROW_INVALID', f'{pointer}/dest')
-            continue
+        _expand_record(ctx, record, pointer, position, path, seen)
+    _report_ambiguous(ctx, path, seen)
 
-        # Two declarations, one list of things this module puts in the image:
-        #   dest[]          the artifact itself (a symlink when symlink_path is set)
-        #   symlink_file[]  links the module creates, pointing at its own dest
-        # They are opposite directions (see symlink-design.md §3.1), but from the
-        # image's point of view both are just "an entry at a path", so both become
-        # install_targets rows.
-        # symlink_file is not in SHAPE.primary, so it lives in the record's
-        # config bucket -- look it up by its *declared* name, which is what
-        # field_value() is for. record.get() would silently miss it.
-        links = field_value(record, 'symlink_file')
-        links = None if links is UNSET else links
-        if links is not None and not isinstance(links, list):
-            ctx.issue(path, 'MODULE_ROW_INVALID', f'{pointer}/symlink_file')
-            links = None
-        plan = [('dest', dests)] + ([('symlink_file', links)] if links else [])
 
-        # One running number across both arrays. `dest_index` only ever means
-        # "the Nth thing this module puts in the image" -- nothing maps it back
-        # to an array subscript -- so continuing the count keeps the unique key
-        # working without inventing a `kind` column.
-        ordinal = 0
-        placed = set()
-        for field, values in plan:
-            for index, value in enumerate(values):
-                normalized = normalize_dest(value)
-                if normalized is None:
-                    code = ('MODULE_DEST_INVALID' if field == 'dest'
-                            else 'MODULE_SYMLINK_INVALID')
-                    ctx.issue(path, code, f'{pointer}/{field}/{index}')
-                    continue
-                dest, directory = normalized
-                # The same path in both arrays is one entry, not two: rk3568 has
-                # exactly one (etsstdlib.abc), where symlink_file names the same
-                # place as dest and symlink_path says what it points at. A second
-                # row would make modules_at() return two rows for one file.
-                if dest in placed:
-                    continue
-                placed.add(dest)
+def _expand_record(ctx, record, pointer, position, path, seen):
+    """Process one module record and emit its install target rows."""
+    dests = record.get('dest')
+    if not isinstance(dests, list):
+        ctx.issue(path, 'MODULE_ROW_INVALID', f'{pointer}/dest')
+        return
+    links = field_value(record, 'symlink_file')
+    links = None if links is UNSET else links
+    if links is not None and not isinstance(links, list):
+        ctx.issue(path, 'MODULE_ROW_INVALID', f'{pointer}/symlink_file')
+        links = None
+    plan = [('dest', dests)] + ([('symlink_file', links)] if links else [])
+    ordinal = 0
+    placed = set()
+    for field, values in plan:
+        for index, value in enumerate(values):
+            ordinal, placed = _emit_target(
+                ctx, value, field, index, pointer, position, ordinal,
+                placed, path, seen)
 
-                size, link_target, status = measure(ctx, dest)
-                if status == 'missing':
-                    # The declaration installs something the package does not
-                    # have. Advisory: both files read fine, they just disagree --
-                    # a fact about the product, not a gap in the scan.
-                    ctx.issue(path, 'TARGET_MISSING', f'{pointer}/{field}/{index}',
-                              severity='warning', advisory=True, details=dict(dest=dest))
-                elif field == 'symlink_file' and status != 'link':
-                    # Declared as a link, but the package holds a real file or a
-                    # directory. Never fires on rk3568 (776/776 are links) -- it
-                    # exists because breaking this invariant means the build put a
-                    # full copy where a link belongs, and the image silently grows.
-                    ctx.issue(path, 'SYMLINK_NOT_A_LINK', f'{pointer}/{field}/{index}',
-                              severity='warning', advisory=True,
-                              details=dict(dest=dest, found=status))
-                elif status == 'dir' and not directory:
-                    # Declared as a file (no trailing slash) but the package holds
-                    # a directory. Matters beyond cosmetics: modules_at() only does
-                    # the prefix fallback for declared directories, so files below
-                    # this one cannot be traced back to their module.
-                    ctx.issue(path, 'TARGET_DIRECTORY_UNDECLARED',
-                              f'{pointer}/{field}/{index}',
-                              severity='warning', advisory=True, details=dict(dest=dest))
 
-                ctx.track((ctx.package / dest,))
-                ctx.emit('install_targets', dict(
-                    module_position=position, dest_index=ordinal, dest=dest,
-                    # A link is never a directory install, whatever the path looks like
-                    directory=int(directory and field == 'dest'),
-                    partition=dest.split('/')[0],
-                    file_name=PurePosixPath(dest).name,
-                    size=size,
-                    link_target_path=resolve_link_target(dest, link_target) if link_target else None))
-                ordinal += 1
-                seen.setdefault(dest, []).append((position, pointer))
+def _emit_target(ctx, value, field, index, pointer, position,
+                 ordinal, placed, path, seen):
+    """Normalize, validate, and emit a single install target. Returns updated ordinal."""
+    normalized = normalize_dest(value)
+    if normalized is None:
+        code = ('MODULE_DEST_INVALID' if field == 'dest'
+                else 'MODULE_SYMLINK_INVALID')
+        ctx.issue(path, code, f'{pointer}/{field}/{index}')
+        return ordinal, placed
+    dest, directory = normalized
+    if dest in placed:
+        return ordinal, placed
+    placed.add(dest)
+    size, link_target, status = measure(ctx, dest)
+    _check_target_status(ctx, dest, field, status, directory, index,
+                         pointer, path)
+    ctx.track((ctx.package / dest,))
+    ctx.emit('install_targets', dict(
+        module_position=position, dest_index=ordinal, dest=dest,
+        directory=int(directory and field == 'dest'),
+        partition=dest.split('/')[0],
+        file_name=PurePosixPath(dest).name,
+        size=size,
+        link_target_path=(resolve_link_target(dest, link_target)
+                          if link_target else None)))
+    ordinal += 1
+    seen.setdefault(dest, []).append((position, pointer))
+    return ordinal, placed
+
+
+def _check_target_status(ctx, dest, field, status, directory, index,
+                         pointer, path):
+    """Report issues based on the target's status in the package."""
+    if status == 'missing':
+        ctx.issue(path, 'TARGET_MISSING', f'{pointer}/{field}/{index}',
+                  severity='warning', advisory=True, details=dict(dest=dest))
+    elif field == 'symlink_file' and status != 'link':
+        ctx.issue(path, 'SYMLINK_NOT_A_LINK', f'{pointer}/{field}/{index}',
+                  severity='warning', advisory=True,
+                  details=dict(dest=dest, found=status))
+    elif status == 'dir' and not directory:
+        ctx.issue(path, 'TARGET_DIRECTORY_UNDECLARED',
+                  f'{pointer}/{field}/{index}',
+                  severity='warning', advisory=True, details=dict(dest=dest))
+
+
+def _report_ambiguous(ctx, path, seen):
+    """Report destinations claimed by multiple modules."""
     for dest, places in seen.items():
         if len(places) > 1:
             declarations = [p for _, p in places]
             for _, pointer in places:
-                ctx.issue(path, 'INSTALL_DEST_AMBIGUOUS', f'{pointer}/dest',
+                ctx.issue(path, 'INSTALL_DEST_AMBIGUOUS',
+                          f'{pointer}/dest',
                           severity='warning', advisory=True,
-                          details=dict(dest=dest, declarations=declarations))
+                          details=dict(dest=dest,
+                                       declarations=declarations))
 
 
 def modules_at(rows, dest):

@@ -78,62 +78,60 @@ class ArgsCollector(BaseCollector):
         if not (ctx.out_dir / 'args.gn').exists():
             ctx.issue(ctx.workspace, 'GN_BUILD_DIR_MISSING', advisory=True)
             return
-
         ctx.progress('gn-args', 0, 1)
         output = run_gn_args(ctx.gn_path, ctx.out_dir)
         if output is None:
             ctx.issue(ctx.workspace, 'GN_ARGS_TIMEOUT', advisory=True)
             return
-
         data = extract_json(output)
         if not data:
-            ctx.issue(ctx.workspace, 'GN_ARGS_PARSE_FAILED', advisory=True)
+            ctx.issue(ctx.workspace, 'GN_ARGS_PARSE_FAILED',
+                      advisory=True)
             return
         ctx.progress('gn-args', 1, 1)
-
         index = ctx.component_index(location=ctx.workspace)
         dir_index = manifest_directories(index) if index else {}
-
-        for i, item in enumerate(data):
+        for item in data:
             ctx.check()
-            name = item.get('name')
-            if not isinstance(name, str) or not name:
-                continue
-            default = item.get('default', {})
-            if not isinstance(default, dict) or 'file' not in default:
-                continue
+            row = self._parse_gn_arg(item, dir_index)
+            if row:
+                ctx.emit('gn_args', row)
 
-            decl_file = default.get('file', '')
-            decl_line = default.get('line')
-            default_value = parse_gn_value(default.get('value', ''))
-
-            current = item.get('current')
-            if current:
-                actual_value = parse_gn_value(current.get('value', ''))
-                has_override = 1
-            else:
-                actual_value = default_value
-                has_override = 0
-
-            comment = (item.get('comment') or '').strip()
-            value_type = classify_value(actual_value)
-
-            comp = nearest_component(dir_index, decl_file)
-            component_id = comp['id'] if comp else None
-
-            decl_file_rel = decl_file.lstrip('/') if decl_file else None
-
-            ctx.emit('gn_args', dict(
-                name=name,
-                component_id=component_id,
-                decl_file=decl_file_rel,
-                decl_line=decl_line,
-                default_value=json.dumps(default_value) if default_value is not None else None,
-                has_override=has_override,
-                current_value=json.dumps(actual_value) if actual_value is not None else None,
-                comment=comment or None,
-                value_type=value_type,
-            ))
+    def _parse_gn_arg(self, item, dir_index):
+        """Parse one GN arg item into a row dict, or None."""
+        name = item.get('name')
+        if not isinstance(name, str) or not name:
+            return None
+        default = item.get('default', {})
+        if not isinstance(default, dict) or 'file' not in default:
+            return None
+        decl_file = default.get('file', '')
+        decl_line = default.get('line')
+        default_value = parse_gn_value(default.get('value', ''))
+        current = item.get('current')
+        if current:
+            actual_value = parse_gn_value(current.get('value', ''))
+            has_override = 1
+        else:
+            actual_value = default_value
+            has_override = 0
+        comment = (item.get('comment') or '').strip()
+        value_type = classify_value(actual_value)
+        comp = nearest_component(dir_index, decl_file)
+        component_id = comp['id'] if comp else None
+        decl_file_rel = decl_file.lstrip('/') if decl_file else None
+        return dict(
+            name=name,
+            component_id=component_id,
+            decl_file=decl_file_rel,
+            decl_line=decl_line,
+            default_value=(json.dumps(default_value)
+                           if default_value is not None else None),
+            has_override=has_override,
+            current_value=(json.dumps(actual_value)
+                           if actual_value is not None else None),
+            comment=comment or None,
+            value_type=value_type)
 
     def scope(self, ctx):
         return 'gn args --list --json'

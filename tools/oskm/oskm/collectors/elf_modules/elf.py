@@ -94,29 +94,42 @@ def _cstring(handle, offset, limit=4096):
 
 def read_elf(handle):
     """Read ELF facts, or return None for a non-ELF file."""
-    header = handle.read(64)
-    if len(header) < 16 or header[:4] != b"\x7fELF":
+    header = _parse_elf_header(handle)
+    if header is None:
         return None
-    ei_class, ei_data = header[4], header[5]
+    loads, dynamic = _parse_program_headers(handle, header)
+    common = _build_common_facts(handle, header)
+    if dynamic is None:
+        return dict(common, soname=None, needed=(), dynamic=False)
+    soname, needed = _parse_dynamic_section(handle, dynamic, loads, header)
+    return dict(common, soname=soname, needed=tuple(needed), dynamic=True)
+
+
+def _parse_elf_header(handle):
+    """Parse the ELF identification and file header. Returns None if not ELF."""
+    raw = handle.read(64)
+    if len(raw) < 16 or raw[:4] != b"\x7fELF":
+        return None
+    ei_class, ei_data = raw[4], raw[5]
     if ei_class not in (1, 2) or ei_data not in (1, 2):
         raise ElfFormatError("UNSUPPORTED_ELF_IDENTITY")
     endian = "<" if ei_data == 1 else ">"
     if ei_class == 2:
-        e_type, e_machine = struct.unpack_from(endian + "HH", header, 16)
-        phoff, = struct.unpack_from(endian + "Q", header, 32)
-        shoff, = struct.unpack_from(endian + "Q", header, 40)
+        e_type, e_machine = struct.unpack_from(endian + "HH", raw, 16)
+        phoff, = struct.unpack_from(endian + "Q", raw, 32)
+        shoff, = struct.unpack_from(endian + "Q", raw, 40)
         phentsize, phnum, shentsize, shnum, shstrndx = struct.unpack_from(
-            endian + "HHHHH", header, 54)
+            endian + "HHHHH", raw, 54)
         if phnum and phentsize < 56:
             raise ElfFormatError("INVALID_PROGRAM_HEADER_SIZE")
         if shnum and shentsize < 64:
             raise ElfFormatError("INVALID_SECTION_HEADER_SIZE")
     else:
-        e_type, e_machine = struct.unpack_from(endian + "HH", header, 16)
-        phoff, = struct.unpack_from(endian + "I", header, 28)
-        shoff, = struct.unpack_from(endian + "I", header, 32)
+        e_type, e_machine = struct.unpack_from(endian + "HH", raw, 16)
+        phoff, = struct.unpack_from(endian + "I", raw, 28)
+        shoff, = struct.unpack_from(endian + "I", raw, 32)
         phentsize, phnum, shentsize, shnum, shstrndx = struct.unpack_from(
-            endian + "HHHHH", header, 42)
+            endian + "HHHHH", raw, 42)
         if phnum and phentsize < 32:
             raise ElfFormatError("INVALID_PROGRAM_HEADER_SIZE")
         if shnum and shentsize < 40:
@@ -125,7 +138,19 @@ def read_elf(handle):
         raise ElfFormatError("PROGRAM_HEADER_COUNT_LIMIT")
     if shnum > 65535:
         raise ElfFormatError("SECTION_HEADER_COUNT_LIMIT")
+    return dict(ei_class=ei_class, ei_data=ei_data, endian=endian,
+                e_type=e_type, e_machine=e_machine, phoff=phoff,
+                shoff=shoff, phentsize=phentsize, phnum=phnum,
+                shentsize=shentsize, shnum=shnum, shstrndx=shstrndx)
 
+
+def _parse_program_headers(handle, header):
+    """Parse program headers, returning (loads, dynamic) tuples."""
+    phoff = header['phoff']
+    phentsize = header['phentsize']
+    phnum = header['phnum']
+    ei_class = header['ei_class']
+    endian = header['endian']
     handle.seek(phoff)
     headers = handle.read(phentsize * phnum)
     if len(headers) != phentsize * phnum:
@@ -148,20 +173,36 @@ def read_elf(handle):
             loads.append((p_vaddr, p_offset, p_filesz))
         elif p_type == PT_DYNAMIC and dynamic is None:
             dynamic = (p_offset, p_filesz)
+    return loads, dynamic
 
+
+def _build_common_facts(handle, header):
+    """Build the common facts dict shared by all return paths."""
+    ei_class = header['ei_class']
+    ei_data = header['ei_data']
+    endian = header['endian']
+    e_type = header['e_type']
+    e_machine = header['e_machine']
     common = {
         "engine": "internal-elf-dynamic-v1",
-        "format": f"ELF{32 if ei_class == 1 else 64}{'LE' if ei_data == 1 else 'BE'}",
-        "type": {1: "rel", 2: "exec", 3: "dyn", 4: "core"}.get(e_type, "unknown"),
+        "format": f"ELF{32 if ei_class == 1 else 64}"
+                  f"{'LE' if ei_data == 1 else 'BE'}",
+        "type": {1: "rel", 2: "exec", 3: "dyn", 4: "core"}.get(
+            e_type, "unknown"),
         "machine": e_machine,
     }
-    sections = _read_sections(handle, shoff, shentsize, shnum, shstrndx,
-                              ei_class, endian)
+    sections = _read_sections(
+        handle, header['shoff'], header['shentsize'], header['shnum'],
+        header['shstrndx'], ei_class, endian)
     section_facts = _section_facts(handle, sections, ei_class, endian)
     common.update(section_facts)
-    if dynamic is None:
-        return dict(common, soname=None, needed=(), dynamic=False)
+    return common
 
+
+def _parse_dynamic_section(handle, dynamic, loads, header):
+    """Parse the dynamic section, returning (soname, needed)."""
+    ei_class = header['ei_class']
+    endian = header['endian']
     p_offset, p_filesz = dynamic
     if p_filesz > 1024 * 1024:
         raise ElfFormatError("DYNAMIC_SIZE_LIMIT")
@@ -194,7 +235,6 @@ def read_elf(handle):
             raw.append((tag, value))
     if strtab is None:
         raise ElfFormatError("DYNAMIC_STRTAB_MISSING")
-
     needed = []
     soname = None
     for tag, value in raw:
@@ -203,7 +243,7 @@ def read_elf(handle):
             needed.append(text)
         else:
             soname = text
-    return dict(common, soname=soname, needed=tuple(needed), dynamic=True)
+    return soname, needed
 
 
 def _read_sections(handle, shoff, shentsize, shnum, shstrndx,

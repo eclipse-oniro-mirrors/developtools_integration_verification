@@ -284,23 +284,37 @@ class ElfModulesCollector(BaseCollector):
         return found
 
     def collect(self, ctx):
+        """Scan ELF files from install targets and resolve dependencies."""
         manifest = ctx.package / 'system_module_info.json'
+        if not self._check_upstream(ctx, manifest):
+            return
+        indexes = self._build_indexes(ctx)
+        parsed = self._parse_targets(ctx, indexes)
+        self._resolve_edges(ctx, parsed, indexes)
+        self._emit_rows(ctx, parsed, indexes)
+
+    def _check_upstream(self, ctx, manifest):
+        """Verify upstream collectors ran successfully. Returns False if blocked."""
         if not ctx.upstream.ran('install_modules'):
             ctx.issue(manifest, 'INSTALL_INDEX_NOT_SELECTED')
-            return
+            return False
         if (ctx.upstream.failed('install_modules')
                 or not ctx.upstream.inventory_complete('install_modules')):
             ctx.issue(manifest, 'INSTALL_INDEX_INCOMPLETE')
-            return
+            return False
         for dependency in ('component_links', 'services', 'hdi', 'sas'):
             status = ctx.upstream.status(dependency)
             if status is None:
                 ctx.issue(manifest, f'{dependency.upper()}_NOT_SELECTED')
-                return
-            if status == 'failed' or not ctx.upstream.inventory_complete(dependency):
+                return False
+            if status == 'failed' or not ctx.upstream.inventory_complete(
+                    dependency):
                 ctx.issue(manifest, f'{dependency.upper()}_INDEX_INCOMPLETE',
                           severity='warning', advisory=True)
+        return True
 
+    def _build_indexes(self, ctx):
+        """Collect upstream data into lookup structures."""
         module_rows = {row['id']: row
                        for row in ctx.upstream.rows('install_modules')}
         component_subsystems = {
@@ -323,74 +337,95 @@ class ElfModulesCollector(BaseCollector):
         exact_targets = defaultdict(list)
         symlink_targets = []
         for target in ctx.upstream.rows('install_targets'):
-            # A symlink is another *name* for a file already listed, not another
-            # module. Counting it would duplicate the ELF and double its
-            # in-degree. (install_targets started carrying symlink_file rows in
-            # 2026-10; before that this filter was a no-op.)
             if target['link_target_path'] is not None:
                 symlink_targets.append(target)
                 continue
             if not target['directory']:
                 exact_targets[target['dest']].append(target)
-
-        # A duplicate dest is one physical file. install_modules keeps every
-        # claimant and reports the ambiguity; image assembly lets the later
-        # declaration win, so that deterministic rule is used here as well.
         targets = [max(rows, key=lambda row: row['id'])
                    for _, rows in exact_targets.items()]
         targets.sort(key=lambda row: row['dest'])
+        return dict(
+            module_rows=module_rows,
+            component_subsystems=component_subsystems,
+            sa_modules=sa_modules,
+            hdi_modules=hdi_modules,
+            inner_api_modules=inner_api_modules,
+            sdk_names=sdk_names,
+            symlink_targets=symlink_targets,
+            targets=targets,
+        )
 
+    def _parse_targets(self, ctx, indexes):
+        """Parse ELF files from install targets and build parsed list."""
         parsed = []
-        for position, target in enumerate(targets):
-            path = ctx.package / target['dest']
-            module = module_rows[target['module_id']]
-            if module['type'] in self.NON_ELF_MODULE_TYPES:
-                continue
-            if not path.exists() or path.is_dir():
-                continue
-            try:
-                info = ctx.read_elf(path)
-            except (ElfFormatError, struct.error, OverflowError) as exc:
-                if str(exc) == 'ELF_TOTAL_LIMIT':
-                    raise ScanFatalError('INPUT_LIMIT') from exc
-                ctx.issue(path, 'ELF_PARSE_FAILED', severity='warning',
-                          details={'reason': str(exc)})
-                continue
-            if info is None:
-                continue
-            parsed.append(dict(
-                position=position,
-                install_target_id=target['id'],
-                install_module_id=target['module_id'],
-                component_id=module['component_id'],
-                # `dest` is needed by the in-memory resolver, but is not stored:
-                # the authoritative value is reachable through install_target_id.
-                dest=target['dest'],
-                partition=target['partition'],
-                file_name=target['file_name'],
-                soname=info['soname'],
-                format=info['format'],
-                type=info['type'],
-                machine=info['machine'],
-                dynamic=int(info['dynamic']),
-                needed=tuple(info['needed']),
-                _dependencies=tuple(info['needed']),
-                _categories=set(self.classify_direct_categories(
-                    target['dest'],
-                    dict(module, file_name=target['file_name'],
-                         install_module_id=target['module_id'],
-                         partition=target['partition']),
-                    info,
-                    component_subsystems.get(module['component_id']),
-                    sdk_names, sa_modules, hdi_modules)),
-            ))
-            ctx.elf_module_scope.append(ctx.relative(path))
-            ctx.progress('elf_modules', len(parsed), None, ctx.relative(path))
+        module_rows = indexes['module_rows']
+        for position, target in enumerate(indexes['targets']):
+            row = self._try_parse_elf(ctx, target, module_rows, indexes)
+            if row:
+                row['position'] = position
+                parsed.append(row)
+                ctx.elf_module_scope.append(ctx.relative(
+                    ctx.package / target['dest']))
+                ctx.progress('elf_modules', len(parsed), None,
+                             ctx.relative(ctx.package / target['dest']))
+        return parsed
 
-        by_name = candidate_index(parsed, symlink_targets)
+    def _try_parse_elf(self, ctx, target, module_rows, indexes):
+        """Attempt to parse one ELF target. Returns row dict or None."""
+        path = ctx.package / target['dest']
+        module = module_rows[target['module_id']]
+        if module['type'] in self.NON_ELF_MODULE_TYPES:
+            return None
+        if not path.exists() or path.is_dir():
+            return None
+        try:
+            info = ctx.read_elf(path)
+        except (ElfFormatError, struct.error, OverflowError) as exc:
+            if str(exc) == 'ELF_TOTAL_LIMIT':
+                raise ScanFatalError('INPUT_LIMIT') from exc
+            ctx.issue(path, 'ELF_PARSE_FAILED', severity='warning',
+                      details={'reason': str(exc)})
+            return None
+        if info is None:
+            return None
+        return self._build_elf_row(target, module, info, indexes)
+
+    def _build_elf_row(self, target, module, info, indexes):
+        """Construct a parsed ELF row from target, module, and ELF info."""
+        return dict(
+            position=None,  # set by caller
+            install_target_id=target['id'],
+            install_module_id=target['module_id'],
+            component_id=module['component_id'],
+            dest=target['dest'],
+            partition=target['partition'],
+            file_name=target['file_name'],
+            soname=info['soname'],
+            format=info['format'],
+            type=info['type'],
+            machine=info['machine'],
+            dynamic=int(info['dynamic']),
+            needed=tuple(info['needed']),
+            _dependencies=tuple(info['needed']),
+            _categories=set(self.classify_direct_categories(
+                target['dest'],
+                dict(module, file_name=target['file_name'],
+                     install_module_id=target['module_id'],
+                     partition=target['partition']),
+                info,
+                indexes['component_subsystems'].get(
+                    module['component_id']),
+                indexes['sdk_names'],
+                indexes['sa_modules'],
+                indexes['hdi_modules'])),
+        )
+
+    def _resolve_edges(self, ctx, parsed, indexes):
+        """Resolve DT_NEEDED dependencies and emit dependency edges."""
+        by_name = candidate_index(parsed, indexes['symlink_targets'])
         by_position = {row['position']: row for row in parsed}
         adjacency = defaultdict(set)
-
         for row in parsed:
             for ordinal, needed_name in enumerate(row['_dependencies']):
                 winner = resolve_needed(needed_name, by_name)
@@ -400,7 +435,8 @@ class ElfModulesCollector(BaseCollector):
                     caller_position=row['position'],
                     needed_ordinal=ordinal,
                     needed_name=needed_name,
-                    callee_position=None if winner is None else winner['position'],
+                    callee_position=(None if winner is None
+                                     else winner['position']),
                 ))
                 if winner is None:
                     ctx.issue(ctx.package / row['dest'],
@@ -408,8 +444,13 @@ class ElfModulesCollector(BaseCollector):
                               pointer=f'/needed/{ordinal}', severity='warning',
                               advisory=True,
                               details={'needed_name': needed_name})
-
         self.propagate_sdk_categories(by_position, adjacency)
+        indexes['by_position'] = by_position
+        indexes['adjacency'] = adjacency
+
+    def _emit_rows(self, ctx, parsed, indexes):
+        """Finalize categories and emit elf_modules rows."""
+        inner_api_modules = indexes['inner_api_modules']
         for row in parsed:
             if not row['_categories']:
                 row['_categories'].add('other')
@@ -417,7 +458,8 @@ class ElfModulesCollector(BaseCollector):
                 category for category in self.CATEGORY_ORDER
                 if category in row['_categories'])
             row['api_type'] = self.classify_api_type(
-                row['category'], row['install_module_id'], inner_api_modules)
+                row['category'], row['install_module_id'],
+                inner_api_modules)
             ctx.emit('elf_modules', {key: value for key, value in row.items()
                                      if key != 'dest'
                                      and not key.startswith('_')})

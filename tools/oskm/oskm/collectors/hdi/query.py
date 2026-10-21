@@ -49,7 +49,7 @@ class HDIQuery(BaseQuery):
             choices = [(filters.names, record.get('serviceName')), (filters.modules, record.get('moduleName')),
                        (filters.libraries, record.get('library')), (filters.processes,
                                                                     record.get('process')),
-                        (filters.components, component.get('name')),
+                       (filters.components, component.get('name')),
                        (filters.subsystems, component.get('subsystem')), (filters.hcbs, record['hcb']),
                        (filters.service_names, record.get('service', {}).get('name'))]
             if all(not options or value in options for options, value in choices) and all(

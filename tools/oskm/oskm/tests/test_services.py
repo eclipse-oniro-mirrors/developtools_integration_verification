@@ -293,7 +293,7 @@ class ServicesTest(unittest.TestCase):
 
     def test_classifier(self):
         for path, expected in [(['/other/sa_main'], 'sa'), (['hdf_devhost'], 'hdf'),
-                                 (['/bin/sh', 'sa_main'], 'default'),
+                               (['/bin/sh', 'sa_main'], 'default'),
                                (['SA_MAIN'], 'default'), ([], None), ([None], None), ('sa_main', None),
                                (['/bin/'], None), (['${exe}/sa_main'], None), ([''], None)]:
             with self.subTest(path=path):

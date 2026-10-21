@@ -74,27 +74,7 @@ class ServiceQuery(BaseQuery):
         return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), cursor)
 
     def aggregate_services(self, request=ServiceAggregateRequest()):
-        if not isinstance(request, ServiceAggregateRequest) or request.grain not in ('service', 'resource_item'):
-            raise QueryError('INVALID_AGGREGATE_REQUEST')
-        if (request.grain == 'resource_item' and
-                (not isinstance(request.resource_field, str) or
-                 not request.resource_field)) or (
-                request.grain == 'service' and request.resource_field is not None):
-            raise QueryError('INVALID_RESOURCE_GRAIN')
-        if not isinstance(
-            request.group_by,
-            tuple) or not 1 <= len(
-            request.group_by) <= 3 or any(
-            not isinstance(
-                d,
-                str) or not (
-                    d in (
-                        'partition',
-                        'type',
-                        'label',
-                        'component',
-                        'subsystem') or d.startswith('field:') and len(d) > 6) for d in request.group_by):
-            raise QueryError('INVALID_DIMENSION')
+        _validate_aggregate_request(request)
         rows = self._select(request.filters)
         groups, denominator = {}, 0
         for _, record in rows:
@@ -131,3 +111,20 @@ class ServiceQuery(BaseQuery):
                        grain=request.grain, resource_field=request.resource_field)
         selected, cursor = self._page(ordered, request.page, context)
         return ServiceAggregatePage(tuple(selected), denominator, len(rows), len(groups), cursor)
+
+def _validate_aggregate_request(request):
+    """Validate the aggregate request parameters."""
+    if not isinstance(request, ServiceAggregateRequest) or             request.grain not in ('service', 'resource_item'):
+        raise QueryError('INVALID_AGGREGATE_REQUEST')
+    if (request.grain == 'resource_item' and
+            (not isinstance(request.resource_field, str) or
+             not request.resource_field)) or (
+            request.grain == 'service' and
+            request.resource_field is not None):
+        raise QueryError('INVALID_RESOURCE_GRAIN')
+    if not isinstance(request.group_by, tuple) or             not 1 <= len(request.group_by) <= 3 or             any(not isinstance(d, str) or not (
+                d in ('partition', 'type', 'label', 'component',
+                      'subsystem') or
+                d.startswith('field:') and len(d) > 6)
+                for d in request.group_by):
+        raise QueryError('INVALID_DIMENSION')

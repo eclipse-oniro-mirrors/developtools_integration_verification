@@ -46,63 +46,48 @@ def __create_arg_parser():
     return parser
 
 
-def oskm_collect(out_path, target_cpu, workspace_root=None, product=None, args=None):
+def oskm_collect(out_path, target_cpu, workspace_root=None,
+                 product=None, args=None):
     """Scan the source tree into a SQLite knowledge database.
 
-    Called by ``resolve_enable_oskm_collect`` in ``build_args_resolver.py``
-    during the ``postTargetCompilation`` build phase.
-
-    Args:
-        out_path: build output directory (e.g. ``out/rk3568``).
-        target_cpu: target cpu name, e.g. ``arm64``.
-        workspace_root: source tree root. If None, derived from out_path.
-        product: product name. If None, derived from out_path basename.
-        args: optional extra arguments from CLI (unused by resolver path).
-
-    The database is written to ``{out_path}/oskm/knowledge.db``.
+    Called by the hb resolver during postTargetCompilation phase.
+    Output: ``{out_path}/oskm/knowledge.db``.
     """
+    root, prod, db_path = _resolve_params(
+        out_path, workspace_root, product)
+    print(f"[oskm_collect] workspace_root={root}, product={prod}, "
+          f"target_cpu={target_cpu}, db={db_path}")
+    exit_code = _run_scan(root, prod, db_path)
+    if exit_code != 0:
+        print(f"[oskm_collect] scan completed with exit code {exit_code}",
+              file=sys.stderr)
+    else:
+        print(f"[oskm_collect] scan complete: {db_path}")
+    return exit_code
+
+
+def _resolve_params(out_path, workspace_root, product):
+    """Derive workspace root, product name, and database path."""
     out_dir = Path(out_path)
-
-    # Derive workspace root: out/rk3568 → workspace root is two levels up
-    if workspace_root:
-        root = Path(workspace_root)
-    else:
-        root = out_dir.parent.parent
-
-    # Derive product name from output directory basename
-    if product:
-        prod = product
-    else:
-        prod = out_dir.name
-
-    # Output directory and database path
+    root = Path(workspace_root) if workspace_root else out_dir.parent.parent
+    prod = product if product else out_dir.name
     db_dir = out_dir / 'oskm'
     db_dir.mkdir(parents=True, exist_ok=True)
     db_path = db_dir / 'knowledge.db'
+    return root, prod, db_path
 
-    print(f"[oskm_collect] workspace_root={root}, product={prod}, "
-          f"target_cpu={target_cpu}, db={db_path}")
 
-    # Import the oskm scanner package — the resolver adds this directory
-    # to sys.path, so `oskm` package is importable.
+def _run_scan(root, product, db_path):
+    """Import and run the oskm scan subcommand."""
     from oskm.cli import main as oskm_main
-
-    # Run the scan subcommand
     argv = [
         'scan',
         '--workspace-root', str(root),
-        '--product', prod,
+        '--product', product,
         '--db', str(db_path),
     ]
     print(f"[oskm_collect] running: oskm {' '.join(argv)}")
-    exit_code = oskm_main(argv)
-
-    if exit_code != 0:
-        print(f"[oskm_collect] scan completed with exit code {exit_code}", file=sys.stderr)
-    else:
-        print(f"[oskm_collect] scan complete: {db_path}")
-
-    return exit_code
+    return oskm_main(argv)
 
 
 if __name__ == '__main__':

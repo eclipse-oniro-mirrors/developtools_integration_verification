@@ -140,30 +140,36 @@ def run(database, request, *, only=None, without=(), scan_id=None, reuse_upstrea
                 scan_id = db.begin_scan(connection, request.product, request.workspace_root)
         runs = []
         for name in order:
-            collector = framework.get(name)
-            # A dependency's progress is reported under its own name, so a caller
-            # watching one collector still sees a single 'finalize' for it.
-            progress = on_progress
-            if on_progress is not None and name not in selected:
-                def progress(event, _name=name):
-                    on_progress(ScanProgress(f'{_name}:{event.phase}', event.completed,
-                                             event.total, event.current_input))
-            try:
-                ctx = collector.CONTEXT_TYPE(
-                    scan_id=scan_id, connection=connection, request=request, collector=name,
-                    issue_fields=collector.ISSUE_FIELDS, on_progress=progress,
-                    on_diagnostic=on_diagnostic, cancelled=cancelled)
-                collector().collect(ctx)
-            except (ScanFatalError, RequestError) as exc:
-                # Explicitly requested collectors still fail the run; a dependency
-                # only marks itself failed so dependents can degrade gracefully.
-                if name in selected:
-                    raise
-                runs.append(_record_failure(connection, collector, scan_id, exc))
-                continue
-            emitted = len(ctx.records.get(collector.TABLES[0].name, ()))
-            ctx.progress('finalize', emitted, emitted)
-            runs.append(_persist(connection, collector, ctx, scan_id))
+            run = _execute_collector(
+                name, connection, scan_id, request, selected,
+                on_progress, on_diagnostic, cancelled)
+            if run is not None:
+                runs.append(run)
         with db.transaction(connection):
             db.finish_scan(connection, scan_id)
     return ScanRun(scan_id, tuple(runs))
+
+
+def _execute_collector(name, connection, scan_id, request, selected,
+                       on_progress, on_diagnostic, cancelled):
+    """Run one collector and persist its results. Returns ScanRun or None."""
+    collector = framework.get(name)
+    progress = on_progress
+    if on_progress is not None and name not in selected:
+        def progress(event, _name=name):
+            on_progress(ScanProgress(f'{_name}:{event.phase}', event.completed,
+                                     event.total, event.current_input))
+    try:
+        ctx = collector.CONTEXT_TYPE(
+            scan_id=scan_id, connection=connection, request=request,
+            collector=name, issue_fields=collector.ISSUE_FIELDS,
+            on_progress=progress, on_diagnostic=on_diagnostic,
+            cancelled=cancelled)
+        collector().collect(ctx)
+    except (ScanFatalError, RequestError) as exc:
+        if name in selected:
+            raise
+        return _record_failure(connection, collector, scan_id, exc)
+    emitted = len(ctx.records.get(collector.TABLES[0].name, ()))
+    ctx.progress('finalize', emitted, emitted)
+    return _persist(connection, collector, ctx, scan_id)
