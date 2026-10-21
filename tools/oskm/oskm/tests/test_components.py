@@ -1,4 +1,29 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Component input boundaries, declaration fidelity, queries and publication."""
+from oskm.cli import main, parser
+from oskm.core.models import (ScanLimits, FieldPredicate, PageRequest, RequestError,
+                              ScanFatalError, ScanCancelled, QueryError, ResultError, PublishError)
+from oskm.core.io import canonical, read_bytes
+from oskm.core.session import ScanSession
+from oskm.core.db import Database
+from oskm.core.api import scan as _scan_one
+from oskm.collectors.components.models import ComponentScanRequest, ComponentFilter, ComponentResult
 import contextlib
 import io
 import json
@@ -11,14 +36,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from oskm.collectors.components.models import ComponentScanRequest, ComponentFilter, ComponentResult
-from oskm.core.api import scan as _scan_one
-from oskm.core.db import Database
-from oskm.core.session import ScanSession
-from oskm.core.io import canonical, read_bytes
-from oskm.core.models import (ScanLimits, FieldPredicate, PageRequest, RequestError,
-                              ScanFatalError, ScanCancelled, QueryError, ResultError, PublishError)
-from oskm.cli import main, parser
 
 
 class ComponentTest(unittest.TestCase):
@@ -59,9 +76,10 @@ class ComponentTest(unittest.TestCase):
         manifest = self.bundle(deps={'components': ['external', 'external']}, build={'inner_kits': []})
         self.entries['a'].update(deps_components=['wrong'], innerapis=[{'name': 'wrong'}])
         self.write(self.index, self.entries)
-        self.write(self.root/'out/test/all_parts_info.json', {'wrong': {}})
+        self.write(self.root / 'out/test/all_parts_info.json', {'wrong': {}})
         opened = []
         original = Path.open
+
         def tracked(path, *args, **kwargs):
             opened.append(path.resolve())
             return original(path, *args, **kwargs)
@@ -157,12 +175,19 @@ class ComponentTest(unittest.TestCase):
 
     def test_raw_fidelity_and_immutable_model(self):
         build = dict(sub_component=['//x:${name}', '//x:${name}'],
-                     inner_kits=[dict(name='//x:kit', header=dict(header_files=['x.h'], header_base='//x'), extra=Decimal('1.1234567890123456789'))],
-                     conditions={'//x:kit': 'flag'}, unknown={'nested': [True, None]})
+                     inner_kits=[
+            dict(
+                name='//x:kit',
+                header=dict(
+                    header_files=['x.h'],
+                    header_base='//x'),
+                extra=Decimal('1.1234567890123456789'))],
+            conditions={'//x:kit': 'flag'}, unknown={'nested': [True, None]})
         self.bundle(deps={'components': [], 'vendor': {'a': 1}}, build=build, features=[], syscap=[])
         result = self.scan()
         self.assertEqual(result.to_dict()['components'][0]['build'], build)
-        with self.assertRaises(TypeError): result.components[0]['name'] = 'new'
+        with self.assertRaises(TypeError):
+            result.components[0]['name'] = 'new'
         copy = result.to_dict()
         copy['components'][0]['build']['inner_kits'].clear()
         self.assertEqual(len(result.components[0]['build']['inner_kits']), 1)
@@ -177,16 +202,45 @@ class ComponentTest(unittest.TestCase):
         with result.query() as query:
             self.assertNotIn('deps', query.get_component('absent'))
             self.assertIsNone(query.get_component('null')['deps'])
-            self.assertEqual(query.list_components(ComponentFilter(fields=(FieldPredicate('deps', 'is_null'),))).total, 1)
-            self.assertEqual(query.list_components(ComponentFilter(fields=(FieldPredicate('deps', 'absent'),))).total, 1)
+            self.assertEqual(
+                query.list_components(
+                    ComponentFilter(
+                        fields=(
+                            FieldPredicate(
+                                'deps',
+                                'is_null'),
+                        ))).total,
+                1)
+            self.assertEqual(
+                query.list_components(
+                    ComponentFilter(
+                        fields=(
+                            FieldPredicate(
+                                'deps',
+                                'absent'),
+                        ))).total,
+                1)
 
     def test_ohos_multiple_parts_aliases_and_shared_read(self):
         self.entries = {name: dict(path='src/shared', subsystem='effective') for name in ('a', 'b')}
         self.write(self.index, self.entries)
-        source = self.root/'src/shared/ohos.build'
-        self.write(source, dict(subsystem='declared', parts={
-            'a': dict(module_list=['//x:${product_name}'], inner_kits=[], feature_list=['a_flag'], system_capabilities=[], hisysevent_config=['ignored']),
-            'b': dict(deps={}, features=['fallback'], syscap=[], test_list=[])}))
+        source = self.root / 'src/shared/ohos.build'
+        self.write(
+            source,
+            dict(
+                subsystem='declared',
+                parts={
+                    'a': dict(
+                        module_list=['//x:${product_name}'],
+                        inner_kits=[],
+                        feature_list=['a_flag'],
+                        system_capabilities=[],
+                        hisysevent_config=['ignored']),
+                    'b': dict(
+                        deps={},
+                        features=['fallback'],
+                        syscap=[],
+                        test_list=[])}))
         with patch('oskm.core.framework.read_bytes', wraps=read_bytes) as reader:
             result = self.scan()
         self.assertEqual(reader.call_count, 2)
@@ -200,7 +254,15 @@ class ComponentTest(unittest.TestCase):
 
     def test_alias_conflict_keeps_native_value(self):
         self.write(self.index, {'a': dict(path='src/a', subsystem='s')})
-        self.write(self.root/'src/a/ohos.build', dict(subsystem='s', parts={'a': dict(feature_list=['native'], features=['other'])}))
+        self.write(
+            self.root /
+            'src/a/ohos.build',
+            dict(
+                subsystem='s',
+                parts={
+                    'a': dict(
+                        feature_list=['native'],
+                        features=['other'])}))
         result = self.scan()
         self.assertIn('FIELD_ALIAS_CONFLICT', self.codes(result))
         self.assertEqual(result.components[0]['features'], ('native',))
@@ -210,15 +272,21 @@ class ComponentTest(unittest.TestCase):
         for data in (b'[]', b'{', b'{"x":{},"x":{}}', b'{"":{}}'):
             with self.subTest(data=data):
                 self.write(self.index, data)
-                with self.assertRaises(ScanFatalError): self.scan()
+                with self.assertRaises(ScanFatalError):
+                    self.scan()
         self.index.unlink()
-        with self.assertRaises(ScanFatalError): self.scan()
+        with self.assertRaises(ScanFatalError):
+            self.scan()
 
     def test_bad_entries_preserve_identities(self):
         self.write(self.index, {'a': None, 'b': {'path': 'missing'}, 'c': {'path': 3, 'subsystem': 's'}})
         result = self.scan()
         self.assertEqual([r['name'] for r in result.components], ['a', 'b', 'c'])
-        self.assertEqual(self.codes(result), {'INDEX_ENTRY_TYPE', 'INDEX_FIELD_TYPE', 'MANIFEST_MISSING', 'SOURCE_PATH_INVALID'})
+        self.assertEqual(self.codes(result),
+                         {'INDEX_ENTRY_TYPE',
+                          'INDEX_FIELD_TYPE',
+                          'MANIFEST_MISSING',
+                          'SOURCE_PATH_INVALID'})
 
     def test_manifest_errors_and_duplicates_have_locations(self):
         path = self.bundle()
@@ -255,7 +323,8 @@ class ComponentTest(unittest.TestCase):
         path = self.bundle()
         other = self.write(path.with_name('ohos.build'), {})
         self.assertIn('MANIFEST_AMBIGUOUS', self.codes(self.scan()))
-        path.unlink(); other.unlink()
+        path.unlink()
+        other.unlink()
         self.assertIn('MANIFEST_MISSING', self.codes(self.scan()))
         path.mkdir()
         self.assertIn('MANIFEST_UNREADABLE', self.codes(self.scan()))
@@ -266,8 +335,8 @@ class ComponentTest(unittest.TestCase):
             with self.subTest(value=value):
                 self.write(self.index, {'a': dict(path=value, subsystem='s')})
                 self.assertIn('SOURCE_PATH_INVALID', self.codes(self.scan()))
-        link = self.root/'linked'
-        link.symlink_to(self.root/'out/test', target_is_directory=True)
+        link = self.root / 'linked'
+        link.symlink_to(self.root / 'out/test', target_is_directory=True)
         self.write(self.index, {'a': dict(path='linked', subsystem='s')})
         self.assertIn('SOURCE_PATH_INVALID', self.codes(self.scan()))
         path = self.bundle()
@@ -276,9 +345,11 @@ class ComponentTest(unittest.TestCase):
         self.assertIn('SOURCE_PATH_INVALID', self.codes(self.scan()))
 
     def test_index_symlink_outside_index_directory_is_fatal(self):
-        target = self.write(self.root/'source-index.json', {})
-        self.index.unlink(); self.index.symlink_to(target)
-        with self.assertRaises(ScanFatalError): self.scan()
+        target = self.write(self.root / 'source-index.json', {})
+        self.index.unlink()
+        self.index.symlink_to(target)
+        with self.assertRaises(ScanFatalError):
+            self.scan()
 
     def test_budget_limits_and_failure_cache(self):
         self.bundle('a')
@@ -286,16 +357,16 @@ class ComponentTest(unittest.TestCase):
         index_bytes = self.index.stat().st_size
         for limits in (ScanLimits(file_bytes=1),            # index itself exceeds the cap
                        ScanLimits(input_files=1),            # more components than allowed
-                       ScanLimits(total_bytes=index_bytes)): # budget exhausted by the index
+                       ScanLimits(total_bytes=index_bytes)):  # budget exhausted by the index
             with self.subTest(limits=limits), self.assertRaises(ScanFatalError):
                 _scan_one('components', replace(self.request, limits=limits))
         # A manifest larger than the per-file cap degrades that one component only.
-        self.write(self.root/'src/a/bundle.json',
+        self.write(self.root / 'src/a/bundle.json',
                    dict(component=dict(name='a', subsystem='s', syscap=['x' * index_bytes])))
         limited = _scan_one('components', replace(self.request, limits=ScanLimits(file_bytes=index_bytes)))
         self.assertIn('MANIFEST_LIMIT', self.codes(limited))
         self.write(self.index, {k: dict(path='shared', subsystem='s') for k in ('a', 'b')})
-        self.write(self.root/'shared/ohos.build', b'{')
+        self.write(self.root / 'shared/ohos.build', b'{')
         with patch('oskm.core.framework.read_bytes', wraps=read_bytes) as reader:
             result = self.scan()
         self.assertEqual(reader.call_count, 2)
@@ -303,18 +374,33 @@ class ComponentTest(unittest.TestCase):
 
     def test_requests_progress_cancel_and_callbacks(self):
         self.bundle()
-        for req in (None, replace(self.request, product='../a'), replace(self.request, workspace_root=self.root/'missing'),
-                    replace(self.request, limits=ScanLimits(file_bytes=True))):
-            with self.subTest(req=req), self.assertRaises(RequestError): _scan_one('components', req)
-        with self.assertRaises(ScanCancelled): self.scan(cancelled=lambda: True)
+        for req in (
+            None,
+            replace(
+                self.request,
+                product='../a'),
+            replace(
+                self.request,
+                workspace_root=self.root /
+                'missing'),
+            replace(
+                self.request,
+                limits=ScanLimits(
+                    file_bytes=True))):
+            with self.subTest(req=req), self.assertRaises(RequestError):
+                _scan_one('components', req)
+        with self.assertRaises(ScanCancelled):
+            self.scan(cancelled=lambda: True)
         progress = []
         self.scan(on_progress=progress.append)
         self.assertEqual(progress[-1].phase, 'finalize')
         self.assertEqual(progress[-1].completed, 1)
         def fail(_): raise LookupError('caller')
-        with self.assertRaises(ScanFatalError): self.scan(on_progress=fail)
+        with self.assertRaises(ScanFatalError):
+            self.scan(on_progress=fail)
         self.write(self.index, {'a': None})
-        with self.assertRaises(ScanFatalError): self.scan(on_diagnostic=fail)
+        with self.assertRaises(ScanFatalError):
+            self.scan(on_diagnostic=fail)
 
     def test_queries_reverse_deps_filters_and_aggregation(self):
         self.bundle('a', deps={'components': ['outside', 'outside'], 'third_party': ['jsoncpp']}, features=[])
@@ -327,14 +413,20 @@ class ComponentTest(unittest.TestCase):
             self.assertEqual(query.list_components(ComponentFilter(names=('a', 'b'), subsystems=('s',))).total, 1)
             pred = FieldPredicate('deps', 'contains', 'jsoncpp', pointer='/third_party')
             self.assertEqual(query.list_components(ComponentFilter(fields=(pred,))).items[0]['name'], 'a')
-            self.assertEqual([dict(r) for r in query.count_by_subsystem()], [dict(subsystem='s', count=1), dict(subsystem='t', count=2)])
-            with self.assertRaises(QueryError): query.get_component('')
-            with self.assertRaises(QueryError): query.list_components(page=PageRequest(0))
-            with self.assertRaises(QueryError): query.list_components(ComponentFilter(fields=(FieldPredicate('deps', 'bad'),)))
-        with self.assertRaises(QueryError): query.get_component('a')
+            self.assertEqual([dict(r) for r in query.count_by_subsystem()], [
+                             dict(subsystem='s', count=1), dict(subsystem='t', count=2)])
+            with self.assertRaises(QueryError):
+                query.get_component('')
+            with self.assertRaises(QueryError):
+                query.list_components(page=PageRequest(0))
+            with self.assertRaises(QueryError):
+                query.list_components(ComponentFilter(fields=(FieldPredicate('deps', 'bad'),)))
+        with self.assertRaises(QueryError):
+            query.get_component('a')
 
     def test_cursor_roundtrip_and_foreign_cursor_rejected(self):
-        for name in ('a', 'b', 'c'): self.bundle(name)
+        for name in ('a', 'b', 'c'):
+            self.bundle(name)
         result = self.scan()
         with result.query() as query:
             first = query.list_components(page=PageRequest(1))
@@ -366,7 +458,8 @@ class ComponentTest(unittest.TestCase):
         # Degraded (missing manifest) is independent of the quality gate: no deps
         # were declared, so analyze_components finds nothing and the gate passes.
         code, report, _ = self.invoke(*scan, '--fail-on', 'error')
-        self.assertEqual(code, 4); self.assertTrue(report['gate_passed'])
+        self.assertEqual(code, 4)
+        self.assertTrue(report['gate_passed'])
         self.index.unlink()
         self.assertEqual(self.invoke(*scan)[0], 3)
         # A document from another domain is rejected when a domain is asserted.
@@ -377,11 +470,13 @@ class ComponentTest(unittest.TestCase):
                 '--db', str(self.root / 'k.db'), '--only', 'components')
         self.assertEqual(self.invoke(*args)[0], 0)
         code, report, _ = self.invoke(*args, '--fail-on', 'error')
-        self.assertEqual(code, 0); self.assertTrue(report['gate_passed'])
+        self.assertEqual(code, 0)
+        self.assertTrue(report['gate_passed'])
         # A dangling dependency is a warning: the scan is complete, the data is not sound.
         code, report, _ = self.invoke(*args, '--fail-on', 'warning')
         self.assertEqual(code, 5)
-        self.assertEqual(report['status'], 'complete'); self.assertFalse(report['gate_passed'])
+        self.assertEqual(report['status'], 'complete')
+        self.assertFalse(report['gate_passed'])
 
 
 if __name__ == '__main__':

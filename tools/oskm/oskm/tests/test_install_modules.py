@@ -1,4 +1,31 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Contract tests: the install manifest is preserved, attributed and queryable."""
+from oskm.core.session import ScanSession
+from oskm.core.models import UNSET
+from oskm.core.io import canonical
+from oskm.core.db import Database
+from oskm.core.api import scan as _scan_one
+from oskm.collectors.install_modules.targets import modules_at, normalize_dest
+from oskm.collectors.install_modules.records import SHAPE, raw_module
+from oskm.collectors.install_modules.models import (InstallModuleFilter,
+                                                    InstallModuleScanRequest)
+from oskm.cli import main
 import contextlib
 import io
 import json
@@ -8,16 +35,6 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from oskm.cli import main
-from oskm.collectors.install_modules.models import (InstallModuleFilter,
-                                                    InstallModuleScanRequest)
-from oskm.collectors.install_modules.records import SHAPE, raw_module
-from oskm.collectors.install_modules.targets import modules_at, normalize_dest
-from oskm.core.api import scan as _scan_one
-from oskm.core.db import Database
-from oskm.core.io import canonical
-from oskm.core.models import UNSET
-from oskm.core.session import ScanSession
 
 LABEL = '//component/x:y(//build/toolchain:clang)'
 
@@ -162,7 +179,8 @@ class InstallModulesTest(unittest.TestCase):
         rows = [dict(dest='system/app/Demo', directory=1, module_id=1),
                 dict(dest='system/app', directory=1, module_id=2),
                 dict(dest='system/app/Demo/entry.hap', directory=0, module_id=3)]
-        at = lambda d: [r['module_id'] for r in modules_at(rows, d)]
+
+        def at(d): return [r['module_id'] for r in modules_at(rows, d)]
         self.assertEqual(at('system/app/Demo/entry.hap'), [3])   # exact wins
         self.assertEqual(at('system/app/Demo/other'), [1])       # longest directory
         self.assertEqual(at('system/app/Else/x'), [2])

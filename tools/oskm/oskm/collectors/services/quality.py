@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Advisory checks on init cfg declarations that were read correctly.
 
 These are issues like any other, raised with advisory=True: the cfg parsed fine,
@@ -96,7 +113,8 @@ def _resource_item(key, value):
     required = ('name', 'family', 'type', 'protocol', 'permissions', 'uid', 'gid')
     if not all(k in value for k in required):
         return None
-    if not all(isinstance(value[k], str) for k in required[:5]) or not _account(value['uid']) or not _account(value['gid']):
+    if not all(isinstance(value[k], str)
+               for k in required[:5]) or not _account(value['uid']) or not _account(value['gid']):
         return None
     if not re.fullmatch(r'[0-7]{3,4}', value['permissions']):
         return None

@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Only manager/host/device/node in installed default HCBs enters inventory."""
 import os
 from ...core.framework import READ_ERRORS
@@ -6,12 +23,14 @@ from .records import make_record
 from ...core.io import pointer
 from ...core.models import ScanFatalError
 
+
 def partitions(ctx):
     try:
         with os.scandir(ctx.package) as entries:
             return sorted(ctx.package / e.name for e in entries if e.is_dir(follow_symlinks=False))
     except OSError as exc:
         raise ScanFatalError('PACKAGE_UNREADABLE') from exc
+
 
 def discover(ctx):
     paths = []
@@ -34,8 +53,10 @@ def discover(ctx):
         raise ScanFatalError('HCB_INPUT_MISSING')
     return sorted(paths)
 
+
 def extract(root, hcb):
     managers = []
+
     def visit(node, path):
         path = path + '/' + pointer(node.name)
         if node.attributes.get('match_attr') == 'hdf_manager':
@@ -55,6 +76,7 @@ def extract(root, hcb):
                 location = path + '/' + '/'.join(pointer(n.name) for n in (host, device, node))
                 records.append(make_record(hcb, location, host.attributes, node.attributes))
     return records
+
 
 def read_records(ctx, paths):
     records = []

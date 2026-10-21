@@ -1,4 +1,27 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Registry enforcement, schema generation and the SQLite scan lifecycle."""
+from oskm.core.schema import Column, Index, SchemaError, Table
+from oskm.core.runner import run
+from oskm.core.models import ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
+from oskm.core.framework import BaseCollector, RegistryError, projection, register
+from oskm.core.db import Database, StoreError
+from oskm.core import db, framework
 import sqlite3
 import sys
 import tempfile
@@ -7,12 +30,6 @@ from decimal import Decimal
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from oskm.core import db, framework
-from oskm.core.db import Database, StoreError
-from oskm.core.framework import BaseCollector, RegistryError, projection, register
-from oskm.core.models import ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
-from oskm.core.runner import run
-from oskm.core.schema import Column, Index, SchemaError, Table
 
 
 def table(name, *columns, **kwargs):
@@ -108,6 +125,7 @@ class RegistryTest(unittest.TestCase):
     def setUp(self):
         self._saved = dict(framework._COLLECTORS)
         framework._COLLECTORS.clear()
+
         def restore():
             framework._COLLECTORS.clear()
             framework._COLLECTORS.update(self._saved)
@@ -189,6 +207,7 @@ class ScanTest(unittest.TestCase):
         self.request = ScanRequest(self.root, 'test')
         self._saved = dict(framework._COLLECTORS)
         framework._COLLECTORS.clear()
+
         def restore():
             framework._COLLECTORS.clear()
             framework._COLLECTORS.update(self._saved)

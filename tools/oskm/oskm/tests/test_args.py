@@ -1,4 +1,25 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Tests for the args collector: gn_args parsing, JSON extraction, value classification."""
+from oskm.collectors.args.gn_args import (
+    find_gn, run_gn_args, extract_json, parse_gn_value, classify_value,
+    GN_PATHS,
+)
 import json
 import os
 import sys
@@ -8,11 +29,6 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
-from oskm.collectors.args.gn_args import (
-    find_gn, run_gn_args, extract_json, parse_gn_value, classify_value,
-    GN_PATHS,
-)
 
 
 class TestParseGnValue(unittest.TestCase):
@@ -72,14 +88,18 @@ class TestExtractJson(unittest.TestCase):
         self.assertEqual(data[0]['name'], 'test')
 
     def test_mixed_with_noise(self):
-        output = 'some print output\nmore noise\n[{"name": "x", "default": {"file": "//b.gni", "line": 2, "value": "false"}}]'
+        output = ('some print output\nmore noise\n'
+                  '[{"name": "x", "default": {"file": "//b.gni", '
+                  '"line": 2, "value": "false"}}]')
         data = extract_json(output)
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0]['name'], 'x')
         self.assertEqual(data[0]['default']['file'], '//b.gni')
 
     def test_multiple_items(self):
-        output = 'noise\n[{"name": "a", "default": {"file": "//1.gni", "line": 1, "value": "true"}}, {"name": "b", "default": {"file": "//2.gni", "line": 2, "value": "false"}}]'
+        output = ('noise\n[{"name": "a", "default": {"file": "//1.gni", '
+                  '"line": 1, "value": "true"}}, {"name": "b", "default": '
+                  '{"file": "//2.gni", "line": 2, "value": "false"}}]')
         data = extract_json(output)
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0]['name'], 'a')
@@ -92,7 +112,10 @@ class TestExtractJson(unittest.TestCase):
         self.assertEqual(extract_json('just text, no json'), [])
 
     def test_with_override_and_comment(self):
-        output = '[{"name": "feat", "default": {"file": "//x.gni", "line": 10, "value": "true"}, "current": {"file": "//out/p/args.gn", "line": 5, "value": "false"}, "comment": "Enable feature"}]'
+        output = ('[{"name": "feat", "default": {"file": "//x.gni", '
+                  '"line": 10, "value": "true"}, "current": {"file": '
+                  '"//out/p/args.gn", "line": 5, "value": "false"}, '
+                  '"comment": "Enable feature"}]')
         data = extract_json(output)
         self.assertEqual(len(data), 1)
         self.assertIn('current', data[0])

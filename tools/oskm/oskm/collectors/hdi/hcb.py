@@ -1,6 +1,24 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Bounded reader for little-endian HCB 0.7; no HCS text or external tool."""
 import struct
 from dataclasses import dataclass
+
 
 @dataclass
 class Node:
@@ -9,8 +27,10 @@ class Node:
     children: list
     offset: int
 
+
 class HCBError(ValueError):
     pass
+
 
 class Reader:
     def __init__(self, data, *, depth=128, items=100000, cancelled_check=lambda: None):
@@ -118,6 +138,7 @@ class Reader:
         if any(ref not in self.offsets for ref in self.references):
             raise HCBError('HCB_REFERENCE')
         return root
+
 
 def read_hcb(data, **options):
     return Reader(data, **options).read()

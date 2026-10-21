@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """ELF module collector.
 
 The install manifest is read only through install_modules. This collector adds
@@ -449,9 +466,9 @@ class ElfModulesCollector(BaseCollector):
             'SELECT d.needed_ordinal, d.needed_name, t.dest AS callee_dest '
             'FROM elf_module_dependencies d '
             'LEFT JOIN elf_modules callee '
-              'ON callee.scan_id = d.scan_id AND callee.id = d.callee_id '
+            'ON callee.scan_id = d.scan_id AND callee.id = d.callee_id '
             'LEFT JOIN install_targets t '
-              'ON t.scan_id = callee.scan_id AND t.id = callee.install_target_id '
+            'ON t.scan_id = callee.scan_id AND t.id = callee.install_target_id '
             'WHERE d.scan_id = ? AND d.caller_id = ? '
             'ORDER BY d.needed_ordinal', (scan_id, row['id']))
         for edge in edges:

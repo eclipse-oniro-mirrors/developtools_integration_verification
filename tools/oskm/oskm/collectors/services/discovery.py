@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Find every etc/init directory without following directory symlinks."""
 import os
 from pathlib import Path
@@ -5,8 +22,10 @@ from ...core.io import InputFailure
 from ...core.models import ScanFatalError
 from .records import make_record
 
+
 def discover_configs(ctx):
     paths = set()
+
     def failed(exc):
         path = Path(exc.filename or ctx.package)
         ctx.issue(path, 'DIRECTORY_UNREADABLE')
@@ -24,6 +43,7 @@ def discover_configs(ctx):
             if len(paths) > ctx.limits.input_files:
                 raise ScanFatalError(ctx.INPUT_LIMIT_CODE)
     return sorted(paths, key=lambda p: p.relative_to(ctx.package).as_posix())
+
 
 def read_configs(ctx, paths):
     for i, path in enumerate(paths):

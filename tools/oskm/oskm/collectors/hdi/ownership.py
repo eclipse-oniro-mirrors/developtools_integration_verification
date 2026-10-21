@@ -1,9 +1,27 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Installation matches, not a simulation of dlopen or linker namespaces."""
 import os
 from pathlib import PurePosixPath
 from collections import defaultdict
 from .discovery import partitions
 from ...core.framework import READ_ERRORS
+
 
 class Ownership:
     """Locate each device node's driver library in the installed image.
@@ -20,7 +38,8 @@ class Ownership:
         self.files = defaultdict(list)
         self.complete = True
         self.cache = {}
-        names = {r['moduleName'] for r in records if isinstance(r.get('moduleName'), str) and '/' not in r['moduleName']}
+        names = {r['moduleName'] for r in records if isinstance(
+            r.get('moduleName'), str) and '/' not in r['moduleName']}
         if names:
             for partition in partitions(ctx):
                 for dirname in ('lib', 'lib64'):
@@ -62,7 +81,8 @@ class Ownership:
         ctx = self.ctx
         location, pointer = ctx.package / record['hcb'], record['node']
         name = record.get('moduleName')
-        if not isinstance(name, str) or not name or any(c in name for c in '$\x00{}\\') or '..' in PurePosixPath(name).parts:
+        if not isinstance(name, str) or not name or any(
+                c in name for c in '$\x00{}\\') or '..' in PurePosixPath(name).parts:
             ctx.issue(location, 'MODULE_PATH_INVALID', pointer)
             return None
         if name.startswith('/'):
@@ -90,7 +110,9 @@ class Ownership:
                 if f.read(4) != b'\x7fELF':
                     raise ValueError('LIBRARY_NOT_ELF')
         except (OSError, RuntimeError, ValueError) as exc:
-            code = 'LIBRARY_UNMATCHED' if isinstance(exc, FileNotFoundError) else str(exc) if isinstance(exc, ValueError) else 'LIBRARY_UNREADABLE'
+            code = 'LIBRARY_UNMATCHED' if isinstance(
+                exc, FileNotFoundError) else str(exc) if isinstance(
+                exc, ValueError) else 'LIBRARY_UNREADABLE'
             ctx.issue(location, code, pointer)
             return None
         return path.relative_to(ctx.package).as_posix()

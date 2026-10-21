@@ -1,4 +1,30 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Contract tests for the framework-integrated ELF dependency collector."""
+from oskm.core.io import canonical
+from oskm.core import framework
+from oskm.core.api import scan as scan_one
+from oskm.collectors.elf_modules.resolution import candidate_index, resolve_needed
+from oskm.collectors.elf_modules.elf import read_elf
+from oskm.collectors.elf_modules.models import (
+    ElfModuleScanRequest,
+    ElfModuleFilter,
+)
 import struct
 import sys
 import tempfile
@@ -6,16 +32,6 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from oskm.collectors.elf_modules.models import (
-    ElfModuleScanRequest,
-    ElfModuleFilter,
-)
-from oskm.collectors.elf_modules.elf import read_elf
-from oskm.collectors.elf_modules.resolution import candidate_index, resolve_needed
-from oskm.core.api import scan as scan_one
-from oskm.core import framework
-from oskm.core.io import canonical
 
 
 class ElfModulesTest(unittest.TestCase):
@@ -151,11 +167,11 @@ class ElfModulesTest(unittest.TestCase):
                         1, 3, 0, 0, 64, len(names), 0, 0, 1, 0),
         )
         blob = (struct.pack(
-                    '<16sHHIIIIIHHHHHH',
-                    b'\x7fELF\x01\x01\x01\x00' + b'\0' * 8,
-                    3, 40, 1, 0, 0, section_offset, 0, 52, 0, 0,
-                    40, len(sections), 1)
-                + b'\0' * (64 - 52) + names + b''.join(sections))
+            '<16sHHIIIIIHHHHHH',
+            b'\x7fELF\x01\x01\x01\x00' + b'\0' * 8,
+            3, 40, 1, 0, 0, section_offset, 0, 52, 0, 0,
+            40, len(sections), 1)
+            + b'\0' * (64 - 52) + names + b''.join(sections))
         path = self.write('system/lib/libelf32.z.so', blob)
 
         with path.open('rb') as handle:
@@ -276,7 +292,7 @@ class ElfModulesTest(unittest.TestCase):
         self.assertEqual({row['dest']: (row['category'], row['api_type'])
                           for row in result.elf_modules},
                          {'system/lib/module/ani/libani.z.so':
-                              (('ani',), 'public_api'),
+                          (('ani',), 'public_api'),
                           'system/lib/module/libnapi_ani.z.so':
                               (('ani',), 'public_api'),
                           'system/lib/libcangjie.z.so':

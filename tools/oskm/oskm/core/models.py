@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Small immutable scan and query primitives genuinely shared by every domain.
 
 Domain-specific Request/Result/Filter contracts live in each collector's own
@@ -11,25 +28,42 @@ from pathlib import Path
 from collections.abc import Mapping
 from types import MappingProxyType
 
+
 class ScanError(Exception):
     pass
+
+
 class RequestError(ScanError):
     pass
+
+
 class ScanFatalError(ScanError):
     pass
+
+
 class ScanCancelled(ScanError):
     pass
+
+
 class PublishError(ScanError):
     pass
+
+
 class QueryError(ScanError):
     pass
+
+
 class ResultError(ScanError):
     pass
+
 
 class Unset:
     def __repr__(self):
         return 'UNSET'
+
+
 UNSET = Unset()
+
 
 def freeze(value):
     if isinstance(value, Mapping):
@@ -37,6 +71,7 @@ def freeze(value):
     if isinstance(value, (list, tuple)):
         return tuple(freeze(v) for v in value)
     return value
+
 
 def thaw(value):
     if is_dataclass(value):
@@ -47,6 +82,7 @@ def thaw(value):
         return [thaw(v) for v in value]
     return value
 
+
 @dataclass(frozen=True)
 class ScanProgress:
     phase: str
@@ -54,19 +90,23 @@ class ScanProgress:
     total: int | None = None
     current_input: str | None = None
 
+
 @dataclass(frozen=True)
 class PublishedArtifact:
     path: Path
     size_bytes: int
+
 
 @dataclass(frozen=True)
 class ValidationReport:
     valid: bool
     issues: tuple = ()
 
+
 @dataclass(frozen=True)
 class ReaderLimits:
     artifact_bytes: int = 512 * 1024 * 1024
+
 
 @dataclass(frozen=True)
 class FieldPredicate:
@@ -75,10 +115,12 @@ class FieldPredicate:
     value: object = UNSET
     pointer: str = ''
 
+
 @dataclass(frozen=True)
 class PageRequest:
     limit: int = 100
     cursor: str | None = None
+
 
 @dataclass(frozen=True)
 class Page:

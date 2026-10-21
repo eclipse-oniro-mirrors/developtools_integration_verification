@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """One in-memory evaluator for API and JSON results."""
 from collections.abc import Mapping
 from decimal import Decimal
@@ -6,8 +23,9 @@ from .records import field_value
 from ...core.io import canonical
 from ...core.models import UNSET, QueryError, PageRequest, Page, freeze
 from ...core.query import (numeric_key, string_choices, validate_predicates,
-                         filter_key, matches, paginate)
+                           filter_key, matches, paginate)
 from ...core.base_query import BaseQuery
+
 
 def validate_filter(f):
     if not isinstance(f, ServiceFilter):
@@ -42,7 +60,8 @@ class ServiceQuery(BaseQuery):
             tests = [(filters.cfgs, record['cfg']), (filters.partitions, record['cfg'].split('/')[0]),
                      (filters.types, record.get('type')), (filters.components, component.get('name')),
                      (filters.subsystems, component.get('subsystem'))]
-            if all(not options or value in options for options, value in tests) and all(self._field_match(record, p) for p in filters.fields):
+            if all(not options or value in options for options, value in tests) and all(
+                    self._field_match(record, p) for p in filters.fields):
                 rows.append((position, record))
         return rows
 
@@ -57,9 +76,24 @@ class ServiceQuery(BaseQuery):
     def aggregate_services(self, request=ServiceAggregateRequest()):
         if not isinstance(request, ServiceAggregateRequest) or request.grain not in ('service', 'resource_item'):
             raise QueryError('INVALID_AGGREGATE_REQUEST')
-        if (request.grain == 'resource_item' and (not isinstance(request.resource_field, str) or not request.resource_field)) or (request.grain == 'service' and request.resource_field is not None):
+        if (request.grain == 'resource_item' and
+                (not isinstance(request.resource_field, str) or
+                 not request.resource_field)) or (
+                request.grain == 'service' and request.resource_field is not None):
             raise QueryError('INVALID_RESOURCE_GRAIN')
-        if not isinstance(request.group_by, tuple) or not 1 <= len(request.group_by) <= 3 or any(not isinstance(d, str) or not (d in ('partition', 'type', 'label', 'component', 'subsystem') or d.startswith('field:') and len(d) > 6) for d in request.group_by):
+        if not isinstance(
+            request.group_by,
+            tuple) or not 1 <= len(
+            request.group_by) <= 3 or any(
+            not isinstance(
+                d,
+                str) or not (
+                    d in (
+                        'partition',
+                        'type',
+                        'label',
+                        'component',
+                        'subsystem') or d.startswith('field:') and len(d) > 6) for d in request.group_by):
             raise QueryError('INVALID_DIMENSION')
         rows = self._select(request.filters)
         groups, denominator = {}, 0
@@ -79,7 +113,12 @@ class ServiceQuery(BaseQuery):
                          record.get('component', {}).get('subsystem', UNSET))
                 if isinstance(value, (Mapping, tuple, list)):
                     raise QueryError('NON_SCALAR_DIMENSION')
-                keys.append(dict(kind='absent') if value is UNSET else dict(kind='null') if value is None else dict(kind='value', value=value))
+                keys.append(
+                    dict(
+                        kind='absent') if value is UNSET else dict(
+                        kind='null') if value is None else dict(
+                        kind='value',
+                        value=value))
             if units:
                 # Numeric equality matches predicates; booleans retain their own bucket.
                 identity = [dict(k, value=numeric_key(k['value']))

@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Pure comparison, predicate and pagination helpers shared by two domains."""
 import base64
 import binascii
@@ -7,6 +24,7 @@ from dataclasses import fields as dataclass_fields
 from decimal import Decimal
 from .io import canonical, digest, parse_json
 from .models import UNSET, QueryError, FieldPredicate, PageRequest, thaw
+
 
 def equal(a, b):
     if isinstance(a, bool) or isinstance(b, bool):
@@ -90,7 +108,6 @@ def filter_key(f):
     return obj
 
 
-
 def matches(value, predicate):
     value = at_pointer(value, predicate.pointer)
     if predicate.op == 'absent':
@@ -116,12 +133,13 @@ def paginate(rows, page, context, result_fingerprint):
     if page.cursor is not None:
         try:
             cursor, duplicates = parse_json(base64.b64decode(page.cursor, altchars=b'-_', validate=True))
-            if duplicates or not isinstance(cursor, dict) or cursor.get('query') != fingerprint or type(cursor.get('offset')) is not int or not 0 <= cursor['offset'] <= len(rows):
+            if duplicates or not isinstance(cursor, dict) or cursor.get('query') != fingerprint or type(
+                    cursor.get('offset')) is not int or not 0 <= cursor['offset'] <= len(rows):
                 raise ValueError()
             offset = cursor['offset']
         except (ValueError, TypeError, binascii.Error, UnicodeError):
             raise QueryError('INVALID_CURSOR') from None
     end = offset + page.limit
-    cursor = base64.urlsafe_b64encode(canonical(dict(query=fingerprint, offset=end))).decode() if end < len(rows) else None
+    cursor = base64.urlsafe_b64encode(canonical(dict(query=fingerprint, offset=end))
+                                      ).decode() if end < len(rows) else None
     return rows[offset:end], cursor
-

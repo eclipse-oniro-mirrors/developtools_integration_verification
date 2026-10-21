@@ -1,4 +1,20 @@
 #!/usr/bin/env python3
+# coding=utf-8
+
+#
+# Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 """Real-product acceptance for rk3568, run against the SQLite store.
 
 One scan, eight collectors, then each domain is reconciled against an oracle built
@@ -19,6 +35,15 @@ promises:
 Usage:
     python tests/verify_rk3568.py --workspace-root /path/to/code
 """
+from oskm.core.session import ScanSession
+from oskm.core.provenance import strip_label
+from oskm.core.models import ScanRequest
+from oskm.core.io import canonical, parse_json
+from oskm.core.db import Database
+from oskm.core import runner
+from oskm.collectors.system_abilities.records import raw_sa
+from oskm.collectors.services.records import raw_service
+from oskm.collectors.hdi.records import raw_hdi
 import argparse
 import json
 import re
@@ -31,15 +56,6 @@ from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PACKAGE))
-from oskm.collectors.hdi.records import raw_hdi
-from oskm.collectors.services.records import raw_service
-from oskm.collectors.system_abilities.records import raw_sa
-from oskm.core import runner
-from oskm.core.db import Database
-from oskm.core.io import canonical, parse_json
-from oskm.core.models import ScanRequest
-from oskm.core.provenance import strip_label
-from oskm.core.session import ScanSession
 
 
 class Pairs(list):
@@ -432,13 +448,13 @@ def verify_elf_modules(session, package):
         'FROM elf_module_dependencies e '
         'JOIN elf_modules caller ON caller.scan_id = e.scan_id AND caller.id = e.caller_id '
         'JOIN install_targets caller_t '
-          'ON caller_t.scan_id = caller.scan_id '
-         'AND caller_t.id = caller.install_target_id '
+        'ON caller_t.scan_id = caller.scan_id '
+        'AND caller_t.id = caller.install_target_id '
         'LEFT JOIN elf_modules callee '
-          'ON callee.scan_id = e.scan_id AND callee.id = e.callee_id '
+        'ON callee.scan_id = e.scan_id AND callee.id = e.callee_id '
         'LEFT JOIN install_targets callee_t '
-          'ON callee_t.scan_id = callee.scan_id '
-         'AND callee_t.id = callee.install_target_id '
+        'ON callee_t.scan_id = callee.scan_id '
+        'AND callee_t.id = callee.install_target_id '
         'WHERE e.scan_id = ? ORDER BY caller_dest, needed_ordinal', (session.scan_id,))
     actual_edges = {(row['caller_dest'], row['needed_ordinal']):
                     (row['needed_name'], row['callee_dest_stored'])
@@ -734,9 +750,9 @@ def verify_navigation(session):
     """The unified model must agree with the foreign keys it is built on."""
     assert len(session.subsystems()) == 56
     assert set(session.collectors) == {'components', 'install_modules',
-                                          'elf_modules', 'services',
-                                          'hdi', 'sas', 'repos', 'args',
-                                          'component_links'}
+                                       'elf_modules', 'services',
+                                       'hdi', 'sas', 'repos', 'args',
+                                       'component_links'}
     assert session.status == 'degraded'
     graphic = session.component('graphic_2d')
     assert graphic is not None
