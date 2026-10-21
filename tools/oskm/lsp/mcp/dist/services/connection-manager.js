@@ -1,0 +1,311 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import { LSPError, LSPErrorCode } from '../types.js';
+import { resolveServerConfig } from './typescript-server.js';
+import { createLSPClient } from './lsp-client.js';
+import { logger } from '../utils/logger.js';
+import { getExtension, normalizePath } from '../utils/uri.js';
+import { findWorkspaceRootForLanguage, createServerKey, parseServerKey } from '../utils/workspace.js';
+import { MAX_RESTART_ATTEMPTS, RESTART_WINDOW_MS, RESTART_BASE_DELAY_MS, DEFAULT_CONFIG, } from '../constants.js';
+/**
+ * Manages multiple LSP client instances, routing requests to the appropriate
+ * server based on file language and workspace root.
+ */
+export class ConnectionManagerImpl {
+    config;
+    diagnosticsCache;
+    servers = new Map();
+    restartInfo = new Map();
+    idleTimers = new Map();
+    initLocks = new Map();
+    constructor(config = DEFAULT_CONFIG, diagnosticsCache) {
+        this.config = config;
+        this.diagnosticsCache = diagnosticsCache;
+    }
+    /**
+     * Get or create a client for a file path.
+     */
+    async getClientForFile(filePath) {
+        const normalizedPath = normalizePath(filePath);
+        const ext = getExtension(normalizedPath);
+        // Find the server config for this file extension
+        const serverConfig = this.config.servers.find(s => s.extensions.includes(ext));
+        if (!serverConfig) {
+            throw new LSPError(LSPErrorCode.UNSUPPORTED_LANGUAGE, `No language server configured for ${ext} files`, 'Add a server configuration for this file type or check the file extension.', { file_path: normalizedPath });
+        }
+        // Detect workspace root
+        const workspaceRoot = await findWorkspaceRootForLanguage(normalizedPath, serverConfig.rootPatterns);
+        return this.getClient(serverConfig.id, workspaceRoot);
+    }
+    /**
+     * Get or create a client by explicit language and workspace root.
+     */
+    async getClient(serverId, workspaceRoot) {
+        const normalizedRoot = normalizePath(workspaceRoot);
+        const key = createServerKey(serverId, normalizedRoot);
+        // Check if there's already an initialization in progress
+        const existingLock = this.initLocks.get(key);
+        if (existingLock) {
+            return existingLock;
+        }
+        // Check if server is already running
+        const existing = this.servers.get(key);
+        if (existing?.client && existing.status === 'running') {
+            this.resetIdleTimer(key);
+            return existing.client;
+        }
+        // Start the server
+        const initPromise = this.startServerInternal(serverId, normalizedRoot, key);
+        this.initLocks.set(key, initPromise);
+        try {
+            return await initPromise;
+        }
+        finally {
+            this.initLocks.delete(key);
+        }
+    }
+    /**
+     * Manually start a language server.
+     */
+    async startServer(serverId, workspaceRoot) {
+        return this.getClient(serverId, workspaceRoot);
+    }
+    /**
+     * Stop a language server.
+     */
+    async stopServer(serverId, workspaceRoot) {
+        if (workspaceRoot) {
+            // Stop specific instance
+            const key = createServerKey(serverId, normalizePath(workspaceRoot));
+            await this.stopServerByKey(key);
+        }
+        else {
+            // Stop all instances of this server type
+            const keysToStop = [];
+            for (const key of this.servers.keys()) {
+                const { serverId: id } = parseServerKey(key);
+                if (id === serverId) {
+                    keysToStop.push(key);
+                }
+            }
+            await Promise.all(keysToStop.map(key => this.stopServerByKey(key)));
+        }
+    }
+    /**
+     * Stop all language servers.
+     */
+    async shutdownAll() {
+        const keys = [...this.servers.keys()];
+        await Promise.all(keys.map(key => this.stopServerByKey(key)));
+    }
+    /**
+     * List all active servers.
+     */
+    listActiveServers() {
+        return [...this.servers.values()];
+    }
+    /**
+     * Detect workspace root for a file path.
+     * Note: This is a synchronous fallback. The actual async detection
+     * happens in getClientForFile using findWorkspaceRootForLanguage.
+     */
+    detectWorkspaceRoot(filePath, _serverId) {
+        const normalizedPath = normalizePath(filePath);
+        // Return the file's directory as a synchronous fallback
+        // The actual workspace detection is async and happens in getClientForFile
+        return normalizedPath;
+    }
+    // ============================================================================
+    // Private Methods
+    // ============================================================================
+    async startServerInternal(serverId, workspaceRoot, key) {
+        const configuredServer = this.config.servers.find(s => s.id === serverId);
+        if (!configuredServer) {
+            throw new LSPError(LSPErrorCode.SERVER_NOT_FOUND, `No server configuration found for: ${serverId}`, 'Add a server configuration for this language in the config file.', { server_id: serverId });
+        }
+        // The concrete command can depend on the workspace (e.g. TypeScript 7)
+        const serverConfig = resolveServerConfig(configuredServer, workspaceRoot);
+        // Create server instance record
+        const instance = {
+            id: serverId,
+            workspaceRoot,
+            status: 'starting',
+            client: null,
+            pid: null,
+            startTime: null,
+            restartCount: 0,
+            lastError: null,
+        };
+        this.servers.set(key, instance);
+        try {
+            // Create and initialize client
+            const client = createLSPClient(serverConfig, serverConfig.requestTimeout ?? this.config.requestTimeout);
+            await client.initialize(workspaceRoot);
+            // Update instance
+            instance.status = 'running';
+            instance.client = client;
+            instance.pid = client.getPid();
+            instance.startTime = Date.now();
+            // Set up event handlers
+            this.setupClientHandlers(key, client, serverConfig);
+            // Start idle timer
+            this.resetIdleTimer(key);
+            logger.info(`Started language server: ${serverId}`, {
+                workspaceRoot,
+                pid: instance.pid,
+            });
+            return client;
+        }
+        catch (error) {
+            instance.status = 'crashed';
+            instance.lastError = error instanceof Error ? error.message : String(error);
+            // Try to restart if appropriate. A server that did not answer initialize
+            // in time is not retried: each attempt would wait the full timeout again.
+            const timedOut = error instanceof LSPError && error.code === LSPErrorCode.SERVER_TIMEOUT;
+            if (!timedOut && this.shouldRestart(key)) {
+                logger.warn(`Attempting to restart server: ${serverId}`, { error });
+                return this.restartServer(key, serverConfig, workspaceRoot);
+            }
+            throw error;
+        }
+    }
+    setupClientHandlers(key, client, config) {
+        // Handle server exit
+        client.onExit((code) => {
+            const instance = this.servers.get(key);
+            if (instance) {
+                instance.status = code === 0 ? 'stopped' : 'crashed';
+                if (code !== 0 && this.shouldRestart(key)) {
+                    logger.warn(`Server crashed, restarting: ${config.id}`, { code });
+                    this.restartServer(key, config, instance.workspaceRoot).catch(err => {
+                        logger.error(`Failed to restart server: ${config.id}`, err);
+                    });
+                }
+            }
+        });
+        // Handle server errors
+        client.onError((error) => {
+            const instance = this.servers.get(key);
+            if (instance) {
+                instance.lastError = error.message;
+            }
+            logger.error(`Server error: ${config.id}`, error);
+        });
+        // Forward publishDiagnostics into the global cache so workspace-wide
+        // queries (lsp_workspace_diagnostics, lsp_related_files imported_by) see them.
+        if (this.diagnosticsCache) {
+            const cache = this.diagnosticsCache;
+            client.onDiagnostics((uri, diagnostics) => {
+                cache.update(uri, diagnostics);
+            });
+        }
+    }
+    shouldRestart(key) {
+        const now = Date.now();
+        let info = this.restartInfo.get(key);
+        if (!info) {
+            info = { count: 0, timestamps: [] };
+            this.restartInfo.set(key, info);
+        }
+        // Remove old timestamps outside the window
+        info.timestamps = info.timestamps.filter(t => now - t < RESTART_WINDOW_MS);
+        // Check if we've exceeded max restarts
+        return info.timestamps.length < MAX_RESTART_ATTEMPTS;
+    }
+    async restartServer(key, config, workspaceRoot) {
+        // Record restart attempt
+        const info = this.restartInfo.get(key) ?? { count: 0, timestamps: [] };
+        info.count++;
+        info.timestamps.push(Date.now());
+        this.restartInfo.set(key, info);
+        // Update instance
+        const instance = this.servers.get(key);
+        if (instance) {
+            instance.restartCount = info.count;
+        }
+        // Exponential backoff delay
+        const delay = RESTART_BASE_DELAY_MS * Math.pow(2, info.timestamps.length - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        // Clean up old client
+        if (instance?.client) {
+            try {
+                instance.client.exit();
+            }
+            catch {
+                // Ignore cleanup errors
+            }
+        }
+        // Start new server
+        return this.startServerInternal(config.id, workspaceRoot, key);
+    }
+    async stopServerByKey(key) {
+        const instance = this.servers.get(key);
+        if (!instance)
+            return;
+        // Clear idle timer
+        const timer = this.idleTimers.get(key);
+        if (timer) {
+            clearTimeout(timer);
+            this.idleTimers.delete(key);
+        }
+        instance.status = 'stopping';
+        if (instance.client) {
+            try {
+                await instance.client.shutdown();
+                instance.client.exit();
+            }
+            catch (error) {
+                logger.warn(`Error stopping server: ${instance.id}`, error);
+                // Force kill if graceful shutdown fails
+                instance.client.exit();
+            }
+        }
+        instance.status = 'stopped';
+        instance.client = null;
+        this.servers.delete(key);
+        logger.info(`Stopped language server: ${instance.id}`, {
+            workspaceRoot: instance.workspaceRoot,
+        });
+    }
+    resetIdleTimer(key) {
+        // Clear existing timer
+        const existingTimer = this.idleTimers.get(key);
+        if (existingTimer) {
+            clearTimeout(existingTimer);
+        }
+        // Set new timer
+        const timer = setTimeout(() => {
+            logger.info(`Idle timeout, stopping server`, { key });
+            this.stopServerByKey(key).catch(err => {
+                logger.error(`Error stopping idle server`, err);
+            });
+        }, this.config.idleTimeout);
+        this.idleTimers.set(key, timer);
+    }
+}
+/**
+ * Create a connection manager instance.
+ */
+export function createConnectionManager(config, diagnosticsCache) {
+    return new ConnectionManagerImpl(config, diagnosticsCache);
+}
+//# sourceMappingURL=connection-manager.js.map

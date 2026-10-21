@@ -1,0 +1,374 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import { z } from 'zod';
+import * as path from 'node:path';
+// ============================================================================
+// Common Schemas
+// ============================================================================
+const FilePathSchema = z.string()
+    .min(1)
+    .refine((val) => path.isAbsolute(val), { message: 'File path must be absolute' })
+    .describe('Absolute path to the source file');
+const LineSchema = z.number()
+    .int()
+    .min(1)
+    .describe('Line number (1-indexed)');
+const ColumnSchema = z.number()
+    .int()
+    .min(1)
+    .describe('Column number (1-indexed)');
+// ============================================================================
+// Tool Input Schemas
+// ============================================================================
+export const GotoDefinitionSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const GotoTypeDefinitionSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const FindReferencesSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    include_declaration: z.boolean()
+        .default(true)
+        .describe('Whether to include the declaration in results'),
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(500)
+        .default(100)
+        .describe('Maximum number of results to return'),
+    offset: z.number()
+        .int()
+        .min(0)
+        .default(0)
+        .describe('Number of results to skip (for pagination)'),
+}).strict();
+export const FindImplementationsSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(50)
+        .describe('Maximum number of results'),
+}).strict();
+export const HoverSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const SignatureHelpSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const DocumentSymbolsSchema = z.object({
+    file_path: FilePathSchema,
+}).strict();
+export const WorkspaceSymbolsSchema = z.object({
+    query: z.string()
+        .min(1)
+        .describe('Search query to match symbol names (supports fuzzy matching)'),
+    kinds: z.array(z.enum([
+        'File', 'Module', 'Namespace', 'Package', 'Class', 'Method', 'Property',
+        'Field', 'Constructor', 'Enum', 'Interface', 'Function', 'Variable',
+        'Constant', 'String', 'Number', 'Boolean', 'Array', 'Object', 'Key',
+        'Null', 'EnumMember', 'Struct', 'Event', 'Operator', 'TypeParameter',
+    ]))
+        .optional()
+        .describe('Filter results to specific symbol kinds'),
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(50)
+        .describe('Maximum number of results'),
+}).strict();
+export const DiagnosticsSchema = z.object({
+    file_path: FilePathSchema,
+    severity_filter: z.enum(['all', 'error', 'warning', 'info', 'hint'])
+        .default('all')
+        .describe('Filter diagnostics by minimum severity'),
+}).strict();
+export const WorkspaceDiagnosticsSchema = z.object({
+    severity_filter: z.enum(['all', 'error', 'warning', 'info', 'hint'])
+        .default('all')
+        .describe('Filter diagnostics by minimum severity'),
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(200)
+        .default(50)
+        .describe('Maximum number of diagnostics to return'),
+    group_by: z.enum(['file', 'severity'])
+        .default('file')
+        .describe('How to group/sort results'),
+}).strict();
+export const CompletionsSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(50)
+        .default(20)
+        .describe('Maximum number of suggestions'),
+}).strict();
+export const RenameSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    new_name: z.string()
+        .min(1)
+        .describe('New name for the symbol'),
+    dry_run: z.boolean()
+        .default(true)
+        .describe('If true, only preview changes without applying. If false, apply changes to files.'),
+}).strict();
+export const ServerStatusSchema = z.object({
+    server_id: z.string()
+        .optional()
+        .describe('Specific server ID to check, or omit for all servers'),
+}).strict();
+export const StartServerSchema = z.object({
+    server_id: z.string()
+        .describe("Server ID from configuration (e.g., 'typescript', 'python')"),
+    workspace_root: z.string()
+        .refine((val) => path.isAbsolute(val), { message: 'Workspace root must be an absolute path' })
+        .describe('Absolute path to the workspace/project root'),
+}).strict();
+export const StopServerSchema = z.object({
+    server_id: z.string()
+        .describe("Server ID from configuration (e.g., 'typescript', 'python')"),
+    workspace_root: z.string()
+        .optional()
+        .describe('Workspace root to stop server for. If omitted, stops all instances of this server type.'),
+}).strict();
+// ============================================================================
+// Code Actions Schema
+// ============================================================================
+export const CodeActionsSchema = z.object({
+    file_path: FilePathSchema,
+    start_line: LineSchema.describe('Start line of the range (1-indexed)'),
+    start_column: ColumnSchema.describe('Start column of the range (1-indexed)'),
+    end_line: z.number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('End line of the range (1-indexed). Defaults to start_line.'),
+    end_column: z.number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('End column of the range (1-indexed). Defaults to start_column.'),
+    kinds: z.array(z.enum([
+        'quickfix',
+        'refactor',
+        'refactor.extract',
+        'refactor.inline',
+        'refactor.rewrite',
+        'source',
+        'source.organizeImports',
+        'source.fixAll',
+    ]))
+        .optional()
+        .describe('Filter actions by kind (e.g., "quickfix", "refactor.extract")'),
+    apply: z.boolean()
+        .default(false)
+        .describe('If true, apply the action at action_index. If false, just list available actions.'),
+    action_index: z.number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Index of the action to apply (when apply=true). Defaults to 0 (first action).'),
+}).strict();
+// ============================================================================
+// Call Hierarchy Schema
+// ============================================================================
+export const CallHierarchySchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    direction: z.enum(['incoming', 'outgoing', 'both'])
+        .default('both')
+        .describe('Direction of calls to retrieve: incoming (callers), outgoing (callees), or both'),
+}).strict();
+// ============================================================================
+// Type Hierarchy Schema
+// ============================================================================
+export const TypeHierarchySchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    direction: z.enum(['supertypes', 'subtypes', 'both'])
+        .default('both')
+        .describe('Direction of hierarchy: supertypes (parents), subtypes (children), or both'),
+}).strict();
+// ============================================================================
+// Format Document Schema
+// ============================================================================
+export const FormatDocumentSchema = z.object({
+    file_path: FilePathSchema,
+    tab_size: z.number()
+        .int()
+        .min(1)
+        .max(8)
+        .default(2)
+        .describe('Size of a tab in spaces'),
+    insert_spaces: z.boolean()
+        .default(true)
+        .describe('Prefer spaces over tabs'),
+    apply: z.boolean()
+        .default(false)
+        .describe('If true, apply formatting changes to the file. If false, only preview changes.'),
+}).strict();
+// ============================================================================
+// Smart Search Schema
+// ============================================================================
+export const SmartSearchSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+    include: z.array(z.enum([
+        'definition',
+        'references',
+        'hover',
+        'implementations',
+        'incoming_calls',
+        'outgoing_calls',
+    ]))
+        .default(['definition', 'references', 'hover'])
+        .describe('What information to include in the search results'),
+    references_limit: z.number()
+        .int()
+        .min(1)
+        .max(50)
+        .default(10)
+        .describe('Maximum number of references to include'),
+}).strict();
+export const FindSymbolSchema = z.object({
+    name: z.string()
+        .min(1)
+        .describe('Symbol name to search for (supports fuzzy matching)'),
+    file_path: FilePathSchema
+        .optional()
+        .describe('Optional: scope the search to this file. When provided, the symbol is resolved from this file\'s document symbols (faster and unambiguous when you know the file). When omitted, searches the entire workspace.'),
+    kind: z.enum([
+        'File', 'Module', 'Namespace', 'Package', 'Class', 'Method', 'Property',
+        'Field', 'Constructor', 'Enum', 'Interface', 'Function', 'Variable',
+        'Constant', 'String', 'Number', 'Boolean', 'Array', 'Object', 'Key',
+        'Null', 'EnumMember', 'Struct', 'Event', 'Operator', 'TypeParameter',
+    ])
+        .optional()
+        .describe('Filter to specific symbol kind'),
+    include: z.array(z.enum([
+        'definition',
+        'references',
+        'hover',
+        'implementations',
+        'incoming_calls',
+        'outgoing_calls',
+    ]))
+        .default(['definition', 'references', 'hover'])
+        .describe('What information to include for the found symbol'),
+    references_limit: z.number()
+        .int()
+        .min(1)
+        .max(50)
+        .default(20)
+        .describe('Maximum number of references to include'),
+}).strict();
+// ============================================================================
+// File Exports Schema
+// ============================================================================
+export const FileExportsSchema = z.object({
+    file_path: FilePathSchema,
+    include_signatures: z.boolean()
+        .default(true)
+        .describe('Include type signatures from hover (slower but more informative)'),
+}).strict();
+// ============================================================================
+// File Imports Schema
+// ============================================================================
+export const FileImportsSchema = z.object({
+    file_path: FilePathSchema,
+}).strict();
+// ============================================================================
+// Related Files Schema
+// ============================================================================
+export const RelatedFilesSchema = z.object({
+    file_path: FilePathSchema,
+    relationship: z.enum(['imports', 'imported_by', 'all'])
+        .default('all')
+        .describe('Which relationships to include'),
+}).strict();
+// ============================================================================
+// Document Highlights / Inlay Hints / Selection Range / Folding Ranges
+// ============================================================================
+export const DocumentHighlightsSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const InlayHintsSchema = z.object({
+    file_path: FilePathSchema,
+    start_line: LineSchema.describe('Start line of the range to query (1-indexed)'),
+    start_column: ColumnSchema.describe('Start column of the range to query (1-indexed)'),
+    end_line: LineSchema.describe('End line of the range to query (1-indexed)'),
+    end_column: ColumnSchema.describe('End column of the range to query (1-indexed)'),
+    limit: z.number()
+        .int()
+        .min(1)
+        .max(500)
+        .default(100)
+        .describe('Maximum number of hints to return'),
+}).strict();
+export const SelectionRangeSchema = z.object({
+    file_path: FilePathSchema,
+    line: LineSchema,
+    column: ColumnSchema,
+}).strict();
+export const FoldingRangesSchema = z.object({
+    file_path: FilePathSchema,
+    kind_filter: z.enum(['all', 'comment', 'imports', 'region'])
+        .default('all')
+        .describe('Filter results to one kind (LSP foldingRange kinds)'),
+}).strict();
+// ============================================================================
+// Index Files (warm-up)
+// ============================================================================
+export const IndexFilesSchema = z.object({
+    files: z.array(FilePathSchema)
+        .min(1)
+        .max(200)
+        .describe('List of absolute file paths to open. Once opened, the LSP server begins publishing diagnostics for these files, making them visible to lsp_workspace_diagnostics. Use before a project-wide diagnostic scan or before lsp_related_files imported_by, which only sees opened files.'),
+}).strict();
+//# sourceMappingURL=tool-schemas.js.map

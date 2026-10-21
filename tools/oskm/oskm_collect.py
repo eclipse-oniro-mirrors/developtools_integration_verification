@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 import argparse
+import os
+import subprocess
+import sys
 
 
 def __create_arg_parser():
@@ -28,12 +31,37 @@ def __create_arg_parser():
     return parser
 
 
+def __build_lsp_index(out_path):
+    """Build the clangd .idx index under the build output (non-fatal).
+
+    Delegates to lsp/build_index.py; any failure is logged and swallowed so
+    it never breaks the collection phase. Set OSKM_LSP_INDEX=off to skip.
+    """
+    if os.environ.get('OSKM_LSP_INDEX', '').lower() in ('off', '0', 'no'):
+        print('[oskm_collect] lsp index disabled by OSKM_LSP_INDEX')
+        return
+    lsp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lsp')
+    build_script = os.path.join(lsp_dir, 'build_index.py')
+    if not os.path.isfile(build_script):
+        print('[oskm_collect] lsp/build_index.py not found, skip')
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, build_script, '-i', str(out_path)],
+            cwd=lsp_dir)
+        if result.returncode != 0:
+            print('[oskm_collect] lsp index build exit={} (non-fatal)'.format(
+                result.returncode))
+    except Exception as exc:  # noqa: BLE001 - never block the pipeline
+        print('[oskm_collect] lsp index build failed (non-fatal): {}'.format(exc))
+
+
 def oskm_collect(out_path, target_cpu, args=None):
     """Collect oskm information from build output.
 
-    Placeholder for extension. Add the real collection logic here, e.g.
-    scanning build outputs, aggregating metadata, writing result files
-    under ``out_path``.
+    Currently generates the clangd background index (.idx shards) under
+    ``<out_path>/.cache/clangd/index`` via ``lsp/build_index.py``; extend
+    with further collection logic here.
 
     Args:
         out_path: build output directory.
@@ -43,9 +71,9 @@ def oskm_collect(out_path, target_cpu, args=None):
     Returns:
         None
     """
-    # TODO: implement oskm collection logic here.
     print("[oskm_collect] entry point reached, out_path={}, target_cpu={}".format(
-        out_path, target_cpu))
+        out_path, target_cpu), flush=True)
+    __build_lsp_index(out_path)
     return
 
 

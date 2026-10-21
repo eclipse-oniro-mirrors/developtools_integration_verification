@@ -1,0 +1,171 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
+import { DEFAULT_CONFIG, DEFAULT_SERVERS } from './constants.js';
+import { isWorkspaceConfigurationMap } from './config/workspace-settings.js';
+import { parseMinify } from './utils/json.js';
+// ============================================================================
+// Configuration Loading
+// ============================================================================
+/**
+ * Configuration file locations (in order of priority).
+ */
+function getConfigPaths() {
+    const home = os.homedir();
+    const xdgConfig = process.env.XDG_CONFIG_HOME ?? path.join(home, '.config');
+    return [
+        // Current directory
+        path.join(process.cwd(), '.lsp-mcp.json'),
+        path.join(process.cwd(), 'lsp-mcp.json'),
+        // XDG config directory
+        path.join(xdgConfig, 'lsp-mcp', 'config.json'),
+        // Home directory
+        path.join(home, '.lsp-mcp.json'),
+    ];
+}
+/**
+ * Try to read a JSON file.
+ */
+async function tryReadJson(filePath) {
+    try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        return JSON.parse(content);
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Merge server configurations.
+ * User servers override built-in servers with the same ID.
+ */
+function mergeServers(builtIn, user) {
+    const merged = new Map();
+    // Add built-in servers
+    for (const server of builtIn) {
+        merged.set(server.id, server);
+    }
+    // Override/add user servers
+    for (const server of user) {
+        merged.set(server.id, server);
+    }
+    return Array.from(merged.values());
+}
+/**
+ * Validate a server configuration.
+ */
+function validateServerConfig(server) {
+    if (!server || typeof server !== 'object') {
+        return false;
+    }
+    const s = server;
+    return (typeof s.id === 'string' &&
+        Array.isArray(s.extensions) &&
+        s.extensions.every((e) => typeof e === 'string') &&
+        Array.isArray(s.languageIds) &&
+        s.languageIds.every((l) => typeof l === 'string') &&
+        typeof s.command === 'string' &&
+        Array.isArray(s.args) &&
+        s.args.every((a) => typeof a === 'string') &&
+        (s.workspaceConfigurations === undefined ||
+            isWorkspaceConfigurationMap(s.workspaceConfigurations)));
+}
+/**
+ * Load configuration from file or environment.
+ */
+export async function loadConfig() {
+    const config = {
+        ...DEFAULT_CONFIG,
+        servers: [...DEFAULT_SERVERS],
+    };
+    // Try to load config file
+    const configPaths = getConfigPaths();
+    let userConfig = null;
+    for (const configPath of configPaths) {
+        const loaded = await tryReadJson(configPath);
+        if (loaded && typeof loaded === 'object') {
+            userConfig = loaded;
+            break;
+        }
+    }
+    // Apply user configuration
+    if (userConfig) {
+        // Merge servers
+        if (Array.isArray(userConfig.servers)) {
+            const validServers = userConfig.servers.filter(validateServerConfig);
+            config.servers = mergeServers(DEFAULT_SERVERS, validServers);
+        }
+        // Apply other settings
+        if (typeof userConfig.requestTimeout === 'number') {
+            config.requestTimeout = userConfig.requestTimeout;
+        }
+        if (typeof userConfig.autoStart === 'boolean') {
+            config.autoStart = userConfig.autoStart;
+        }
+        if (typeof userConfig.logLevel === 'string') {
+            const level = userConfig.logLevel;
+            if (['debug', 'info', 'warn', 'error'].includes(level)) {
+                config.logLevel = level;
+            }
+        }
+        if (typeof userConfig.idleTimeout === 'number') {
+            config.idleTimeout = userConfig.idleTimeout;
+        }
+        config.minify = parseMinify(userConfig.minify);
+    }
+    // Environment variable overrides.
+    // Standardised on the LSP_* prefix (matches README + ENV constants).
+    // The legacy LSP_MCP_* names are still honoured but should be considered deprecated.
+    const envLogLevel = process.env.LSP_LOG_LEVEL ?? process.env.LSP_MCP_LOG_LEVEL;
+    if (envLogLevel && ['debug', 'info', 'warn', 'error'].includes(envLogLevel)) {
+        config.logLevel = envLogLevel;
+    }
+    const envTimeout = process.env.LSP_REQUEST_TIMEOUT ?? process.env.LSP_MCP_REQUEST_TIMEOUT;
+    if (envTimeout) {
+        const timeout = parseInt(envTimeout, 10);
+        if (!isNaN(timeout) && timeout > 0) {
+            config.requestTimeout = timeout;
+        }
+    }
+    return config;
+}
+/**
+ * Get server config by ID.
+ */
+export function getServerConfig(config, serverId) {
+    return config.servers.find((s) => s.id === serverId);
+}
+/**
+ * Find server config by file extension.
+ */
+export function findServerByExtension(config, extension) {
+    return config.servers.find((s) => s.extensions.includes(extension));
+}
+/**
+ * Find server config by language ID.
+ */
+export function findServerByLanguageId(config, languageId) {
+    return config.servers.find((s) => s.languageIds.includes(languageId));
+}
+//# sourceMappingURL=config.js.map

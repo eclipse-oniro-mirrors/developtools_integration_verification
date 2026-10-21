@@ -1,0 +1,801 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import type { ServerCapabilities, InitializeResult, TextDocumentItem, TextDocumentContentChangeEvent, Position, Location, LocationLink, Hover, SignatureHelp, DocumentSymbol, SymbolInformation, WorkspaceSymbol, CompletionList, CompletionItem, WorkspaceEdit, Diagnostic, Range, CodeAction, Command, CallHierarchyItem, CallHierarchyIncomingCall, CallHierarchyOutgoingCall, TypeHierarchyItem, TextEdit, FormattingOptions, DocumentHighlight, InlayHint, SelectionRange, FoldingRange } from 'vscode-languageserver-protocol';
+export type { ServerCapabilities, InitializeResult, TextDocumentItem, TextDocumentContentChangeEvent, Position, Location, LocationLink, Hover, SignatureHelp, DocumentSymbol, SymbolInformation, WorkspaceSymbol, CompletionList, CompletionItem, WorkspaceEdit, Diagnostic, Range, CodeAction, Command, CallHierarchyItem, CallHierarchyIncomingCall, CallHierarchyOutgoingCall, TypeHierarchyItem, TextEdit, FormattingOptions, DocumentHighlight, InlayHint, SelectionRange, FoldingRange, };
+export interface LSPServerConfig {
+    /** Server identifier (e.g., "typescript", "python", "rust") */
+    id: string;
+    /** File extensions this server handles */
+    extensions: string[];
+    /** Language IDs (as per LSP spec) */
+    languageIds: string[];
+    /** Command to start the language server */
+    command: string;
+    /** Command arguments */
+    args: string[];
+    /** Environment variables */
+    env?: Record<string, string>;
+    /** Initialization options to pass to the server */
+    initializationOptions?: Record<string, unknown>;
+    /**
+     * LSP settings keyed by exact, absolute workspace root.
+     *
+     * The selected settings are exposed through workspace/configuration after
+     * the language server has initialized.
+     */
+    workspaceConfigurations?: WorkspaceConfigurationMap;
+    /** Patterns to identify project root (e.g., ["package.json", "tsconfig.json"]) */
+    rootPatterns?: string[];
+    /** Per-server timeout for LSP requests (ms). Overrides global requestTimeout. */
+    requestTimeout?: number;
+    /**
+     * Optional absolute path to a small source file. When set, the MCP starts
+     * this server at startup and opens this file to kick off whole-project
+     * background indexing (clangd only sweeps its compilation database after
+     * the first didOpen), so the in-memory index is fully loaded by the time
+     * the first real query arrives.
+     */
+    warmup?: string;
+}
+export type WorkspaceSettings = Record<string, unknown>;
+export type WorkspaceConfigurationMap = Record<string, WorkspaceSettings>;
+export interface Config {
+    /** Configured language servers */
+    servers: LSPServerConfig[];
+    /** Default timeout for LSP requests (ms) */
+    requestTimeout: number;
+    /** Whether to auto-start servers on first request */
+    autoStart: boolean;
+    /** Log level */
+    logLevel: 'debug' | 'info' | 'warn' | 'error';
+    /** Idle timeout before shutting down unused servers (ms) */
+    idleTimeout: number;
+    /** Tool JSON minification: "default" (whitespace), "full" (whitespace + omit nulls), or false (disabled) */
+    minify: MinifyMode;
+}
+export type MinifyMode = 'default' | 'full' | false;
+export interface LSPClient {
+    initialize(rootUri: string): Promise<InitializeResult>;
+    shutdown(): Promise<void>;
+    exit(): void;
+    didOpen(document: TextDocumentItem): void;
+    didChange(uri: string, version: number, changes: TextDocumentContentChangeEvent[]): void;
+    didClose(uri: string): void;
+    /** Notify the server that a document was saved (its content matches the file on disk) */
+    didSave(uri: string): void;
+    /** Wait until diagnostics for `uri` are published at or after `since`; false after `maxMs` */
+    waitForDiagnostics(uri: string, since: number, maxMs: number): Promise<boolean>;
+    /**
+     * Wait until work the server started at or after `since` (epoch ms) has
+     * finished, as reported through work-done progress. Waits at least
+     * `windowMs` after `since` and at most `maxMs` from now.
+     */
+    waitForServerWork(since: number, windowMs: number, maxMs: number): Promise<void>;
+    /** Notify the server that files were deleted (no-op unless it registered for deletions) */
+    didDeleteFiles(uris: string[]): void;
+    definition(uri: string, position: Position): Promise<Location | Location[] | LocationLink[] | null>;
+    typeDefinition(uri: string, position: Position): Promise<Location | Location[] | LocationLink[] | null>;
+    references(uri: string, position: Position, includeDeclaration: boolean): Promise<Location[] | null>;
+    implementation(uri: string, position: Position): Promise<Location | Location[] | LocationLink[] | null>;
+    hover(uri: string, position: Position): Promise<Hover | null>;
+    signatureHelp(uri: string, position: Position): Promise<SignatureHelp | null>;
+    documentSymbols(uri: string): Promise<DocumentSymbol[] | SymbolInformation[] | null>;
+    workspaceSymbols(query: string): Promise<SymbolInformation[] | WorkspaceSymbol[] | null>;
+    completion(uri: string, position: Position): Promise<CompletionList | CompletionItem[] | null>;
+    prepareRename(uri: string, position: Position): Promise<Range | {
+        range: Range;
+        placeholder: string;
+    } | null>;
+    rename(uri: string, position: Position, newName: string): Promise<WorkspaceEdit | null>;
+    codeActions(uri: string, range: Range, diagnostics: Diagnostic[], kinds?: string[]): Promise<(CodeAction | Command)[] | null>;
+    prepareCallHierarchy(uri: string, position: Position): Promise<CallHierarchyItem[] | null>;
+    callHierarchyIncomingCalls(item: CallHierarchyItem): Promise<CallHierarchyIncomingCall[] | null>;
+    callHierarchyOutgoingCalls(item: CallHierarchyItem): Promise<CallHierarchyOutgoingCall[] | null>;
+    prepareTypeHierarchy(uri: string, position: Position): Promise<TypeHierarchyItem[] | null>;
+    typeHierarchySupertypes(item: TypeHierarchyItem): Promise<TypeHierarchyItem[] | null>;
+    typeHierarchySubtypes(item: TypeHierarchyItem): Promise<TypeHierarchyItem[] | null>;
+    formatDocument(uri: string, options: FormattingOptions): Promise<TextEdit[] | null>;
+    documentHighlight(uri: string, position: Position): Promise<DocumentHighlight[] | null>;
+    inlayHints(uri: string, range: Range): Promise<InlayHint[] | null>;
+    selectionRange(uri: string, positions: Position[]): Promise<SelectionRange[] | null>;
+    foldingRanges(uri: string): Promise<FoldingRange[] | null>;
+    cancelRequest(id: number | string): void;
+    getCachedDiagnostics(uri: string): Diagnostic[];
+    /** Whether the server provides diagnostics on request (textDocument/diagnostic) */
+    supportsPullDiagnostics(): boolean;
+    /** Whether the last diagnostics the server published (pushed) for `uri` were non-empty */
+    hasPushedDiagnostics(uri: string): boolean;
+    /** Pull diagnostics for a document and store them; null if unsupported or failed */
+    pullDiagnostics(uri: string): Promise<Diagnostic[] | null>;
+    readonly capabilities: ServerCapabilities;
+    readonly isInitialized: boolean;
+    readonly workspaceRoot: string;
+    readonly serverId: string;
+    onDiagnostics(handler: (uri: string, diagnostics: Diagnostic[]) => void): void;
+    onError(handler: (error: Error) => void): void;
+    onExit(handler: (code: number | null) => void): void;
+}
+export interface ServerInstance {
+    id: string;
+    workspaceRoot: string;
+    status: 'starting' | 'running' | 'stopping' | 'stopped' | 'crashed';
+    client: LSPClient | null;
+    pid: number | null;
+    startTime: number | null;
+    restartCount: number;
+    lastError: string | null;
+}
+export interface ConnectionManager {
+    /** Get or create client for a file (detects language and workspace root) */
+    getClientForFile(filePath: string): Promise<LSPClient>;
+    /** Get client by explicit parameters */
+    getClient(languageId: string, workspaceRoot: string): Promise<LSPClient>;
+    /** Manually start a specific server */
+    startServer(serverId: string, workspaceRoot: string): Promise<LSPClient>;
+    /** Stop a server */
+    stopServer(serverId: string, workspaceRoot?: string): Promise<void>;
+    /** Stop all servers */
+    shutdownAll(): Promise<void>;
+    /** List active servers with their workspace roots */
+    listActiveServers(): ServerInstance[];
+    /** Detect workspace root for a file path */
+    detectWorkspaceRoot(filePath: string, serverId?: string): string;
+}
+export interface DocumentState {
+    uri: string;
+    content: string;
+    version: number;
+    languageId: string;
+    openWithClients: Set<string>;
+}
+export interface DocumentManager {
+    /** Open a document (reads from disk, sends didOpen) */
+    openDocument(uri: string, client: LSPClient): Promise<void>;
+    /** Ensure document is open (idempotent, thread-safe) */
+    ensureOpen(uri: string, client: LSPClient): Promise<void>;
+    /** Close a document */
+    closeDocument(uri: string, client: LSPClient): Promise<void>;
+    /** Update document content (for unsaved changes) */
+    updateContent(uri: string, content: string, client: LSPClient): Promise<void>;
+    /** Get current content */
+    getContent(uri: string): string | undefined;
+    /** Check if document is open with a specific client */
+    isOpen(uri: string, client: LSPClient): boolean;
+    /**
+     * If the document is open in this client instance and the file on disk
+     * changed, send the new content (didChange + didSave). Returns true if it did.
+     */
+    syncWithDisk(uri: string, client: LSPClient): Promise<boolean>;
+    /** List the documents open in a specific client instance */
+    getOpenUris(client: LSPClient): string[];
+    /** Get current version for a URI */
+    getVersion(uri: string): number;
+}
+export interface DiagnosticsCache {
+    /** Called when publishDiagnostics notification is received */
+    update(uri: string, diagnostics: Diagnostic[]): void;
+    /** Get cached diagnostics for a URI */
+    get(uri: string): Diagnostic[];
+    /** Clear diagnostics for a URI (on document close) */
+    clear(uri: string): void;
+    /** Clear all diagnostics (on server restart) */
+    clearAll(): void;
+    /** Get all URIs with cached diagnostics */
+    getUris(): string[];
+    /** Get total count of diagnostics across all files */
+    getTotalCount(): number;
+    /** Get summary of diagnostics across all files */
+    getSummary(): {
+        errors: number;
+        warnings: number;
+        info: number;
+        hints: number;
+    };
+}
+export declare enum LSPErrorCode {
+    SERVER_NOT_FOUND = "SERVER_NOT_FOUND",
+    SERVER_START_FAILED = "SERVER_START_FAILED",
+    SERVER_CRASHED = "SERVER_CRASHED",
+    SERVER_TIMEOUT = "SERVER_TIMEOUT",
+    SERVER_NOT_READY = "SERVER_NOT_READY",
+    FILE_NOT_FOUND = "FILE_NOT_FOUND",
+    FILE_NOT_READABLE = "FILE_NOT_READABLE",
+    INVALID_POSITION = "INVALID_POSITION",
+    UNSUPPORTED_LANGUAGE = "UNSUPPORTED_LANGUAGE",
+    CAPABILITY_NOT_SUPPORTED = "CAPABILITY_NOT_SUPPORTED",
+    RENAME_NOT_ALLOWED = "RENAME_NOT_ALLOWED",
+    INVALID_RESPONSE = "INVALID_RESPONSE",
+    REQUEST_CANCELLED = "REQUEST_CANCELLED"
+}
+export interface LSPErrorDetails {
+    server_id?: string;
+    file_path?: string;
+    position?: {
+        line: number;
+        column: number;
+    };
+    install_command?: string;
+    original_error?: string;
+}
+export declare class LSPError extends Error {
+    readonly code: LSPErrorCode;
+    readonly suggestion: string;
+    readonly details?: LSPErrorDetails | undefined;
+    constructor(code: LSPErrorCode, message: string, suggestion: string, details?: LSPErrorDetails | undefined);
+    toJSON(): {
+        error: {
+            code: LSPErrorCode;
+            message: string;
+            suggestion: string;
+            details: LSPErrorDetails | undefined;
+        };
+    };
+}
+export interface LocationResult {
+    path: string;
+    line: number;
+    column: number;
+    end_line: number;
+    end_column: number;
+    context: string;
+    /** The symbol name at this location, if extractable */
+    symbol_name?: string;
+}
+export interface DefinitionResponse {
+    definitions: LocationResult[];
+}
+export interface ReferencesResponse {
+    references: LocationResult[];
+    total_count: number;
+    returned_count: number;
+    offset: number;
+    has_more: boolean;
+}
+export interface ImplementationsResponse {
+    implementations: LocationResult[];
+    total_count: number;
+    returned_count: number;
+    has_more: boolean;
+}
+export interface HoverResponse {
+    contents: string;
+    range?: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+}
+export interface SignatureHelpResponse {
+    signatures: Array<{
+        label: string;
+        documentation?: string;
+        parameters?: Array<{
+            label: string;
+            documentation?: string;
+        }>;
+    }>;
+    active_signature: number;
+    active_parameter: number;
+}
+export interface SymbolResult {
+    name: string;
+    kind: string;
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    selection_range?: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    children?: SymbolResult[];
+}
+export interface DocumentSymbolsResponse {
+    symbols: SymbolResult[];
+}
+export interface WorkspaceSymbolResult {
+    name: string;
+    kind: string;
+    path: string;
+    line: number;
+    column: number;
+    container_name?: string;
+}
+export interface WorkspaceSymbolsResponse {
+    symbols: WorkspaceSymbolResult[];
+    total_count: number;
+    returned_count: number;
+    has_more: boolean;
+}
+export interface DiagnosticResult {
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    severity: 'error' | 'warning' | 'info' | 'hint';
+    code?: string | number;
+    source?: string;
+    message: string;
+    context: string;
+}
+export interface DiagnosticsResponse {
+    diagnostics: DiagnosticResult[];
+    summary: {
+        errors: number;
+        warnings: number;
+        info: number;
+        hints: number;
+    };
+    note: string;
+}
+export interface WorkspaceDiagnosticItem {
+    file: string;
+    line: number;
+    column: number;
+    end_line: number;
+    end_column: number;
+    severity: 'error' | 'warning' | 'info' | 'hint';
+    message: string;
+    code?: string | number;
+    source?: string;
+    context: string;
+}
+export interface WorkspaceDiagnosticsResponse {
+    items: WorkspaceDiagnosticItem[];
+    total_count: number;
+    returned_count: number;
+    files_affected: number;
+    summary: {
+        errors: number;
+        warnings: number;
+        info: number;
+        hints: number;
+    };
+    note: string;
+}
+export interface CompletionResult {
+    label: string;
+    kind: string;
+    detail?: string;
+    documentation?: string;
+    insert_text?: string;
+    sort_text?: string;
+}
+export interface CompletionsResponse {
+    completions: CompletionResult[];
+    is_incomplete: boolean;
+}
+export interface RenameEdit {
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    new_text: string;
+    context: string;
+}
+export interface RenameResponse {
+    changes: Record<string, RenameEdit[]>;
+    files_affected: number;
+    edits_count: number;
+    applied: boolean;
+    original_name?: string;
+    /** Present when the server proposed changes lsp_rename cannot show or apply */
+    note?: string;
+}
+export interface ServerStatusResult {
+    id: string;
+    status: string;
+    pid?: number;
+    workspace_root?: string;
+    capabilities?: string[];
+    uptime_seconds?: number;
+    documents_open?: number;
+    restart_count?: number;
+    last_error?: string | null;
+}
+export interface ServerStatusResponse {
+    servers: ServerStatusResult[];
+}
+export interface StartServerResponse {
+    status: string;
+    server_id: string;
+    workspace_root: string;
+    capabilities: string[];
+}
+export interface StopServerResponse {
+    status: string;
+    server_id: string;
+    workspace_root?: string;
+    was_running: boolean;
+}
+export interface CodeActionResult {
+    title: string;
+    kind?: string;
+    is_preferred?: boolean;
+    diagnostics?: DiagnosticResult[];
+    edit?: {
+        files_affected: number;
+        changes: Record<string, Array<{
+            range: {
+                start: {
+                    line: number;
+                    column: number;
+                };
+                end: {
+                    line: number;
+                    column: number;
+                };
+            };
+            new_text: string;
+        }>>;
+    };
+    command?: {
+        title: string;
+        command: string;
+        arguments?: unknown[];
+    };
+}
+export interface CodeActionsResponse {
+    actions: CodeActionResult[];
+    total_count: number;
+    /** The action that was applied (if apply=true and successful) */
+    applied?: CodeActionResult;
+}
+export interface CallHierarchyItemResult {
+    name: string;
+    kind: string;
+    path: string;
+    line: number;
+    column: number;
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    selection_range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    detail?: string;
+    tags?: string[];
+}
+export interface CallHierarchyIncomingCallResult {
+    from: CallHierarchyItemResult;
+    from_ranges: Array<{
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    }>;
+}
+export interface CallHierarchyOutgoingCallResult {
+    to: CallHierarchyItemResult;
+    from_ranges: Array<{
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    }>;
+}
+export interface CallHierarchyResponse {
+    item: CallHierarchyItemResult | null;
+    incoming_calls?: CallHierarchyIncomingCallResult[];
+    outgoing_calls?: CallHierarchyOutgoingCallResult[];
+    /** Explanations for directions the language server does not implement. */
+    notes?: string[];
+}
+export interface TypeHierarchyItemResult {
+    name: string;
+    kind: string;
+    path: string;
+    line: number;
+    column: number;
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    selection_range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    detail?: string;
+    tags?: string[];
+}
+export interface TypeHierarchyResponse {
+    item: TypeHierarchyItemResult | null;
+    supertypes?: TypeHierarchyItemResult[];
+    subtypes?: TypeHierarchyItemResult[];
+}
+export interface FormatEdit {
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    new_text: string;
+}
+export interface FormatDocumentResponse {
+    edits: FormatEdit[];
+    edits_count: number;
+    applied: boolean;
+}
+export interface SmartSearchResponse {
+    symbol_name?: string;
+    definition?: LocationResult;
+    references?: {
+        items: LocationResult[];
+        total_count: number;
+        has_more: boolean;
+    };
+    hover?: {
+        contents: string;
+        range?: {
+            start: {
+                line: number;
+                column: number;
+            };
+            end: {
+                line: number;
+                column: number;
+            };
+        };
+    };
+    implementations?: {
+        items: LocationResult[];
+        total_count: number;
+        has_more: boolean;
+    };
+    incoming_calls?: CallHierarchyIncomingCallResult[];
+    outgoing_calls?: CallHierarchyOutgoingCallResult[];
+}
+export interface FindSymbolMatch {
+    name: string;
+    kind: string;
+    path: string;
+    line: number;
+    column: number;
+    container_name?: string | undefined;
+}
+export interface FileExportItem {
+    name: string;
+    kind: string;
+    line: number;
+    column: number;
+    signature?: string | undefined;
+}
+export interface FileExportsResponse {
+    file: string;
+    exports: FileExportItem[];
+    note: string;
+}
+export interface FileImportItem {
+    module: string;
+    line: number;
+    symbols?: string[] | undefined;
+    is_type_only?: boolean | undefined;
+    is_dynamic?: boolean | undefined;
+}
+export interface FileImportsResponse {
+    file: string;
+    imports: FileImportItem[];
+    note: string;
+}
+export interface RelatedFilesResponse {
+    file: string;
+    imports: string[];
+    imported_by: string[];
+    note: string;
+}
+export interface FindSymbolResponse {
+    /** The symbol that was searched for */
+    query: string;
+    /** The best matching symbol found */
+    match?: FindSymbolMatch;
+    /** Number of total matches found */
+    matches_found: number;
+    /** Detailed information about the matched symbol (same as smart_search) */
+    symbol_name?: string;
+    definition?: LocationResult;
+    references?: {
+        items: LocationResult[];
+        total_count: number;
+        has_more: boolean;
+    };
+    hover?: {
+        contents: string;
+        range?: {
+            start: {
+                line: number;
+                column: number;
+            };
+            end: {
+                line: number;
+                column: number;
+            };
+        };
+    };
+    implementations?: {
+        items: LocationResult[];
+        total_count: number;
+        has_more: boolean;
+    };
+    incoming_calls?: CallHierarchyIncomingCallResult[];
+    outgoing_calls?: CallHierarchyOutgoingCallResult[];
+}
+export interface DocumentHighlightResult {
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    /** 'text' (default), 'read', or 'write' — LSP DocumentHighlightKind */
+    kind: 'text' | 'read' | 'write';
+    /** Trimmed source line at the highlight, for quick scanning */
+    context: string;
+}
+export interface DocumentHighlightsResponse {
+    highlights: DocumentHighlightResult[];
+}
+export interface InlayHintResult {
+    line: number;
+    column: number;
+    /** The hint text (e.g. ": string", "name:") — combined when multipart */
+    label: string;
+    /** 'type' or 'parameter' (from LSP InlayHintKind), or undefined if unknown */
+    kind?: 'type' | 'parameter';
+    /** Optional tooltip / documentation associated with the hint */
+    tooltip?: string;
+    padding_left?: boolean;
+    padding_right?: boolean;
+}
+export interface InlayHintsResponse {
+    hints: InlayHintResult[];
+    /**
+     * The exact 1-indexed range that was queried.
+     * Re-stated for clarity since hints depend on it.
+     */
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+}
+export interface SelectionRangeNode {
+    range: {
+        start: {
+            line: number;
+            column: number;
+        };
+        end: {
+            line: number;
+            column: number;
+        };
+    };
+    /** The trimmed source on the range's first line — context for quick scanning */
+    context: string;
+    /** Parent range — null at the outermost level */
+    parent?: SelectionRangeNode;
+}
+export interface SelectionRangeResponse {
+    /** Innermost-to-outermost flat list, for easy iteration */
+    ranges: SelectionRangeNode[];
+}
+export interface FoldingRangeResult {
+    start_line: number;
+    end_line: number;
+    start_column?: number;
+    end_column?: number;
+    /** 'comment', 'imports', 'region', or undefined */
+    kind?: string;
+    collapsed_text?: string;
+}
+export interface FoldingRangesResponse {
+    ranges: FoldingRangeResult[];
+}
+export interface IndexFilesResponse {
+    /** Files successfully opened (will now publish diagnostics) */
+    opened: string[];
+    /** Files that failed to open, with reason */
+    failed: Array<{
+        file: string;
+        error: string;
+    }>;
+    /** Convenience counts */
+    opened_count: number;
+    failed_count: number;
+}
+//# sourceMappingURL=types.d.ts.map
