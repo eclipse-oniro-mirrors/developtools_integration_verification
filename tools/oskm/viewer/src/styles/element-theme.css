@@ -1,0 +1,51 @@
+/* 把 Element Plus 的变量映射到我们的 token，让成熟库长成我们的样子。
+   只在这里出现 --el-*，其它任何地方都不准直接写 Element 的变量。 */
+html.dark, html.light {
+  --el-bg-color:            var(--surface-default);
+  --el-bg-color-page:       var(--surface-sunken);
+  --el-bg-color-overlay:    var(--surface-overlay);
+  --el-fill-color:          var(--surface-raised);
+  --el-fill-color-light:    var(--surface-overlay);
+  /* 行 hover 单独压回 raised：行里有 --entity-component 的链接，
+     它在 overlay 上只有 4.31:1。见 tokens.css 的"浮层底色"一节。 */
+  --el-table-row-hover-bg-color: var(--surface-raised);
+  --el-fill-color-lighter:  var(--surface-raised);
+  --el-fill-color-blank:    var(--surface-default);
+
+  --el-text-color-primary:   var(--text-primary);
+  --el-text-color-regular:   var(--text-primary);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-text-color-placeholder: var(--text-tertiary);
+  --el-text-color-disabled:  var(--text-disabled);
+
+  --el-border-color:         var(--border-default);
+  --el-border-color-light:   var(--border-subtle);
+  --el-border-color-lighter: var(--border-subtle);
+  --el-border-color-dark:    var(--border-strong);
+
+  --el-color-primary: var(--entity-component);
+  --el-color-success: var(--entity-sa);
+  --el-color-warning: var(--severity-warning);
+  --el-color-danger:  var(--severity-error);
+  --el-color-error:   var(--severity-error);
+  --el-color-info:    var(--severity-advisory);
+
+  --el-border-radius-base:  var(--radius-md);
+  --el-border-radius-small: var(--radius-sm);
+  --el-font-size-base: var(--text-base);
+  --el-font-family: var(--font-ui);
+  --el-transition-duration: var(--motion-fast);
+
+  --el-box-shadow-light: var(--shadow-1);
+  --el-box-shadow:       var(--shadow-2);
+}
+
+/* Element Plus 在 --el-color-primary 底上一律放白字。我们的主色是浅蓝 #4ea8ff，
+   白字只有 2.51:1 —— token 体系里本来就有 --text-inverse 专门应对浅色底。
+   （由 tools/a11y.mjs 抓出，分页器当前页码。）
+
+   不跟它比选择器优先级：按需导入的组件 CSS 总是后加载，同优先级下它赢。
+   改写变量，让它自己的规则取到我们的值。 */
+.el-pagination.is-background,
+.el-button--primary,
+.el-tag--dark { --el-color-white: var(--text-inverse) }
