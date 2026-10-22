@@ -1,0 +1,1364 @@
+# lsp-mcp-server
+
+An MCP (Model Context Protocol) server that bridges Codex, Claude Code, and other MCP clients to Language Server Protocol (LSP) servers, enabling semantic code intelligence capabilities.
+
+## Overview
+
+**lsp-mcp-server** acts as a bridge between MCP clients and language servers, providing powerful code intelligence features:
+
+- **Go to Definition** - Navigate to where symbols are defined
+- **Find References** - Find all usages of a symbol across the workspace
+- **Hover Information** - Get type information and documentation
+- **Code Completion** - Get intelligent code suggestions
+- **Diagnostics** - Access errors, warnings, and hints from the language server
+- **Symbol Search** - Search for symbols in documents or across the workspace
+- **Rename** - Safely rename symbols across the entire codebase
+- **Code Actions** - Apply quick fixes, refactorings, and organize imports
+- **Call Hierarchy** - See who calls a function and what it calls
+- **Type Hierarchy** - Explore class inheritance and interface implementations
+- **Format Document** - Format code using the language server's formatter
+- **Smart Search** - Comprehensive symbol analysis in a single call
+- **File Analysis** - Explore imports, exports, and file relationships
+
+```
+┌─────────────┐      ┌──────────────────┐      ┌───────────────────┐
+│ MCP client  │────▶│  lsp-mcp-server  │────▶│ Language Servers  │
+│ Codex/Claude│◀────│   (this tool)    │◀────│ (TypeScript, etc) │
+└─────────────┘      └──────────────────┘      └───────────────────┘
+      stdio              stdio/JSON-RPC            stdio
+```
+
+## Features
+
+- **29 MCP Tools** for comprehensive code intelligence
+- **10 Languages Supported** out of the box:
+  - TypeScript / JavaScript
+  - Python
+  - Rust
+  - Go
+  - C / C++
+  - Ruby
+  - PHP
+  - Elixir
+  - Kotlin
+  - Java
+- **Multi-root Workspace** - Proper monorepo support with per-workspace server instances
+- **Push-based Diagnostics** - Real-time error/warning caching from language servers
+- **Human-friendly Positions** - All line/column numbers are 1-indexed
+- **Safe Rename** - Preview changes before applying with dry-run mode
+- **Automatic Server Management** - Servers start on-demand and restart on crash
+- **Configurable** - Customize language servers, timeouts, and more
+- **Security Features** - File size limits, workspace boundary validation, absolute path enforcement
+
+## Installation
+
+### Prerequisites
+
+- **Node.js** 18.0.0 or higher
+- **Language servers** for the languages you want to use:
+
+```bash
+# TypeScript/JavaScript (TypeScript 6 and older)
+npm install -g typescript-language-server typescript
+# TypeScript 7 and newer need nothing extra: the language server built into
+# the project's typescript package is used automatically
+
+# Python
+pip install python-lsp-server
+
+# Rust
+rustup component add rust-analyzer
+
+# Go
+go install golang.org/x/tools/gopls@latest
+
+# C/C++
+# Ubuntu/Debian:
+sudo apt install clangd
+# macOS:
+brew install llvm
+
+# Ruby
+gem install solargraph
+
+# PHP
+npm install -g intelephense
+
+# Elixir
+mix escript.install hex elixir_ls
+# Or download pre-built releases from:
+# https://github.com/elixir-lsp/elixir-ls/releases
+
+# Kotlin: JetBrains kotlin-lsp (bundles its own Java runtime)
+# macOS:
+brew install JetBrains/utils/kotlin-lsp
+# Linux/Windows: download the .vsix for your platform from
+# https://github.com/Kotlin/kotlin-lsp/releases
+# then unzip it and link extension/server/kotlin-lsp.sh as 'kotlin-lsp'
+#
+# Alternative: fwcd/kotlin-language-server does not start on JDK 25.
+# Run it on JDK 21, see "Running a Server on a Specific JDK" below.
+
+# Java (requires Java 20+, Maven, npm, protobuf)
+git clone https://github.com/idelice/jls
+cd jls && ./scripts/build.sh
+# Add dist/ to PATH or symlink dist/lang_server_linux.sh as 'jls'
+```
+
+### Install lsp-mcp-server
+
+**From npm:**
+
+```bash
+npm install -g lsp-mcp-server
+```
+
+This puts an `lsp-mcp-server` command on your PATH. You can also skip the install and run it with `npx -y lsp-mcp-server`.
+
+**From source:**
+
+```bash
+# Clone the repository
+git clone https://github.com/ProfessioneIT/lsp-mcp-server.git
+cd lsp-mcp-server
+
+# Install dependencies (the prepare script also builds dist/)
+npm install
+
+# Rebuild after local changes
+npm run build
+
+# Verify installation: logs "LSP-MCP server running on stdio" to stderr, Ctrl+C to stop
+node dist/index.js
+```
+
+### Global Installation from Source (Optional)
+
+```bash
+# Link globally for easy access
+npm link
+
+# Now you can run from anywhere
+lsp-mcp-server
+```
+
+## Configuration with Codex
+
+Codex CLI and the IDE extension can use this server directly over stdio. Install the language servers you need using the prerequisites above. No OpenAI API key or client-specific server mode is required by lsp-mcp-server.
+
+### Register the server
+
+When developing from this checkout, build and register the local executable:
+
+```bash
+npm run build
+codex mcp add lsp -- node "$(pwd)/dist/index.js"
+codex mcp get lsp
+```
+
+After a global npm installation, use `codex mcp add lsp -- lsp-mcp-server`. To run the published npm version without installing globally, use `codex mcp add lsp -- npx -y lsp-mcp-server`. Use the local executable when testing unpublished changes.
+
+Restart Codex or reload the IDE extension, then use `/mcp` to check the connection. Ask Codex to run `lsp_server_status` or query a source file with `lsp_hover`. File tools auto-start the appropriate language server by default; a status call is only needed for troubleshooting.
+
+### TOML configuration
+
+Alternatively, add the following to `~/.codex/config.toml`, or to `.codex/config.toml` in a trusted project. Replace the absolute paths with your checkout and target project:
+
+```toml
+[mcp_servers.lsp]
+command = "node"
+args = ["/absolute/path/to/lsp-mcp-server/dist/index.js"]
+cwd = "/absolute/path/to/your/project"
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+
+[mcp_servers.lsp.env]
+LSP_LOG_LEVEL = "info"
+```
+
+`cwd` selects the directory where `.lsp-mcp.json` is loaded. Language-server workspace roots are still detected from each source file. Keep custom language-server settings in `.lsp-mcp.json`; Codex's TOML config controls the MCP connection. The longer tool timeout accommodates language-server startup and initial project analysis. Ensure the language-server executables are available on Codex's `PATH`.
+
+See the [official Codex MCP documentation](https://developers.openai.com/codex/mcp/) for configuration details.
+
+### Optional Codex skill
+
+From this checkout, install the accompanying usage guide at the user level:
+
+```bash
+mkdir -p ~/.agents/skills/lsp-mcp-server
+cp SKILL.md ~/.agents/skills/lsp-mcp-server/SKILL.md
+```
+
+For one project, copy it into that project's `.agents/skills/lsp-mcp-server/SKILL.md` instead. The npm package also includes `SKILL.md`. Invoke it in Codex with `$lsp-mcp-server`; the MCP connection must already be configured. See the [official skills documentation](https://developers.openai.com/codex/skills/).
+
+For persistent project guidance, add these instructions to the target project's `AGENTS.md`:
+
+```markdown
+Prefer the connected LSP MCP tools for definitions, references, types, and diagnostics.
+Use absolute file paths and 1-indexed line/column positions. File tools auto-start
+language servers. Preview rename, formatting, and code actions before applying edits.
+After editing, query lsp_diagnostics; also run the project's build and tests.
+```
+
+## Configuration with Claude Code
+
+### 1. Add to Claude Code MCP Settings
+
+Create or edit the `.mcp.json` file in your home directory:
+
+**Location:** `~/.mcp.json` (user-level) or `.mcp.json` in your project root (project-level)
+
+```json
+{
+  "mcpServers": {
+    "lsp": {
+      "command": "node",
+      "args": ["/absolute/path/to/lsp-mcp-server/dist/index.js"],
+      "env": {
+        "LSP_LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+```
+
+**Or if installed globally with `npm install -g` or `npm link`:**
+
+```json
+{
+  "mcpServers": {
+    "lsp": {
+      "command": "lsp-mcp-server"
+    }
+  }
+}
+```
+
+**Or run the published package through npx without installing:**
+
+```json
+{
+  "mcpServers": {
+    "lsp": {
+      "command": "npx",
+      "args": ["-y", "lsp-mcp-server"]
+    }
+  }
+}
+```
+
+### 2. Restart Claude Code
+
+After updating the configuration, restart Claude Code to load the new MCP server.
+
+### 3. Verify Installation
+
+In Claude Code, ask:
+
+> "Use lsp_server_status to check available language servers"
+
+You should see a response showing the server is running.
+
+### 4. Enforce LSP Tool Usage (Recommended)
+
+To make Claude Code consistently prefer LSP tools over alternatives like `Grep` and `Glob` for code navigation, add instructions to your global `~/.claude/CLAUDE.md` file:
+
+````markdown
+## LSP Server - REQUIRED FIRST STEP
+
+**BEFORE any code analysis, navigation, or codebase exploration, you MUST:**
+
+1. Run `lsp_server_status` to check running servers
+2. If the relevant language server is NOT running → run `lsp_start_server` immediately
+3. ONLY AFTER the LSP server is running, proceed with analysis
+
+This is a hard requirement, not a preference. Do NOT skip this step.
+
+## LSP Tool Requirements
+
+When LSP MCP tools are available, you MUST use them instead of alternatives:
+
+| Task | REQUIRED Tool | FORBIDDEN Alternatives |
+|------|---------------|----------------------|
+| Find where X is defined | `lsp_goto_definition` | Grep, Read, Glob |
+| Find where X is used | `lsp_find_references` | Grep |
+| Find symbol by name | `lsp_workspace_symbols` or `lsp_find_symbol` | Glob, Grep |
+| Understand file structure | `lsp_document_symbols` | Read entire file |
+| Get type information | `lsp_hover` | Reading source code |
+| Find implementations | `lsp_find_implementations` | Grep |
+| Understand module API | `lsp_file_exports` | Read entire file |
+| Check for errors | `lsp_diagnostics` | Running compiler manually |
+| See file dependencies | `lsp_file_imports` or `lsp_related_files` | Grep for imports |
+
+## Prohibited Patterns
+
+When LSP is available, NEVER do these:
+
+- NEVER use `Grep` to find function/class/symbol definitions
+- NEVER use `Grep` to find where a symbol is referenced
+- NEVER use `Glob` to find files containing a symbol name
+- NEVER use `Read` to scan through a file looking for definitions
+- NEVER use `Bash` with grep/rg/find for code navigation
+
+These tools are still appropriate for:
+- Searching for text/strings (not code symbols)
+- Reading configuration files
+- Reading documentation files
+- File operations unrelated to code navigation
+
+## LSP Tool Quick Reference
+
+```
+lsp_server_status          # Check what's running
+lsp_start_server           # Start a language server
+lsp_stop_server            # Stop a language server
+lsp_goto_definition        # Jump to where symbol is defined
+lsp_goto_type_definition   # Jump to type definition
+lsp_find_references        # Find all usages of a symbol
+lsp_find_implementations   # Find concrete implementations
+lsp_workspace_symbols      # Search symbols across project
+lsp_document_symbols       # Get outline of a file
+lsp_document_highlights    # Every occurrence in this file (read/write classified)
+lsp_hover                  # Get type/docs for symbol
+lsp_signature_help         # Get function parameter hints
+lsp_inlay_hints            # Inferred types + parameter names over a range
+lsp_completions            # Get code completions
+lsp_diagnostics            # Get errors/warnings for a file
+lsp_workspace_diagnostics  # Get errors/warnings across opened files
+lsp_index_files            # Warm up: batch-open files for workspace diagnostics
+lsp_file_exports           # Get public API of a module
+lsp_file_imports           # Get imports/dependencies of a file (regex, JS/TS)
+lsp_related_files          # Find connected files (imports/imported by)
+lsp_folding_ranges         # Foldable regions (functions, blocks, imports)
+lsp_selection_range        # Semantic enclosing ranges (stmt/block/fn)
+lsp_rename                 # Rename symbol across codebase
+lsp_code_actions           # Get/apply quick fixes and refactorings
+lsp_call_hierarchy         # See callers and callees
+lsp_type_hierarchy         # See type inheritance
+lsp_format_document        # Format code
+lsp_smart_search           # Combined: definition + refs + hover
+lsp_find_symbol            # Find symbol by name (optionally scoped to a file)
+```
+````
+
+This ensures Claude Code will:
+- Always start the LSP server before analyzing code
+- Use semantic LSP tools instead of text-based search for code navigation
+- Fall back to Grep/Glob only for non-code searches (strings, config files, docs)
+
+### 5. Install the LLM Usage Skill (Recommended)
+
+This repository ships a [`SKILL.md`](./SKILL.md) — a self-contained, LLM-facing guide that teaches an assistant how to choose between the 29 `lsp_*` tools, what their gotchas are, and what canonical workflows look like. It works with Codex and Claude Code; see [Configuration with Codex](#configuration-with-codex) for Codex installation. Installing it as a skill lets the model load that guidance on demand instead of needing it pasted into every prompt.
+
+**Why install it in addition to the CLAUDE.md snippet above?**
+The CLAUDE.md snippet enforces *that* LSP tools are used. `SKILL.md` teaches *how* to use them well — decision tree, workflows, gotchas, output shapes, error codes. The two complement each other.
+
+#### Claude Code
+
+Install at the user level (available in every project):
+
+```bash
+mkdir -p ~/.claude/skills/lsp-mcp-server
+cp SKILL.md ~/.claude/skills/lsp-mcp-server/SKILL.md
+```
+
+Or at the project level (committed to a specific repo, available only inside it):
+
+```bash
+mkdir -p .claude/skills/lsp-mcp-server
+cp /path/to/lsp-mcp-server/SKILL.md .claude/skills/lsp-mcp-server/SKILL.md
+```
+
+Restart Claude Code (or start a new session). The skill is auto-discovered from its YAML frontmatter (`name: lsp-mcp-server`). Claude will invoke it via the `Skill` tool whenever code navigation, refactoring, or diagnostics are relevant.
+
+To verify, ask Claude Code:
+
+> "What skills do you have available for LSP?"
+
+You should see `lsp-mcp-server` listed.
+
+#### Other Claude / Anthropic SDK integrations
+
+`SKILL.md` is plain Markdown with YAML frontmatter, so it works anywhere you can ship a Markdown document:
+
+- **Anthropic API / Claude Agent SDK** — load it via the [Skills feature](https://docs.anthropic.com/) or include it in your system prompt.
+- **Custom agents** — copy the content into your agent's system prompt or knowledge base.
+- **Other LLM CLIs (Gemini CLI, Copilot CLI, etc.)** — drop it into whichever skill / instruction directory the client supports, or include it as reference context.
+
+The file is intentionally self-contained: no external links to follow, no other files to install. One Markdown document is the whole skill.
+
+#### Keeping it up to date
+
+If you upgrade `lsp-mcp-server` (new tools, new behaviors), re-copy `SKILL.md` from the new version. A future release may break with a stale skill if, for example, a tool signature changes — pinning the skill to the server version you run is the simplest way to stay aligned.
+
+## Available Tools
+
+### Navigation Tools
+
+#### `lsp_goto_definition`
+Navigate to the definition of a symbol.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - definitions: Array of locations with path, line, column, and context
+```
+
+**Example prompt:** "Go to the definition of the function at line 42, column 10 in /project/src/utils.ts"
+
+#### `lsp_goto_type_definition`
+Navigate to the type definition of a symbol (useful for finding the interface/class that defines a variable's type).
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - definitions: Array of type definition locations
+```
+
+**Example prompt:** "Find the type definition for the variable at line 15, column 5 in /project/src/app.ts"
+
+### Reference Tools
+
+#### `lsp_find_references`
+Find all references to a symbol across the workspace.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - include_declaration: Whether to include the declaration (default: true)
+  - limit: Maximum results (default: 100, max: 500)
+  - offset: Skip results for pagination (default: 0)
+
+Output:
+  - references: Array of locations
+  - total_count: Total number of references found
+  - has_more: Whether there are more results
+```
+
+**Example prompt:** "Find all references to the 'UserService' class in /project/src/services/user.ts at line 5"
+
+#### `lsp_find_implementations`
+Find all implementations of an interface or abstract method.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - limit: Maximum results (default: 50, max: 100)
+
+Output:
+  - implementations: Array of implementation locations
+  - total_count: Total implementations found
+  - has_more: Whether there are more results
+```
+
+**Example prompt:** "Find all implementations of the interface at line 10 in /project/src/types.ts"
+
+#### `lsp_document_highlights`
+Find every occurrence of the symbol at a position within the same file, classified as read, write or plain text. Cheaper than `lsp_find_references` when you only care about one file.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - highlights: Array of occurrences with range, kind ('text', 'read', or 'write'), and context
+```
+
+**Example prompt:** "Where is the variable at line 12 in /project/src/cart.ts written to within that file?"
+
+### Information Tools
+
+#### `lsp_hover`
+Get hover information (type info, documentation) for a symbol.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - contents: Markdown-formatted type information and documentation
+  - range: The range of the hovered symbol (optional)
+```
+
+**Example prompt:** "What is the type of the variable at line 25, column 8 in /project/src/main.ts?"
+
+#### `lsp_signature_help`
+Get function/method signature information when inside a call expression.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - signatures: Array of function signatures with parameters
+  - active_signature: Index of the active signature
+  - active_parameter: Index of the active parameter
+```
+
+**Example prompt:** "What are the parameters for the function call at line 30 in /project/src/api.ts?"
+
+#### `lsp_inlay_hints`
+Get the inferred types and parameter names the language server would show inline over a range. Keep the range small, such as one function.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - start_line: Start line (1-indexed)
+  - start_column: Start column (1-indexed)
+  - end_line: End line (1-indexed)
+  - end_column: End column (1-indexed)
+  - limit: Maximum hints (default: 100, max: 500)
+
+Output:
+  - hints: Array of hints with line, column, label, kind ('type' or 'parameter'), and optional tooltip and padding flags
+  - range: The range that was queried
+```
+
+**Example prompt:** "Show the inferred types inside the function between lines 40 and 60 in /project/src/parser.ts"
+
+### Symbol Tools
+
+#### `lsp_document_symbols`
+Get all symbols (functions, classes, variables, etc.) defined in a document.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+
+Output:
+  - symbols: Hierarchical array of symbols with name, kind, range, and children
+```
+
+**Example prompt:** "List all symbols in /project/src/components/Button.tsx"
+
+#### `lsp_workspace_symbols`
+Search for symbols across the entire workspace by name.
+
+```
+Input:
+  - query: Search query (supports fuzzy matching)
+  - kinds: Filter by symbol kinds (optional): Class, Function, Interface, Variable, etc.
+  - limit: Maximum results (default: 50, max: 100)
+
+Output:
+  - symbols: Array of matching symbols with path and location
+  - total_count: Total matches found
+  - has_more: Whether there are more results
+```
+
+**Example prompt:** "Search for all classes containing 'Service' in the workspace"
+
+#### `lsp_find_symbol`
+Find a symbol by name and get comprehensive information about it - no file path needed.
+
+```
+Input:
+  - name: Symbol name to search for (supports fuzzy matching)
+  - kind: Filter to specific symbol kind (optional): Class, Function, Interface, etc.
+  - include: Array of what to include: 'hover', 'definition', 'references', 'implementations', 'incoming_calls', 'outgoing_calls' (default: ['hover', 'definition', 'references'])
+  - references_limit: Maximum references to return (default: 20)
+
+Output:
+  - query: The symbol that was searched for
+  - match: The best matching symbol found
+  - matches_found: Number of total matches
+  - definition: Where the symbol is defined
+  - hover: Type information and documentation
+  - references: All usages of the symbol
+  - implementations: Implementations (for interfaces)
+  - incoming_calls: Functions that call this
+  - outgoing_calls: Functions this calls
+```
+
+**Example prompt:** "Find the UserService class and show me all its references"
+
+### Structure Tools
+
+#### `lsp_selection_range`
+Get the chain of semantic ranges enclosing a position: the expression, then its statement, then its block, up to the whole file. Useful for choosing the right range to pass to `lsp_code_actions`.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+
+Output:
+  - ranges: Innermost-to-outermost array of ranges, each with range and context (first line of the range)
+```
+
+**Example prompt:** "What are the enclosing statement and block of the expression at line 25, column 18 in /project/src/app.ts?"
+
+#### `lsp_folding_ranges`
+Get the foldable regions of a file, such as functions, classes, blocks, imports and comments. Useful as a quick structural overview before reading specific sections.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - kind_filter: 'all', 'comment', 'imports', or 'region' (default: 'all')
+
+Output:
+  - ranges: Array of regions with start_line, end_line, and optional start_column, end_column, kind, and collapsed_text
+```
+
+**Example prompt:** "Show me the foldable regions of /project/src/server.ts"
+
+### File Analysis Tools
+
+#### `lsp_file_exports`
+Get the public API surface of a file - all exported functions, classes, interfaces, and variables.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - include_signatures: Include type signatures from hover (default: true, slower but more informative)
+
+Output:
+  - file: The file path
+  - exports: Array of exported items with name, kind, line, column, and signature
+  - note: Additional information
+```
+
+**Example prompt:** "What does /project/src/utils/index.ts export?"
+
+#### `lsp_file_imports`
+Get all imports and dependencies of a file.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+
+Output:
+  - file: The file path
+  - imports: Array of imports with module, line, symbols, is_type_only, is_dynamic
+  - note: Additional information
+```
+
+**Example prompt:** "What modules does /project/src/api/client.ts import?"
+
+#### `lsp_related_files`
+Find files connected to a given file - what it imports and what imports it.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - relationship: Which relationships to include: 'imports', 'imported_by', or 'all' (default: 'all')
+
+Output:
+  - file: The file path
+  - imports: Array of files this file imports
+  - imported_by: Array of files that import this file
+  - note: Additional information
+```
+
+**Example prompt:** "What files depend on /project/src/services/auth.ts?"
+
+### Diagnostic Tools
+
+#### `lsp_diagnostics`
+Get cached diagnostics (errors, warnings) for a file.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - severity_filter: Filter by severity - 'all', 'error', 'warning', 'info', 'hint' (default: 'all')
+
+Output:
+  - diagnostics: Array of diagnostics with range, severity, message, and code
+  - summary: Count of errors, warnings, info, and hints
+  - note: Information about diagnostic caching
+```
+
+**Example prompt:** "Show me all errors in /project/src/index.ts"
+
+#### `lsp_workspace_diagnostics`
+Get diagnostics across all open files in the workspace.
+
+```
+Input:
+  - severity_filter: Filter by severity - 'all', 'error', 'warning', 'info', 'hint' (default: 'all')
+  - limit: Maximum diagnostics to return (default: 50, max: 200)
+  - group_by: How to group results - 'file' or 'severity' (default: 'file')
+
+Output:
+  - items: Array of diagnostics with file, line, column, severity, message, and context
+  - total_count: Total diagnostics found
+  - returned_count: Number returned (may be limited)
+  - files_affected: Number of files with diagnostics
+  - summary: Count of errors, warnings, info, and hints
+  - note: Information about diagnostic caching
+```
+
+**Example prompt:** "Show me all errors across the entire project"
+
+#### `lsp_index_files`
+Open a batch of files so their language servers start publishing diagnostics. Run it before `lsp_workspace_diagnostics`, which only sees opened files, and before `lsp_related_files` with `imported_by`. Pass a targeted set rather than the whole workspace.
+
+```
+Input:
+  - files: Array of absolute file paths (1 to 200)
+
+Output:
+  - opened: Files that were opened
+  - failed: Files that could not be opened, each with file and error
+  - opened_count: Number of files opened
+  - failed_count: Number of failures
+```
+
+**Example prompt:** "Index every file under /project/src/services, then show me all workspace errors"
+
+### Completion Tools
+
+#### `lsp_completions`
+Get code completion suggestions at a position.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - limit: Maximum suggestions (default: 20, max: 50)
+
+Output:
+  - completions: Array of completion items with label, kind, detail, and documentation
+  - is_incomplete: Whether the list is incomplete
+```
+
+**Example prompt:** "What completions are available at line 15, column 10 in /project/src/app.ts?"
+
+### Refactoring Tools
+
+#### `lsp_rename`
+Rename a symbol across the workspace.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - new_name: The new name for the symbol
+  - dry_run: Preview changes without applying (default: true)
+
+Output:
+  - changes: Map of file paths to arrays of edits
+  - files_affected: Number of files that would be modified
+  - edits_count: Total number of edits
+  - applied: Whether changes were applied
+  - original_name: The original symbol name (if available)
+```
+
+**Example prompt:** "Rename the function 'getUserData' to 'fetchUserData' at line 20 in /project/src/api.ts (dry run first)"
+
+#### `lsp_code_actions`
+Get available code actions (refactorings, quick fixes) at a position or range, and optionally apply them.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - start_line: Start line number (1-indexed)
+  - start_column: Start column number (1-indexed)
+  - end_line: End line number (optional, defaults to start line)
+  - end_column: End column number (optional, defaults to start column)
+  - kinds: Filter by action kinds (optional): quickfix, refactor, refactor.extract, refactor.inline, source.organizeImports, etc.
+  - apply: If true, apply the action at action_index (default: false)
+  - action_index: Index of action to apply when apply=true (default: 0)
+
+Output:
+  - actions: Array of available code actions with title, kind, and edits
+  - total_count: Number of available actions
+  - applied: The action that was applied (if apply=true and successful)
+```
+
+**Example prompt:** "What refactoring options are available for the function at line 50 in /project/src/utils.ts?"
+
+**Example prompt:** "Apply the first quick fix for the error at line 15 in /project/src/api.ts"
+
+#### `lsp_format_document`
+Format a document using the language server's formatting capabilities.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - tab_size: Spaces per tab (default: 2)
+  - insert_spaces: Use spaces instead of tabs (default: true)
+  - apply: Apply formatting to file (default: false)
+
+Output:
+  - edits: Array of formatting edits with range and new_text
+  - edits_count: Number of edits
+  - applied: Whether edits were applied
+```
+
+**Example prompt:** "Format /project/src/messy-file.ts using the language server"
+
+### Hierarchy Tools
+
+#### `lsp_call_hierarchy`
+Get the call hierarchy for a function - who calls it and what it calls.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - direction: 'incoming' (callers), 'outgoing' (callees), or 'both' (default: 'both')
+
+Output:
+  - item: The call hierarchy item at the position
+  - incoming_calls: Array of functions that call this function
+  - outgoing_calls: Array of functions this function calls
+```
+
+**Example prompt:** "Show me all functions that call handleRequest at line 100 in /project/src/server.ts"
+
+#### `lsp_type_hierarchy`
+Get the type hierarchy for a class or interface - supertypes and subtypes. Not every language server supports it; the TypeScript servers, for example, do not.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - direction: 'supertypes' (parents), 'subtypes' (children), or 'both' (default: 'both')
+
+Output:
+  - item: The type hierarchy item at the position
+  - supertypes: Array of parent types/interfaces
+  - subtypes: Array of child types/implementations
+```
+
+**Example prompt:** "What classes implement the Repository interface at line 5 in /project/src/types.ts?"
+
+### Combined Tools
+
+#### `lsp_smart_search`
+Comprehensive symbol search combining multiple LSP operations in one call.
+
+```
+Input:
+  - file_path: Absolute path to the source file
+  - line: Line number (1-indexed)
+  - column: Column number (1-indexed)
+  - include: Array of what to include: 'hover', 'definition', 'references', 'implementations', 'incoming_calls', 'outgoing_calls' (default: ['hover', 'definition', 'references'])
+  - references_limit: Maximum references to return (default: 20)
+
+Output:
+  - symbol_name: Name of the symbol
+  - hover: Type information and documentation
+  - definition: Where the symbol is defined
+  - references: All usages of the symbol
+  - implementations: Implementations (for interfaces)
+  - incoming_calls: Functions that call this
+  - outgoing_calls: Functions this calls
+```
+
+**Example prompt:** "Give me a complete analysis of the processData function at line 75 in /project/src/processor.ts - definition, all references, and what calls it"
+
+### Server Management Tools
+
+#### `lsp_server_status`
+Get status of running language servers.
+
+```
+Input:
+  - server_id: Specific server to check (optional, omit for all servers)
+
+Output:
+  - servers: Array of server status objects with id, status, capabilities, uptime, etc.
+```
+
+**Example prompt:** "Show the status of all language servers"
+
+#### `lsp_start_server`
+Manually start a language server for a specific workspace.
+
+```
+Input:
+  - server_id: Server ID from configuration (e.g., 'typescript', 'python')
+  - workspace_root: Absolute path to the workspace/project root
+
+Output:
+  - status: 'started'
+  - server_id: The server that was started
+  - workspace_root: The workspace root
+  - capabilities: List of supported capabilities
+```
+
+**Example prompt:** "Start the TypeScript language server for /home/user/my-project"
+
+#### `lsp_stop_server`
+Stop a running language server.
+
+```
+Input:
+  - server_id: Server ID to stop
+  - workspace_root: Workspace root (optional, omit to stop all instances)
+
+Output:
+  - status: 'stopped'
+  - server_id: The server that was stopped
+  - was_running: Whether the server was actually running
+```
+
+**Example prompt:** "Stop the Python language server"
+
+## Supported Languages
+
+The following languages are supported out of the box:
+
+| Language | Server | Command | File Extensions | Root Patterns |
+|----------|--------|---------|-----------------|---------------|
+| **TypeScript/JavaScript** | typescript-language-server, or the TypeScript 7 native server | `typescript-language-server --stdio`, or `tsc --lsp --stdio` | `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs` | `tsconfig.json`, `jsconfig.json`, `package.json` |
+| **Python** | pylsp | `pylsp` | `.py`, `.pyi` | `pyproject.toml`, `setup.py`, `setup.cfg`, `requirements.txt`, `Pipfile` |
+| **Rust** | rust-analyzer | `rust-analyzer` | `.rs` | `Cargo.toml` |
+| **Go** | gopls | `gopls serve` | `.go` | `go.mod`, `go.work` |
+| **C/C++** | clangd | `clangd --background-index` | `.c`, `.h`, `.cpp`, `.hpp`, `.cc`, `.hh`, `.cxx`, `.hxx`, `.c++`, `.h++` | `compile_commands.json`, `compile_flags.txt`, `.clangd`, `CMakeLists.txt`, `Makefile` |
+| **Ruby** | solargraph | `solargraph stdio` | `.rb`, `.rake`, `.gemspec` | `Gemfile`, `.ruby-version`, `Rakefile` |
+| **PHP** | intelephense | `intelephense --stdio` | `.php`, `.phtml`, `.php3`, `.php4`, `.php5`, `.phps` | `composer.json`, `index.php`, `.php-version` |
+| **Elixir** | elixir-ls | `elixir-ls` | `.ex`, `.exs`, `.heex`, `.leex`, `.sface` | `mix.exs`, `.formatter.exs` |
+| **Kotlin** | kotlin-lsp | `kotlin-lsp --stdio` | `.kt`, `.kts` | `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts` |
+| **Java** | jls | `jls` | `.java` | `pom.xml`, `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts`, `BUILD`, `.classpath` |
+
+**TypeScript 7.** TypeScript 7 no longer ships `tsserver`, which typescript-language-server needs. When a workspace's own `typescript` package is version 7 or newer, lsp-mcp-server starts that package's built-in language server with `tsc --lsp --stdio` instead. The package is looked up from the workspace root upward, so hoisted installs in monorepos are found too. Other workspaces keep using typescript-language-server, and a `typescript` server you define in your configuration always takes precedence. Neither TypeScript server supports `lsp_type_hierarchy`.
+
+You can add additional languages by providing a custom configuration (see [Configuration](#configuration)).
+
+## Configuration
+
+### Configuration File
+
+Create a configuration file at one of these locations (in order of priority):
+
+1. `./.lsp-mcp.json` (current directory)
+2. `./lsp-mcp.json` (current directory)
+3. `~/.config/lsp-mcp/config.json` (XDG config)
+4. `~/.lsp-mcp.json` (home directory)
+
+The first file found is used. `~/.config` follows `$XDG_CONFIG_HOME` when it is set. Servers you define replace the built-in server with the same `id`, and new ids are added alongside the built-ins.
+
+**Example configuration:**
+
+```json
+{
+  "servers": [
+    {
+      "id": "typescript",
+      "extensions": [".ts", ".tsx", ".js", ".jsx"],
+      "languageIds": ["typescript", "typescriptreact", "javascript", "javascriptreact"],
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "rootPatterns": ["tsconfig.json", "package.json"]
+    },
+    {
+      "id": "python",
+      "extensions": [".py"],
+      "languageIds": ["python"],
+      "command": "pylsp",
+      "args": [],
+      "rootPatterns": ["pyproject.toml", "setup.py", "requirements.txt"],
+      "workspaceConfigurations": {
+        "/absolute/path/to/project": {
+          "python": {
+            "pythonPath": "/absolute/path/to/project-runtime/bin/python"
+          }
+        }
+      }
+    }
+  ],
+  "requestTimeout": 30000,
+  "autoStart": true,
+  "logLevel": "info",
+  "idleTimeout": 1800000
+}
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `servers` | array | Built-in defaults | Language server configurations |
+| `requestTimeout` | number | 30000 | Request timeout in milliseconds |
+| `autoStart` | boolean | true | Auto-start servers on first request |
+| `logLevel` | string | "info" | Log level: debug, info, warn, error |
+| `idleTimeout` | number | 1800000 | Idle timeout before stopping servers (30 min) |
+| `minify` | string | omitted (disabled) | `"default"`: strip whitespace. `"full"`: strip whitespace and omit `null` properties. Any other value disables. |
+
+### minify
+
+Omitted or any value other than `"default"` / `"full"` leaves tool JSON pretty-printed.
+
+**Disabled** (omitted) — 181 tokens (`cl100k_base`):
+
+```json
+{
+  "references": [
+    {
+      "path": "/home/david/projects/app/src/tools/utils.ts",
+      "line": 79,
+      "column": 23,
+      "end_line": 79,
+      "end_column": 40,
+      "context": "export async function locationToResult(",
+      "symbol_name": "locationToResult",
+      "range": null
+    },
+    {
+      "path": "/home/david/projects/app/src/tools/references.ts",
+      "line": 55,
+      "column": 18,
+      "end_line": 55,
+      "end_column": 35,
+      "context": "result.map(loc => locationToResult(loc))"
+    }
+  ],
+  "total_count": 2,
+  "returned_count": 2,
+  "offset": 0,
+  "has_more": false
+}
+```
+
+**`"minify": "default"`** (whitespace only) — 116 tokens, **65 tokens saved (36%)** (`cl100k_base`). `"range": null` is kept:
+
+```json
+{"references":[{"path":"/home/david/projects/app/src/tools/utils.ts","line":79,"column":23,"end_line":79,"end_column":40,"context":"export async function locationToResult(","symbol_name":"locationToResult","range":null},{"path":"/home/david/projects/app/src/tools/references.ts","line":55,"column":18,"end_line":55,"end_column":35,"context":"result.map(loc => locationToResult(loc))"}],"total_count":2,"returned_count":2,"offset":0,"has_more":false}
+```
+
+**`"minify": "full"`** also omits `null` properties (`"range": null` disappears), 112 tokens, **69 tokens saved (38%)**.
+
+### Server Configuration
+
+Each server in the `servers` array has:
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier for the server |
+| `extensions` | string[] | Yes | File extensions this server handles |
+| `languageIds` | string[] | Yes | LSP language identifiers |
+| `command` | string | Yes | Command to start the server |
+| `args` | string[] | Yes | Command arguments |
+| `env` | object | No | Environment variables |
+| `initializationOptions` | object | No | LSP initialization options |
+| `workspaceConfigurations` | object | No | LSP settings keyed by exact, absolute workspace root |
+| `rootPatterns` | string[] | No | Files/dirs that indicate project root, highest priority first |
+
+`workspaceConfigurations` enables the standard LSP pull model. When a server
+is started for an exact configured root, the client advertises
+`workspace.configuration` and answers `workspace/configuration` requests.
+Scoped requests for files outside that root return `null`. Literal setting keys
+take precedence over dotted traversal, so both `"language.analysis"` and
+nested `"language": { "analysis": ... }` layouts are supported.
+
+Root keys must be absolute and must not resolve to the same canonical path.
+They may be provisioned after configuration is loaded; a missing or stale root
+therefore does not invalidate the language-server definition. Until an exact
+normalized root matches, the client starts without advertising configuration
+support for that process. If separately configured roots later converge on one
+canonical path, the match is treated as ambiguous and no settings are exposed.
+Scoped configuration accepts only undecorated local `file:` URIs and resolves
+symlink ancestors before checking containment, including when the leaf does not
+yet exist.
+
+The repository also provides an environment-driven acceptance suite for
+verifying two exact roots against a real language server:
+
+```bash
+npm run test:acceptance
+```
+
+Set `BASEDPYRIGHT_COMMAND`, `PYTHON_WITH_PYDANTIC`,
+`PYTHON_WITHOUT_PYDANTIC`, and `LSP_ACCEPTANCE_ROOT` to enable the current
+BasedPyright scenario. Without those variables, the external-runtime test is
+reported as skipped.
+
+Each language server process is started with the detected workspace root as its working directory. Servers that look up project settings from their working directory, such as a `.venv`, `pyproject.toml` or `go.mod`, therefore see the project's files rather than the directory lsp-mcp-server was launched from. A relative `command` path is also resolved against the workspace root.
+
+### Running a Server on a Specific JDK
+
+Some JVM-based servers need an older JDK than your default. For example, [fwcd/kotlin-language-server](https://github.com/fwcd/kotlin-language-server) fails at startup on JDK 25 and works on JDK 21. Its launch script honors `JAVA_HOME`, so you can set it per server:
+
+```json
+{
+  "id": "kotlin",
+  "extensions": [".kt", ".kts"],
+  "languageIds": ["kotlin"],
+  "command": "/path/to/kotlin-language-server/server/build/install/server/bin/kotlin-language-server",
+  "args": [],
+  "env": {
+    "JAVA_HOME": "/path/to/jdk-21"
+  },
+  "rootPatterns": ["build.gradle", "build.gradle.kts", "settings.gradle", "settings.gradle.kts"]
+}
+```
+
+If you manage Java with [mise](https://mise.jdx.dev), launch the server through `mise exec` instead. This also works for launchers that ignore `JAVA_HOME` and run whichever `java` is first on `PATH`, such as jls. Use the absolute path to the mise binary, because servers are started without a shell:
+
+```json
+"command": "/home/you/.local/bin/mise",
+"args": ["exec", "java@temurin-21", "--", "/path/to/kotlin-language-server/server/build/install/server/bin/kotlin-language-server"]
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `LSP_LOG_LEVEL` | Override log level (debug, info, warn, error) |
+| `LSP_REQUEST_TIMEOUT` | Override the request timeout in milliseconds |
+| `LSP_WORKSPACE_ROOT` | Workspace root to use when no server `rootPatterns` match |
+
+Environment variables take precedence over the configuration file. The older names `LSP_MCP_LOG_LEVEL` and `LSP_MCP_REQUEST_TIMEOUT` are still accepted.
+
+Workspace roots are detected per file. The server's `rootPatterns` are tried in order: the nearest parent directory containing the first pattern wins, and the next pattern is only tried if no parent contains it. For example, a `compile_commands.json` at the project root wins over the `CMakeLists.txt` files in each source folder, so one clangd instance serves the whole project. Only if none is found does `LSP_WORKSPACE_ROOT` apply, and after that the outermost directory containing a generic marker such as `.git` or `package.json`.
+
+## Security Features
+
+lsp-mcp-server includes several security measures:
+
+- **Absolute Path Enforcement** - All file paths must be absolute to prevent path traversal attacks
+- **Workspace Boundary Validation** - File modifications (rename, format, code actions) are restricted to within the workspace root
+- **File Size Limits** - Files larger than 10 MB are rejected to prevent memory exhaustion
+- **No Shell Execution** - Language servers are spawned with `shell: false` to prevent command injection
+
+## Usage Examples with Codex or Claude Code
+
+### Basic Navigation
+
+> "I'm looking at /project/src/services/auth.ts. Can you tell me what the `validateToken` function at line 45 does? Use lsp_hover to get its documentation."
+
+> "Go to the definition of `UserRepository` used at line 23, column 15 in /project/src/controllers/user.ts"
+
+### Finding Usages
+
+> "Find all places where the `handleError` function is called in my codebase. It's defined at line 10 in /project/src/utils/error.ts"
+
+> "I want to refactor the `Config` interface. First, find all its implementations using lsp_find_implementations"
+
+### Code Quality
+
+> "Check /project/src/index.ts for any TypeScript errors using lsp_diagnostics"
+
+> "Show me all errors and warnings across the entire project using lsp_workspace_diagnostics"
+
+### Safe Refactoring
+
+> "I want to rename the `getData` function to `fetchData`. It's at line 50 in /project/src/api.ts. First do a dry run to see what would change."
+
+> "The dry run looks good. Now apply the rename by setting dry_run to false."
+
+### Code Exploration
+
+> "List all the symbols in /project/src/models/User.ts to understand its structure"
+
+> "Search the workspace for all classes that contain 'Controller' in their name"
+
+> "Find the UserService class and tell me everything about it - definition, references, and what calls it"
+
+### File Analysis
+
+> "What does /project/src/utils/index.ts export?"
+
+> "What files depend on /project/src/services/auth.ts? Use lsp_related_files"
+
+> "Show me all the imports in /project/src/api/client.ts"
+
+### Completions
+
+> "What methods are available on the object at line 30, column 5 in /project/src/app.ts? Use lsp_completions"
+
+### Code Actions and Refactoring
+
+> "What refactoring options are available for the code selection from line 20 to 35 in /project/src/utils.ts?"
+
+> "Organize imports in /project/src/components/App.tsx using lsp_code_actions with kinds filter for source.organizeImports"
+
+> "Apply the first quick fix for the error at line 15 in /project/src/api.ts"
+
+### Understanding Code Flow
+
+> "Show me the call hierarchy for the processOrder function at line 50 in /project/src/orders.ts - I want to see what calls it"
+
+> "What does the authenticate function call? Use lsp_call_hierarchy with outgoing direction"
+
+> "Show me the type hierarchy for the BaseRepository class - what are its subtypes?"
+
+### Comprehensive Analysis
+
+> "Give me a complete analysis of the UserService class at line 10 in /project/src/services/user.ts - I want definition, all references, implementations, and call hierarchy. Use lsp_smart_search"
+
+### Formatting
+
+> "Format /project/src/unformatted.ts using the language server (preview first, don't apply)"
+
+## Troubleshooting
+
+### Language Server Not Found
+
+**Error:** `Failed to start language server: typescript-language-server`
+
+**Solution:** Install the language server:
+```bash
+npm install -g typescript-language-server typescript
+```
+
+### No Diagnostics Showing
+
+**Issue:** `lsp_diagnostics` returns empty results
+
+**Explanation:** Diagnostics are push-based. The language server sends them when files are opened or changed. `lsp_diagnostics` opens the file if needed, sends the current content if the file changed on disk, and then waits up to 3 seconds for the server to publish diagnostics. Empty results usually mean the server has not analyzed the file yet or reports no problems.
+
+**Solution:**
+1. Call `lsp_diagnostics` again after a few seconds; large projects can take longer to analyze on first open
+2. Check with `lsp_server_status` that the server is running for this file's workspace
+3. Some servers only report certain problems on save or build (e.g. rust-analyzer runs `cargo check`), which can take longer
+
+### Server Fails to Start
+
+**Issue:** `SERVER_START_FAILED` or `SERVER_TIMEOUT` when a tool first touches a language
+
+**Explanation:** `SERVER_START_FAILED` means the server process exited during startup; lsp-mcp-server retries a few times before reporting it. `SERVER_TIMEOUT` means the server never answered the LSP `initialize` request within `requestTimeout`, which usually means it is not speaking LSP over stdio.
+
+**Solution:**
+1. Run the configured command yourself and check that it starts without errors.
+2. Check that the arguments select stdio mode, e.g. `--stdio` for kotlin-lsp and typescript-language-server.
+3. For JVM-based servers, check the Java version (see [Running a Server on a Specific JDK](#running-a-server-on-a-specific-jdk)).
+
+### Server Crashes Repeatedly
+
+**Issue:** Server keeps crashing and restarting
+
+**Solution:**
+1. Check `LSP_LOG_LEVEL=debug` for detailed logs
+2. Verify the language server is properly installed
+3. Check if the workspace has valid configuration (e.g., tsconfig.json for TypeScript)
+
+### Position Errors
+
+**Issue:** "Invalid position" errors
+
+**Remember:** All positions are 1-indexed (first line is 1, first column is 1), not 0-indexed.
+
+### Path Errors
+
+**Issue:** "File path must be absolute" errors
+
+**Remember:** All file paths must be absolute (e.g., `/home/user/project/src/file.ts`, not `src/file.ts`).
+
+### Timeout Errors
+
+**Issue:** Requests timing out
+
+**Solution:** Increase the timeout:
+```bash
+export LSP_REQUEST_TIMEOUT=60000  # 60 seconds
+```
+
+Or in configuration:
+```json
+{
+  "requestTimeout": 60000
+}
+```
+
+### File Too Large
+
+**Issue:** "File too large" errors
+
+**Explanation:** Files larger than 10 MB are rejected to prevent memory issues.
+
+**Solution:** Work with smaller files or split large files into modules.
+
+## Development
+
+### Building
+
+```bash
+npm run build        # Compile TypeScript
+npm run dev          # Watch mode
+npm run typecheck    # Type-check only
+```
+
+### Testing
+
+```bash
+npm test             # Run unit tests
+npm run test:watch   # Watch mode
+npm run test:integration  # Build, then test the executable over MCP stdio
+```
+
+The integration suite verifies initialization, tool discovery, results and errors, automatic language-server startup, and disk-edit synchronization using local fixture servers. It exercises clients identifying as Codex and Claude Code without requiring either client or an external language-server installation.
+
+### Interactive Testing
+
+Use the MCP Inspector for interactive testing:
+
+```bash
+npx @modelcontextprotocol/inspector node dist/index.js
+```
+
+### Linting
+
+```bash
+npm run lint         # Check for issues
+npm run lint:fix     # Auto-fix issues
+```
+
+## Architecture
+
+### Multi-root Workspace Support
+
+Server instances are keyed by `(serverId, workspaceRoot)` pairs. This means:
+
+- Each workspace gets its own language server instance
+- Monorepos work correctly with multiple tsconfig.json files
+- Server settings are isolated per workspace
+
+### Diagnostics Caching
+
+Most language servers push diagnostics:
+
+1. Language servers send `publishDiagnostics` notifications
+2. lsp-mcp-server caches these in memory
+3. `lsp_diagnostics` and `lsp_workspace_diagnostics` tools read from the cache
+
+This means diagnostics are available immediately after files are opened, without an explicit request.
+
+Some servers also provide diagnostics on request (`textDocument/diagnostic`). The TypeScript 7 native server reports errors only this way. rust-analyzer returns its own diagnostics this way and still pushes `cargo check` results. For such servers, `lsp_diagnostics`, `lsp_workspace_diagnostics`, and `lsp_code_actions` request fresh diagnostics and combine them with the pushed ones.
+
+When a file is deleted or renamed, its cached diagnostics are dropped the next time `lsp_workspace_diagnostics` or `lsp_index_files` runs, or when a tool is called on the old path. The file is also closed in the language server, and servers that registered for `workspace/didDeleteFiles` are notified.
+
+### Automatic Server Lifecycle
+
+- Servers start automatically when needed (if `autoStart: true`)
+- Crashed servers restart with exponential backoff (max 3 attempts in 5 minutes)
+- Idle servers shut down after the configured timeout
+- The first time a file is opened, lsp-mcp-server waits for work the server reports through LSP progress, such as TypeScript loading its project, so cross-file results like references and renames are complete. This adds at least 300 ms to the first call per file and at most 15 seconds.
+
+## Version
+
+See [`package.json`](./package.json) for the current version. The MCP server reports its version dynamically at startup, so it is always in sync with the package.
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please read the contributing guidelines before submitting pull requests.

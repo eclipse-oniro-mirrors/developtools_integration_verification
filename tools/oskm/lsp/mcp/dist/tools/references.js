@@ -1,0 +1,93 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import { prepareFile, locationToResult, toPosition } from './utils.js';
+/**
+ * Handle lsp_find_references tool call.
+ */
+export async function handleFindReferences(input) {
+    const { file_path, line, column, include_declaration, limit, offset } = input;
+    const { client, uri, content } = await prepareFile(file_path);
+    // Convert position
+    const position = toPosition(line, column, content);
+    // Call LSP
+    const result = await client.references(uri, position, include_declaration);
+    if (!result) {
+        return {
+            references: [],
+            total_count: 0,
+            returned_count: 0,
+            offset: 0,
+            has_more: false,
+        };
+    }
+    // Convert all locations
+    const allReferences = await Promise.all(result.map(loc => locationToResult(loc)));
+    // Apply pagination
+    const total = allReferences.length;
+    const paginated = allReferences.slice(offset, offset + limit);
+    return {
+        references: paginated,
+        total_count: total,
+        returned_count: paginated.length,
+        offset,
+        has_more: offset + paginated.length < total,
+    };
+}
+/**
+ * Handle lsp_find_implementations tool call.
+ */
+export async function handleFindImplementations(input) {
+    const { file_path, line, column, limit } = input;
+    const { client, uri, content } = await prepareFile(file_path);
+    // Convert position
+    const position = toPosition(line, column, content);
+    // Call LSP
+    const result = await client.implementation(uri, position);
+    if (!result) {
+        return {
+            implementations: [],
+            total_count: 0,
+            returned_count: 0,
+            has_more: false,
+        };
+    }
+    // Normalize to array
+    const locations = Array.isArray(result) ? result : [result];
+    // Convert all locations
+    const allImplementations = await Promise.all(locations.map(async (loc) => {
+        if ('targetUri' in loc) {
+            // LocationLink
+            const { locationLinkToResult } = await import('./utils.js');
+            return locationLinkToResult(loc);
+        }
+        return locationToResult(loc);
+    }));
+    // Apply limit
+    const limited = allImplementations.slice(0, limit);
+    return {
+        implementations: limited,
+        total_count: allImplementations.length,
+        returned_count: limited.length,
+        has_more: limited.length < allImplementations.length,
+    };
+}
+//# sourceMappingURL=references.js.map
