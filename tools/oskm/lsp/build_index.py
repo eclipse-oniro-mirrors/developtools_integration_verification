@@ -319,9 +319,9 @@ def ensure_cdb(out_dir, root):
 
     The normal path is the compile_commands.json produced by the OHOS build
     itself. When absent (e.g. a build variant that skips it), fall back to
-    `ninja -t compdb cxx cc objc objcxx asm`, which exports the compile
-    edges from build.ninja in under a minute. Covers ~99% of source files;
-    host-toolchain generated sources may be missing from the fallback.
+    ``ninja -t compdb``. If ninja fails due to duplicate build targets
+    (common in OHOS builds — phony stamp aliases), fall back to a custom
+    parser that reads .ninja files directly and extracts compile commands.
     """
     cdb = os.path.join(out_dir, "compile_commands.json")
     if os.path.isfile(cdb):
@@ -342,12 +342,75 @@ def ensure_cdb(out_dir, root):
         rc = subprocess.run(
             [ninja, "-C", out_dir, "-t", "compdb"] + rules,
             stdout=f, stderr=subprocess.DEVNULL).returncode
-    if rc != 0 or not os.path.isfile(tmp) or os.path.getsize(tmp) < 1024:
-        if os.path.isfile(tmp):
-            os.remove(tmp)
-        return None, "generation failed (ninja exit {})".format(rc)
+    if rc == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) >= 1024:
+        os.replace(tmp, cdb)
+        return cdb, "generated via ninja -t compdb"
+    if os.path.isfile(tmp):
+        os.remove(tmp)
+    print("[lsp] ninja -t compdb failed (exit {}), "
+          "falling back to direct .ninja parser".format(rc))
+    entries = _parse_ninja_compile_commands(out_dir, rules)
+    if not entries:
+        return None, "generation failed (ninja error + parser found nothing)"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(entries, f)
+    if os.path.getsize(tmp) < 1024:
+        os.remove(tmp)
+        return None, "parser output too small"
     os.replace(tmp, cdb)
-    return cdb, "generated via ninja -t compdb"
+    return cdb, "generated via direct .ninja parser ({} " \
+           "entries)".format(len(entries))
+
+
+def _parse_ninja_compile_commands(out_dir, rules):
+    """Parse .ninja files directly to extract compile commands.
+
+    Reads build.ninja, toolchain.ninja and all obj/*.ninja subninja files,
+    finds ``build X.o: cxx source.cpp`` edges, and converts each into a
+    compile_commands.json entry. Duplicate outputs are skipped (first wins).
+    """
+    rule_set = set(rules)
+    entries = []
+    seen = set()
+    ninja_files = [os.path.join(out_dir, "build.ninja"),
+                   os.path.join(out_dir, "toolchain.ninja")]
+    ninja_files += glob.glob(os.path.join(out_dir, "obj", "**",
+                                          "*.ninja"), recursive=True)
+    for nf_path in ninja_files:
+        if not os.path.isfile(nf_path):
+            continue
+        try:
+            with open(nf_path, encoding="utf-8",
+                      errors="replace") as f:
+                lines = f.readlines()
+        except OSError:
+            continue
+        for line in lines:
+            stripped = line.strip()
+            m = re.match(r'^build (\S+\.o): (\S+) (.+)$', stripped)
+            if not m or m.group(2) not in rule_set:
+                continue
+            output = m.group(1)
+            if output in seen:
+                continue
+            seen.add(output)
+            rest = m.group(3)
+            rest = re.split(r'\s*\|\|?\s*', rest)[0].strip()
+            src_m = re.search(
+                r'(\S+\.(?:c|cc|cpp|cxx|s|S|m|mm))\s*$', rest)
+            if not src_m:
+                continue
+            src = src_m.group(1)
+            if not src.startswith('/'):
+                src = os.path.normpath(
+                    os.path.join(out_dir, src))
+            entries.append({
+                "directory": out_dir,
+                "file": src,
+                "output": output,
+                "command": stripped,
+            })
+    return entries
 
 
 def main():
