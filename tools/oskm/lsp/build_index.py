@@ -30,7 +30,8 @@ Flow:
   5. ensure a .clangd config exists at the source root (libcxx include path)
   6. stream-partition the compile database; run N clangd instances in
      parallel, all writing shards into one index dir (atomic temp+rename)
-  7. print a summary
+  7. clean up the slice work dirs, keeping the small instance logs
+  8. print a summary
 
 The index lands in <out_dir>/.cache/clangd/index and is fully incremental:
 existing shards whose source files are unchanged are validated and skipped.
@@ -393,6 +394,7 @@ def main():
         print("[lsp] compile_commands.json unavailable: {}".format(cdb_status))
         return 1
     index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
+    os.makedirs(index_dir, exist_ok=True)
     print("[lsp] cdb: {}".format(cdb_status))
 
     clangd_bin = find_clangd(root)
@@ -460,6 +462,7 @@ def main():
     if not kickoffs or not kickoffs[0]:
         print("[lsp] cannot determine a kickoff file from the CDB")
         return 1
+    kickoffs = [k or kickoffs[0] for k in kickoffs]
 
     procs = []
     for i in range(instances):
@@ -495,6 +498,12 @@ def main():
         for p in procs:
             if p.poll() is None:
                 p.terminate()
+
+    if instances > 1:
+        for i in range(instances):
+            shutil.rmtree(os.path.join(work_dir, str(i)), ignore_errors=True)
+        print("[lsp] work slices cleaned (instance logs kept: {})"
+              .format(work_dir))
 
     import glob as _glob
     shards = len(_glob.glob(os.path.join(index_dir, "*.idx")))
