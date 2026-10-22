@@ -86,9 +86,22 @@ def find_clangd(root):
         root, "prebuilts", "clang", "ohos", "*", "llvm", "bin", "clangd"))
     candidates.extend(prebuilt)
     for cand in candidates:
-        if os.path.isfile(cand) and os.access(cand, os.X_OK):
+        if _is_executable_binary(cand):
             return cand
     return None
+
+
+def _is_executable_binary(path):
+    """Check that a path is a real executable binary, not an LFS pointer."""
+    if not os.path.isfile(path) or not os.access(path, os.X_OK):
+        return False
+    try:
+        with open(path, "rb") as f:
+            magic = f.read(4)
+    except OSError:
+        return False
+    # ELF magic: \x7fELF; also allow "#!/usr/bin/env" scripts
+    return magic == b"\x7fELF" or magic.startswith(b"#!")
 
 
 def clangd_version(clangd_bin):
