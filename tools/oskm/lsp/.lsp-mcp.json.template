@@ -1,0 +1,25 @@
+{
+  "_comment": "消费侧 MCP 配置模板。复制到源码树根目录命名为 .lsp-mcp.json，且必须从源码树根目录启动 opencode（相对路径按启动目录解析）。把 out/rk3568 换成实际产品输出目录；clangd 需 >= 20（建议放入 PATH 或改成本机绝对路径）。",
+  "servers": [
+    {
+      "id": "cpp",
+      "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".hh", ".cxx", ".hxx", ".c++", ".h++"],
+      "languageIds": ["c", "cpp"],
+      "command": "clangd",
+      "args": [
+        "--background-index",
+        "--compile-commands-dir=out/rk3568",
+        "-j=32",
+        "--pch-storage=memory",
+        "--limit-references=0",
+        "--limit-results=0"
+      ],
+      "rootPatterns": [".clangd", "compile_commands.json"],
+      "warmup": "base/startup/init/interfaces/innerkits/service_watcher/service_watcher.c"
+    }
+  ],
+  "requestTimeout": 600000,
+  "autoStart": true,
+  "idleTimeout": 28800000,
+  "logLevel": "info"
+}

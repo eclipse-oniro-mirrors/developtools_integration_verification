@@ -1,0 +1,31 @@
+root {
+    module = "hdi_fixture";
+    device_info {
+        match_attr = "hdf_manager";
+        host {
+            hostName = "host";
+            device {
+                node {
+                    serviceName = "example";
+                    moduleName = "libexample.so";
+                    policy = 2;
+                    preload = 0;
+                    priority = 100;
+                    permission = 0664;
+                    deviceMatchAttr = "";
+                    byte = 0xFF;
+                    word = 0xFFFF;
+                    dword = 0xFFFFFFFF;
+                    qword = 0x7FFFFFFFFFFFFFFF;
+                    numbers = [1, 0xFFFF, 0x7FFFFFFFFFFFFFFF];
+                    empty = [];
+                    quoted = "a\"b";
+                    ref = &root.device_info;
+                }
+            }
+        }
+    }
+    other {
+        moduleName = "not_a_service";
+    }
+}

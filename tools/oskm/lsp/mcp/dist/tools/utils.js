@@ -1,0 +1,322 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import * as fs from 'node:fs';
+import { LSPError, LSPErrorCode } from '../types.js';
+import { logger } from '../utils/logger.js';
+import { uriToPath, readFile, pathToUri, ensureAbsolute } from '../utils/uri.js';
+import { fromLspRange, getLineContent, toLspPosition } from '../utils/position.js';
+import { SYMBOL_KIND_NAMES, COMPLETION_KIND_NAMES, DIAGNOSTIC_SEVERITY_NAMES, SERVER_WORK_SETTLE_MS, SERVER_WORK_MAX_WAIT_MS, DIAGNOSTICS_WAIT_MS } from '../constants.js';
+import { getToolContext } from './context.js';
+/**
+ * Prepare a file for LSP operations by ensuring it's open with the appropriate server.
+ */
+export async function prepareFile(filePath) {
+    const ctx = getToolContext();
+    const absolutePath = ensureAbsolute(filePath);
+    const uri = pathToUri(absolutePath);
+    // A deleted file may still be open and cached; drop that state instead of
+    // answering from stale content.
+    if (!fs.existsSync(absolutePath)) {
+        await forgetDeletedFiles([uri]);
+        throw new LSPError(LSPErrorCode.FILE_NOT_FOUND, `File not found: ${absolutePath}`, 'Check that the path exists. Diagnostics and open state for deleted files are discarded.', { file_path: absolutePath });
+    }
+    // Get the client for this file
+    const client = await ctx.connectionManager.getClientForFile(absolutePath);
+    // Ensure document is open. Opening a document can make the server start
+    // work such as loading the project; until that finishes, cross-file results
+    // (references, rename, call hierarchy) can be silently incomplete. Wait for
+    // work the open triggered, as reported through work-done progress.
+    const wasOpen = ctx.documentManager.isOpen(uri, client);
+    const startedAt = Date.now();
+    let touchedAt = null;
+    if (wasOpen) {
+        // The file may have been edited on disk since it was opened
+        if (await ctx.documentManager.syncWithDisk(uri, client)) {
+            touchedAt = startedAt;
+        }
+    }
+    else {
+        await ctx.documentManager.ensureOpen(uri, client);
+        touchedAt = startedAt;
+        await client.waitForServerWork(startedAt, SERVER_WORK_SETTLE_MS, SERVER_WORK_MAX_WAIT_MS);
+    }
+    // Get content for position conversion
+    const content = ctx.documentManager.getContent(uri) ?? await readFile(absolutePath);
+    return { client, uri, content, touchedAt };
+}
+/**
+ * Get the current diagnostics for an open document.
+ *
+ * Servers that provide diagnostics on request (e.g. the TypeScript 7 native
+ * server, which only publishes empty lists, or rust-analyzer) are asked
+ * directly; the result also includes what they published, after waiting for
+ * a fresh publish if earlier published diagnostics may be stale. For push-model
+ * servers the cached diagnostics are used; when `waitSince` is set (the
+ * document was just opened or changed), first wait briefly for a fresh publish.
+ */
+export async function getCurrentDiagnostics(client, uri, waitSince) {
+    if (client.supportsPullDiagnostics()) {
+        // The pulled result also includes what the server pushed. Only wait for a
+        // fresh publish if the server pushed diagnostics for this document before,
+        // since those may be stale after a change (e.g. rust-analyzer's cargo check
+        // results). TypeScript 7 only pushes empty lists, so it is never waited on.
+        if (waitSince !== null && client.hasPushedDiagnostics(uri)) {
+            await client.waitForDiagnostics(uri, waitSince, DIAGNOSTICS_WAIT_MS);
+        }
+        const pulled = await client.pullDiagnostics(uri);
+        if (pulled) {
+            return pulled;
+        }
+    }
+    if (waitSince !== null) {
+        await client.waitForDiagnostics(uri, waitSince, DIAGNOSTICS_WAIT_MS);
+    }
+    return client.getCachedDiagnostics(uri);
+}
+/**
+ * Pull fresh diagnostics for every document open in a running server instance
+ * that provides diagnostics on request, so workspace-wide views are current.
+ */
+export async function pullOpenDocumentDiagnostics() {
+    const ctx = getToolContext();
+    const pulls = [];
+    for (const instance of ctx.connectionManager.listActiveServers()) {
+        const client = instance.client;
+        if (!client || !client.supportsPullDiagnostics()) {
+            continue;
+        }
+        for (const uri of ctx.documentManager.getOpenUris(client)) {
+            pulls.push(client.pullDiagnostics(uri));
+        }
+    }
+    await Promise.all(pulls);
+}
+/**
+ * Forget files that no longer exist on disk.
+ *
+ * For each deleted file: close it in every running server instance that has it
+ * open, notify servers that registered for workspace/didDeleteFiles, and drop
+ * its cached diagnostics. Without this, diagnostics for deleted or renamed
+ * files are reported forever.
+ *
+ * @param candidateUris - URIs to check; defaults to every URI with cached
+ *   diagnostics or open in a running server instance
+ * @returns The URIs that were forgotten
+ */
+export async function forgetDeletedFiles(candidateUris) {
+    const ctx = getToolContext();
+    const clients = ctx.connectionManager
+        .listActiveServers()
+        .map((instance) => instance.client)
+        .filter((client) => client !== null);
+    const candidates = new Set(candidateUris ?? []);
+    if (!candidateUris) {
+        for (const uri of ctx.diagnosticsCache.getUris()) {
+            candidates.add(uri);
+        }
+        for (const client of clients) {
+            for (const uri of ctx.documentManager.getOpenUris(client)) {
+                candidates.add(uri);
+            }
+        }
+    }
+    const deleted = [...candidates].filter((uri) => {
+        if (!uri.startsWith('file://')) {
+            return false;
+        }
+        try {
+            return !fs.existsSync(uriToPath(uri));
+        }
+        catch {
+            return false;
+        }
+    });
+    if (deleted.length === 0) {
+        return [];
+    }
+    for (const client of clients) {
+        const closed = [];
+        for (const uri of deleted) {
+            if (ctx.documentManager.isOpen(uri, client)) {
+                await ctx.documentManager.closeDocument(uri, client);
+                closed.push(uri);
+            }
+        }
+        if (closed.length > 0) {
+            try {
+                client.didDeleteFiles(closed);
+            }
+            catch (error) {
+                logger.warn('Failed to notify server about deleted files', error);
+            }
+        }
+    }
+    for (const uri of deleted) {
+        ctx.diagnosticsCache.clear(uri);
+    }
+    logger.debug(`Forgot ${deleted.length} deleted file(s)`, { uris: deleted });
+    return deleted;
+}
+/**
+ * Extract symbol name from file content given a range.
+ */
+function extractSymbolName(content, range) {
+    if (!content)
+        return undefined;
+    const lines = content.split('\n');
+    const startLine = lines[range.start.line];
+    if (!startLine)
+        return undefined;
+    // For single-line ranges, extract the text
+    if (range.start.line === range.end.line) {
+        const symbol = startLine.substring(range.start.character, range.end.character);
+        // Only return if it looks like a valid identifier
+        if (symbol && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(symbol)) {
+            return symbol;
+        }
+    }
+    return undefined;
+}
+/**
+ * Convert an LSP Location to our LocationResult format.
+ */
+export async function locationToResult(location, content) {
+    const filePath = uriToPath(location.uri);
+    // Get content if not provided
+    let fileContent = content;
+    if (!fileContent) {
+        try {
+            fileContent = await readFile(filePath);
+        }
+        catch {
+            fileContent = '';
+        }
+    }
+    const { start, end } = fromLspRange(location.range, fileContent);
+    const contextLine = getLineContent(fileContent, start.line) ?? '';
+    const symbolName = extractSymbolName(fileContent, location.range);
+    const result = {
+        path: filePath,
+        line: start.line,
+        column: start.column,
+        end_line: end.line,
+        end_column: end.column,
+        context: contextLine.trim(),
+    };
+    if (symbolName) {
+        result.symbol_name = symbolName;
+    }
+    return result;
+}
+/**
+ * Convert an LSP LocationLink to our LocationResult format.
+ */
+export async function locationLinkToResult(link) {
+    const filePath = uriToPath(link.targetUri);
+    let fileContent;
+    try {
+        fileContent = await readFile(filePath);
+    }
+    catch {
+        fileContent = '';
+    }
+    const range = link.targetSelectionRange ?? link.targetRange;
+    const { start, end } = fromLspRange(range, fileContent);
+    const contextLine = getLineContent(fileContent, start.line) ?? '';
+    // Extract symbol name from the selection range (more precise than target range)
+    const selectionRange = link.targetSelectionRange ?? link.targetRange;
+    const symbolName = extractSymbolName(fileContent, selectionRange);
+    const result = {
+        path: filePath,
+        line: start.line,
+        column: start.column,
+        end_line: end.line,
+        end_column: end.column,
+        context: contextLine.trim(),
+    };
+    if (symbolName) {
+        result.symbol_name = symbolName;
+    }
+    return result;
+}
+/**
+ * Convert LSP locations (which can be Location, Location[], or LocationLink[]) to LocationResult[].
+ */
+export async function convertLocations(result) {
+    if (!result) {
+        return [];
+    }
+    const locations = Array.isArray(result) ? result : [result];
+    const converted = [];
+    for (const loc of locations) {
+        if ('targetUri' in loc) {
+            converted.push(await locationLinkToResult(loc));
+        }
+        else {
+            converted.push(await locationToResult(loc));
+        }
+    }
+    return converted;
+}
+/**
+ * Get human-readable symbol kind name.
+ */
+export function getSymbolKindName(kind) {
+    return SYMBOL_KIND_NAMES[kind] ?? 'Unknown';
+}
+/**
+ * Get human-readable completion kind name.
+ */
+export function getCompletionKindName(kind) {
+    return kind ? (COMPLETION_KIND_NAMES[kind] ?? 'Text') : 'Text';
+}
+/**
+ * Get human-readable diagnostic severity name.
+ */
+export function getDiagnosticSeverityName(severity) {
+    return severity ? (DIAGNOSTIC_SEVERITY_NAMES[severity] ?? 'hint') : 'hint';
+}
+/**
+ * Normalize a diagnostic message to a plain string.
+ * As of LSP types 3.18, `Diagnostic.message` may be a `MarkupContent` object
+ * rather than a plain string; in that case we use its `value`.
+ */
+export function getDiagnosticMessageText(message) {
+    return typeof message === 'string' ? message : message.value;
+}
+/**
+ * Convert 1-indexed position to LSP position for a file.
+ */
+export function toPosition(line, column, content) {
+    return toLspPosition(line, column, content);
+}
+/**
+ * Filter symbol kinds based on requested kinds.
+ */
+export function matchesSymbolKind(symbolKind, requestedKinds) {
+    if (!requestedKinds || requestedKinds.length === 0) {
+        return true;
+    }
+    const kindName = getSymbolKindName(symbolKind);
+    return requestedKinds.includes(kindName);
+}
+//# sourceMappingURL=utils.js.map

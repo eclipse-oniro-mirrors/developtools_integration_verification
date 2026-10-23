@@ -1,0 +1,184 @@
+/**
+ * Copyright (c) 2026 Ivan Iraci <ivan.iraci@professioneit.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+import { prepareFile, getDiagnosticSeverityName, getDiagnosticMessageText, forgetDeletedFiles, getCurrentDiagnostics, pullOpenDocumentDiagnostics } from './utils.js';
+import { fromLspRange, getLineContent } from '../utils/position.js';
+import { uriToPath, readFile } from '../utils/uri.js';
+import { getToolContext } from './context.js';
+const SEVERITY_ORDER = { error: 1, warning: 2, info: 3, hint: 4 };
+/**
+ * Handle lsp_diagnostics tool call.
+ */
+export async function handleDiagnostics(input) {
+    const { file_path, severity_filter } = input;
+    const { client, uri, content, touchedAt } = await prepareFile(file_path);
+    // Pull-model servers are asked directly. For push-model servers, if this call
+    // opened the file or sent it new content, wait briefly for a fresh publish.
+    const diagnostics = await getCurrentDiagnostics(client, uri, touchedAt);
+    // Convert and filter
+    const results = [];
+    let errors = 0;
+    let warnings = 0;
+    let info = 0;
+    let hints = 0;
+    for (const diag of diagnostics) {
+        const severity = getDiagnosticSeverityName(diag.severity);
+        // Count all for summary
+        switch (severity) {
+            case 'error':
+                errors++;
+                break;
+            case 'warning':
+                warnings++;
+                break;
+            case 'info':
+                info++;
+                break;
+            case 'hint':
+                hints++;
+                break;
+        }
+        // Filter by severity
+        if (severity_filter !== 'all') {
+            const filterLevel = SEVERITY_ORDER[severity_filter];
+            const diagLevel = SEVERITY_ORDER[severity];
+            if (diagLevel > filterLevel) {
+                continue;
+            }
+        }
+        const { start, end } = fromLspRange(diag.range, content);
+        const contextLine = getLineContent(content, start.line) ?? '';
+        const result = {
+            range: { start, end },
+            severity,
+            message: getDiagnosticMessageText(diag.message),
+            context: contextLine.trim(),
+        };
+        if (diag.code !== undefined) {
+            result.code = diag.code;
+        }
+        if (diag.source) {
+            result.source = diag.source;
+        }
+        results.push(result);
+    }
+    return {
+        diagnostics: results,
+        summary: { errors, warnings, info, hints },
+        note: 'Diagnostics are cached from language server notifications. Edits made on disk are sent to the server on every call; after an open or a change this call waits briefly for fresh diagnostics.',
+    };
+}
+/**
+ * Handle lsp_workspace_diagnostics tool call.
+ * Returns all diagnostics across the workspace from cache.
+ */
+export async function handleWorkspaceDiagnostics(input) {
+    const { severity_filter, limit, group_by } = input;
+    const ctx = getToolContext();
+    // Drop diagnostics for files deleted since they were reported
+    await forgetDeletedFiles();
+    // Servers that only report diagnostics on request contribute nothing to the
+    // cache by themselves: ask them for every open document
+    await pullOpenDocumentDiagnostics();
+    // Get all cached URIs
+    const uris = ctx.diagnosticsCache.getUris();
+    // Collect all diagnostics with file info
+    const allItems = [];
+    const filesWithDiagnostics = new Set();
+    for (const uri of uris) {
+        const diagnostics = ctx.diagnosticsCache.get(uri);
+        if (diagnostics.length === 0)
+            continue;
+        const filePath = uriToPath(uri);
+        filesWithDiagnostics.add(filePath);
+        // Get file content for context lines
+        let content = ctx.documentManager.getContent(uri);
+        if (!content) {
+            try {
+                content = await readFile(filePath);
+            }
+            catch {
+                content = '';
+            }
+        }
+        for (const diag of diagnostics) {
+            const severity = getDiagnosticSeverityName(diag.severity);
+            // Filter by severity
+            if (severity_filter !== 'all') {
+                const filterLevel = SEVERITY_ORDER[severity_filter];
+                const diagLevel = SEVERITY_ORDER[severity];
+                if (diagLevel > filterLevel) {
+                    continue;
+                }
+            }
+            const { start, end } = fromLspRange(diag.range, content);
+            const contextLine = getLineContent(content, start.line) ?? '';
+            const item = {
+                file: filePath,
+                line: start.line,
+                column: start.column,
+                end_line: end.line,
+                end_column: end.column,
+                severity,
+                message: getDiagnosticMessageText(diag.message),
+                context: contextLine.trim(),
+            };
+            if (diag.code !== undefined) {
+                item.code = diag.code;
+            }
+            if (diag.source) {
+                item.source = diag.source;
+            }
+            allItems.push(item);
+        }
+    }
+    // Sort based on group_by
+    if (group_by === 'severity') {
+        allItems.sort((a, b) => {
+            const severityDiff = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+            if (severityDiff !== 0)
+                return severityDiff;
+            return a.file.localeCompare(b.file) || a.line - b.line;
+        });
+    }
+    else {
+        // group_by === 'file' (default)
+        allItems.sort((a, b) => {
+            const fileDiff = a.file.localeCompare(b.file);
+            if (fileDiff !== 0)
+                return fileDiff;
+            return SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.line - b.line;
+        });
+    }
+    // Apply limit
+    const items = allItems.slice(0, limit);
+    // Get summary
+    const summary = ctx.diagnosticsCache.getSummary();
+    return {
+        items,
+        total_count: allItems.length,
+        returned_count: items.length,
+        files_affected: filesWithDiagnostics.size,
+        summary,
+        note: 'Diagnostics are from cache. Only files that have been opened in this session will have diagnostics. Use lsp_diagnostics on specific files to refresh.',
+    };
+}
+//# sourceMappingURL=diagnostics.js.map
