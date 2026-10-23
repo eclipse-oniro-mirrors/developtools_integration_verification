@@ -1,5 +1,5 @@
 {
-  "_comment": "消费侧 MCP 配置模板。复制到源码树根目录命名为 .lsp-mcp.json，且必须从源码树根目录启动 opencode（相对路径按启动目录解析）。把 out/rk3568 换成实际产品输出目录；clangd 需 >= 20（建议放入 PATH 或改成本机绝对路径）。",
+  "_comment": "手工兜底模板，正常无需复制：任何产品带 enable_oskm_collect 编译后会按实际 out/<product> 自动生成 oskm/lsp/lsp-mcp.json 并软链到源码树根 .lsp-mcp.json，编译其他产品即自动切换；已建索引的产品间切换可用 build_index.py -i out/<product> --mcp-only 秒级重建配置。仅当从未运行过索引构建时才手工复制本文件到源码树根目录（命名 .lsp-mcp.json），并把 out/rk3568、warmup、clangd 路径替换为实际值，且必须从源码树根目录启动 opencode（相对路径按启动目录解析）；clangd 需 >= 20。",
   "servers": [
     {
       "id": "cpp",

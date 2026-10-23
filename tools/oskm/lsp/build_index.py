@@ -28,10 +28,13 @@ Flow:
   3. verify compile_commands.json exists in the out dir
   4. apply the musl stddef nullptr_t patch (C++ parse quality)
   5. ensure a .clangd config exists at the source root (libcxx include path)
-  6. stream-partition the compile database; run N clangd instances in
+  6. generate the consumer-side MCP config (before indexing starts, so it
+     adapts to this product as soon as its CDB exists; --mcp-only stops
+     right after this step)
+  7. stream-partition the compile database; run N clangd instances in
      parallel, all writing shards into one index dir (atomic temp+rename)
-  7. clean up the slice work dirs, keeping the small instance logs
-  8. print a summary
+  8. clean up the slice work dirs, keeping the small instance logs
+  9. print a summary
 
 The index lands in <out_dir>/.cache/clangd/index and is fully incremental:
 existing shards whose source files are unchanged are validated and skipped.
@@ -271,11 +274,14 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
     Writes oskm/lsp/lsp-mcp.json from the actual build parameters (product
     out dir, the very clangd that built the index, a real kickoff file from
     the CDB), then symlinks <root>/.lsp-mcp.json to it so consumers need no
-    manual setup. All paths are relative to the source root: the root config
-    is only discovered when the MCP is launched from the source root, so
-    relative paths are always self-consistent and the whole tree stays
-    relocatable. An existing regular file at the root is left untouched
-    (user-managed). Returns a status string.
+    manual setup; re-running the index build for another product regenerates
+    the file, so the config always follows the last built product. All paths
+    are relative to the source root: the root config is only discovered when
+    the MCP is launched from the source root, so relative paths are always
+    self-consistent and the whole tree stays relocatable. An existing regular
+    file at the root is left untouched (user-managed) unless it carries the
+    "_generatedBy" marker — a stale copy of a previously generated config —
+    which is healed into the symlink. Returns a status string.
     """
     here_rel = os.path.relpath(HERE, root)
     config_path = os.path.join(HERE, "lsp-mcp.json")
@@ -285,6 +291,7 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
     if kickoff and os.path.isfile(kickoff):
         warmup_rel = os.path.relpath(kickoff, root)
     config = {
+        "_generatedBy": "oskm/lsp/build_index.py",
         "servers": [{
             "id": "cpp",
             "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".hh",
@@ -321,6 +328,18 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
         os.symlink(target_rel, link)
         return "symlink refreshed -> {}".format(target_rel)
     if os.path.exists(link):
+        # Regular file: user-managed, left untouched — unless it carries the
+        # "_generatedBy" marker, i.e. it is a stale copy of an earlier
+        # generated config; heal those into the auto-updating symlink.
+        try:
+            with open(link, "r", encoding="utf-8") as f:
+                legacy = json.load(f)
+        except (OSError, ValueError):
+            legacy = None
+        if isinstance(legacy, dict) and legacy.get("_generatedBy"):
+            os.unlink(link)
+            os.symlink(target_rel, link)
+            return "healed stale generated copy -> {}".format(target_rel)
         return "generated {} but root .lsp-mcp.json exists (left untouched)".format(
             target_rel)
     os.symlink(target_rel, link)
@@ -449,6 +468,11 @@ def main():
                              "partial progress is kept and resumed next run)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan and checks without building")
+    parser.add_argument("--mcp-only", action="store_true",
+                        help="(re)generate the consumer-side MCP config for "
+                             "this out dir and exit without indexing; use to "
+                             "switch products when their indexes already "
+                             "exist")
     args = parser.parse_args()
 
     root = find_root()
@@ -479,7 +503,8 @@ def main():
         print("[lsp] compile_commands.json unavailable: {}".format(cdb_status))
         return 1
     index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
-    os.makedirs(index_dir, exist_ok=True)
+    if not args.mcp_only:
+        os.makedirs(index_dir, exist_ok=True)
     print("[lsp] cdb: {}".format(cdb_status))
 
     clangd_bin = find_clangd(root)
@@ -501,6 +526,10 @@ def main():
         print("[lsp] low free RAM; falling back to 1 instance (no CDB slice)")
         instances = 1
     jobs = args.jobs_per_instance or max(1, min(60, cpu // instances))
+    if args.mcp_only:
+        # No indexing: the single-instance path only reads the CDB head to
+        # find a kickoff file, so skip partitioning entirely.
+        instances = 1
 
     from apply_musl_fix import apply_musl_fix, revert_musl_fix
     musl_results = apply_musl_fix(out_dir)
@@ -519,7 +548,8 @@ def main():
     print("[lsp] index: {}".format(index_dir))
 
     work_dir = os.path.join(out_dir, ".clangd-lsp-work")
-    os.makedirs(work_dir, exist_ok=True)
+    if not args.mcp_only:
+        os.makedirs(work_dir, exist_ok=True)
     t0 = time.time()
     if instances == 1:
         slices = [(cdb, None, -1)]
@@ -549,6 +579,20 @@ def main():
         _report_revert(revert_musl_fix(out_dir))
         return 1
     kickoffs = [k or kickoffs[0] for k in kickoffs]
+    # A tiny CDB can leave fewer kickoffs than instances (empty slices, or
+    # the single-entry fallback above replacing the list); cycle so every
+    # instance gets a valid kickoff file.
+    kickoffs = [kickoffs[i % len(kickoffs)] for i in range(instances)]
+
+    # Generate the consumer config before the (possibly hours-long) index
+    # run, so the MCP adapts to this product as soon as its CDB exists.
+    mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
+                                    kickoff=kickoffs[0])
+    print("[lsp] mcp config: {}".format(mcp_status))
+
+    if args.mcp_only:
+        _report_revert(revert_musl_fix(out_dir))
+        return 0
 
     procs = []
     for i in range(instances):
@@ -596,9 +640,6 @@ def main():
     print("[lsp] done in {:.0f}s: {} shards in {}".format(
         time.time() - t0, shards, index_dir))
 
-    mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
-                                    kickoff=kickoffs[0])
-    print("[lsp] mcp config: {}".format(mcp_status))
     _report_revert(revert_musl_fix(out_dir))
     return 0
 
