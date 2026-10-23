@@ -332,9 +332,11 @@ def ensure_cdb(out_dir, root):
 
     The normal path is the compile_commands.json produced by the OHOS build
     itself. When absent (e.g. a build variant that skips it), fall back to
-    ``ninja -t compdb``. If ninja fails due to duplicate build targets
-    (common in OHOS builds — phony stamp aliases), fall back to a custom
-    parser that reads .ninja files directly and extracts compile commands.
+    ``ninja -w dupbuild=warn -t compdb`` — the warning flag tolerates the
+    duplicate build targets common in OHOS builds (phony stamp aliases) so
+    ninja still emits a full, exact CDB. If ninja fails for any other
+    reason, fall back to a custom parser that reads .ninja files directly
+    and extracts compile commands.
     """
     cdb = os.path.join(out_dir, "compile_commands.json")
     if os.path.isfile(cdb):
@@ -353,7 +355,8 @@ def ensure_cdb(out_dir, root):
     tmp = cdb + ".gen-tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         rc = subprocess.run(
-            [ninja, "-C", out_dir, "-t", "compdb"] + rules,
+            [ninja, "-C", out_dir, "-w", "dupbuild=warn",
+             "-t", "compdb"] + rules,
             stdout=f, stderr=subprocess.DEVNULL).returncode
     if rc == 0 and os.path.isfile(tmp) and os.path.getsize(tmp) >= 1024:
         os.replace(tmp, cdb)
@@ -426,6 +429,12 @@ def _parse_ninja_compile_commands(out_dir, rules):
     return entries
 
 
+def _report_revert(results):
+    print("[lsp] musl fix reverted: {}".format(
+        ", ".join("{}: {}".format(os.path.basename(os.path.dirname(p)), s)
+                  for p, s in results) or "no musl sysroot found"))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build the clangd background index for an OHOS build.")
@@ -493,7 +502,7 @@ def main():
         instances = 1
     jobs = args.jobs_per_instance or max(1, min(60, cpu // instances))
 
-    from apply_musl_fix import apply_musl_fix
+    from apply_musl_fix import apply_musl_fix, revert_musl_fix
     musl_results = apply_musl_fix(out_dir)
     clangd_cfg = ensure_clangd_config(root)
 
@@ -537,6 +546,7 @@ def main():
                                                       m.group(1)))]
     if not kickoffs or not kickoffs[0]:
         print("[lsp] cannot determine a kickoff file from the CDB")
+        _report_revert(revert_musl_fix(out_dir))
         return 1
     kickoffs = [k or kickoffs[0] for k in kickoffs]
 
@@ -589,6 +599,7 @@ def main():
     mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
                                     kickoff=kickoffs[0])
     print("[lsp] mcp config: {}".format(mcp_status))
+    _report_revert(revert_musl_fix(out_dir))
     return 0
 
 
