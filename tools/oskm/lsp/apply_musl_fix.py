@@ -31,6 +31,9 @@ Usage (standalone):
 
 Or import:  apply_musl_fix("/abs/path/to/out")
 Returns a list of patched (or already-patched) stddef.h paths.
+
+Use revert_musl_fix() to strip the shim again once indexing is done, so the
+patched sysroot is left exactly as the build produced it.
 """
 
 import argparse
@@ -72,6 +75,36 @@ def apply_musl_fix(out_dir):
         with open(stddef, "w", encoding="utf-8") as f:
             f.write(content)
         results.append((stddef, "patched"))
+    return results
+
+
+def revert_musl_fix(out_dir):
+    """Strip the clangd shim from the musl sysroot inside a build output dir.
+
+    Exact inverse of apply_musl_fix(): removes the previously inserted PATCH
+    block (identified by the "clangd shim" marker) and restores the original
+    file byte-for-byte. Files without the marker are left untouched, so this
+    is idempotent and safe to call even when nothing was ever patched.
+
+    Returns a list of (stddef_path, status) tuples.
+    """
+    out_dir = os.path.abspath(out_dir)
+    results = []
+    pattern = os.path.join(out_dir, "obj", "third_party", "musl",
+                           "usr", "include", "*", "stddef.h")
+    for stddef in sorted(glob.glob(pattern)):
+        try:
+            with open(stddef, "r", encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            continue
+        if PATCH not in content:
+            results.append((stddef, "not-patched"))
+            continue
+        content = content.replace(PATCH, "", 1)
+        with open(stddef, "w", encoding="utf-8") as f:
+            f.write(content)
+        results.append((stddef, "reverted"))
     return results
 
 
