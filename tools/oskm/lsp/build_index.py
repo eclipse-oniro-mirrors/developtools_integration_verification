@@ -27,7 +27,8 @@ Flow:
   2. locate clangd (LSP_CLANGD_BIN > bundled clangd/ > PATH > OHOS prebuilts)
   3. verify compile_commands.json exists in the out dir
   4. apply the musl stddef nullptr_t patch (C++ parse quality)
-  5. ensure a .clangd config exists at the source root (libcxx include path)
+  5. ensure a .clangd config exists at the source root (libcxx include
+     path + musl sysroot include order; see ensure_clangd_config)
   6. stream-partition the compile database; run N clangd instances in
      parallel, all writing shards into one index dir (atomic temp+rename)
   7. clean up the slice work dirs, keeping the small instance logs
@@ -115,8 +116,8 @@ def clangd_version(clangd_bin):
 
 
 def _clangd_config_isystem_dead(path, base_dir):
-    """True when the existing .clangd aims its -isystem at a path that is
-    missing on this machine (e.g. the file was generated on another host
+    """True when the existing .clangd aims an -I or -isystem at a path that
+    is missing on this machine (e.g. the file was generated on another host
     and shipped over). Relative paths are resolved against base_dir (the
     directory the compile commands run from), not the process cwd."""
     try:
@@ -125,14 +126,66 @@ def _clangd_config_isystem_dead(path, base_dir):
     except OSError:
         return False
     for i, line in enumerate(lines):
-        if line.strip() == "- -isystem" and i + 1 < len(lines):
+        stripped = line.strip()
+        if stripped in ("- -isystem", "- -I") and i + 1 < len(lines):
             target = lines[i + 1].strip().lstrip("-").strip()
             if not target:
-                return False
+                continue
             if not os.path.isabs(target):
                 target = os.path.normpath(os.path.join(base_dir, target))
-            return not os.path.exists(target)
+            if not os.path.exists(target):
+                return True
     return False
+
+
+def _clangd_config_pre_reorder(path):
+    """True when an existing .clangd predates the include-order fix: libcxx
+    sits at the back of the search (-isystem, no -nostdinc++), the layout
+    under which clangd's sysroot expansion lets musl's stddef.h hijack
+    every libc++ #include_next chain."""
+    try:
+        with open(path) as f:
+            text = f.read()
+    except OSError:
+        return False
+    return "- -isystem" in text and "-nostdinc++" not in text
+
+
+def _cdb_sysroot_target(out_dir):
+    """Extract the sysroot and target triple recorded in the compile
+    database head (GN commands are uniform, so the head is representative).
+
+    Returns (sysroot_flag, sysroot, target):
+      * sysroot_flag: the Remove entry exactly as the flag appears in the
+        commands ("-sysroot=obj/third_party/musl" for the joined form, the
+        bare flag name for the space-separated form), or None
+      * sysroot: the sysroot path as recorded (kept relative when the
+        command spells it relative, so the config stays relocatable), or
+        None
+      * target: the target triple, or None
+    """
+    try:
+        with open(os.path.join(out_dir, "compile_commands.json"),
+                  "r", encoding="utf-8", errors="replace") as f:
+            head = f.read(1 << 20)
+    except OSError:
+        return None, None, None
+    sysroot_flag = None
+    sysroot = None
+    m = re.search(r"(-{1,2}i?sysroot=[^\s\"']+)", head)
+    if m:
+        sysroot_flag = m.group(1)
+        sysroot = m.group(1).split("=", 1)[1]
+    else:
+        m = re.search(r"\s(-{1,2}i?sysroot)[ \t]+[^\s\"']+", head)
+        if m:
+            sysroot_flag = m.group(1)
+            sysroot = m.group(0).split(None, 1)[1].strip()
+    target = None
+    m = re.search(r"-{1,2}target[= ]([^\s\"']+)", head)
+    if m:
+        target = m.group(1)
+    return sysroot_flag, sysroot, target
 
 
 def _pick_libcxx(root, out_dir):
@@ -184,46 +237,86 @@ def ensure_clangd_config(root, out_dir=None):
     The libcxx-ohos include path is not part of the compile commands (the
     OHOS clang driver adds it implicitly), so clangd needs it via config.
     The include is written relative to the out dir (compile commands run
-    from there), which keeps the file relocatable across machines. An
-    existing config is left untouched unless its -isystem points at a
-    directory missing on this machine, in which case it is regenerated.
+    from there), which keeps the file relocatable across machines.
+
+    When the compile commands carry a musl sysroot, the config additionally
+    fixes the include order. clangd expands the sysroot where the flag sits
+    in argv (early, ahead of every -I), so musl's <stddef.h> wins over
+    libc++'s own wrapper on every #include_next and C++ TUs degrade with
+    the "no member named 'nullptr_t' in the global namespace" cascade (the
+    problem apply_musl_fix.py shims around during index builds). The fix
+    drops the sysroot flag, puts libcxx-ohos in the user group (-I, always
+    searched first) and re-adds the musl directories at the back (-isystem)
+    — the order the real clang driver computes. Unlike the shim it also
+    covers interactive clangd sessions, which run long after the shim has
+    been reverted out of the build output.
+
+    An existing config is regenerated when one of its -I/-isystem targets
+    is missing on this machine, or when it predates the reorder while the
+    sysroot reorder is derivable from the compile database; otherwise it
+    is left untouched.
     """
     path = os.path.join(root, ".clangd")
-    stale = False
+    out_dir = out_dir or root
+    sysroot_flag, sysroot, target = _cdb_sysroot_target(out_dir)
+    reorder = bool(sysroot_flag and sysroot and target)
     if os.path.exists(path):
-        if not _clangd_config_isystem_dead(path, out_dir or root):
+        stale = _clangd_config_isystem_dead(path, out_dir)
+        outdated = reorder and _clangd_config_pre_reorder(path)
+        if not stale and not outdated:
             return "exists (left untouched)"
-        stale = True
+
     libcxx = _pick_libcxx(root, out_dir)
     if libcxx is None:
         return "SKIPPED (libcxx-ohos not found; C++ indexing may degrade)"
-    include = os.path.relpath(libcxx, out_dir or root)
-    content = (
-        "Index:\n"
-        "  Background: Build\n"
-        "  StandardLibrary: Yes\n"
-        "\n"
-        "CompileFlags:\n"
-        "  Add:\n"
-        "    - -Wno-unknown-warning-option\n"
-        "    - -Wno-unknown-attributes\n"
-        "    - -isystem\n"
-        "    - %s\n"
-        "  Remove:\n"
-        "    - -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang\n"
-        "    - -fstack-protector-ret-strong\n"
-        "    - -fcfi-trap-function=__cfi_fail_report\n"
-        "\n"
-        "Diagnostics:\n"
-        "  ClangTidy:\n"
-        '    Checks: "-*"\n'
-        "  UnusedIncludes: None\n"
-        "  MissingIncludes: None\n"
-    ) % include
+    include = os.path.relpath(libcxx, out_dir)
+
+    add_flags = [
+        "-Wno-unknown-warning-option",
+        "-Wno-unknown-attributes",
+    ]
+    remove_flags = [
+        "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang",
+        "-fstack-protector-ret-strong",
+        "-fcfi-trap-function=__cfi_fail_report",
+    ]
+    if reorder:
+        add_flags += [
+            "-nostdinc++",
+            "-I", include,
+            "-isystem", os.path.join(sysroot, "usr", "include", target),
+            "-isystem", os.path.join(sysroot, "usr", "include"),
+        ]
+        remove_flags = [sysroot_flag] + remove_flags
+    else:
+        add_flags += ["-isystem", include]
+
+    lines = [
+        "Index:",
+        "  Background: Build",
+        "  StandardLibrary: Yes",
+        "",
+        "CompileFlags:",
+        "  Add:",
+    ]
+    for flag in add_flags:
+        lines.append("    - " + flag)
+    lines.append("  Remove:")
+    for flag in remove_flags:
+        lines.append("    - " + flag)
+    lines += [
+        "",
+        "Diagnostics:",
+        "  ClangTidy:",
+        '    Checks: "-*"',
+        "  UnusedIncludes: None",
+        "  MissingIncludes: None",
+        "",
+    ]
     with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
-    if stale:
-        return "regenerated (previous -isystem was missing on this machine)"
+        f.write("\n".join(lines))
+    if reorder:
+        return "generated (include order fixed: libcxx first, musl last)"
     return "generated"
 
 
