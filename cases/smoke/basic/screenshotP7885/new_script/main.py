@@ -14,9 +14,9 @@ def distribute_testcase(test_num):
     with open(os.path.join(BASE_DIR, 'testcases.json'), 'r', encoding='utf-8') as f:
         test_cases_list = [case.get('case_file') for case in json.load(f)]
     if test_num == '1/2':
-        selected = test_cases_list[0:1] + test_cases_list[8:]
+        selected = test_cases_list[0:1] + test_cases_list[6:]
     elif test_num == '2/2':
-        selected = test_cases_list[0:8]
+        selected = test_cases_list[0:6]
     else:
         selected = test_cases_list
     return selected
