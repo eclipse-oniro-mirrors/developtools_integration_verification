@@ -48,6 +48,9 @@ ROOT = os.environ.get("OH_ROOT") or os.path.normpath(
 CDB_DIR = os.environ.get("CDB_DIR", "")
 CLANGD = os.environ.get("CLANGD_BIN", "clangd")
 JOBS = os.environ.get("CLANGD_JOBS") or str(min(os.cpu_count() or 8, 60))
+PCH = os.environ.get("CLANGD_PCH", "memory")
+if PCH not in ("memory", "disk"):
+    PCH = "memory"
 KICKOFF = os.environ.get("KICKOFF_FILE", "")
 CACHE_DIRS = [
     os.path.join(CDB_DIR, ".cache", "clangd", "index"),
@@ -88,7 +91,7 @@ class Clangd:
             "--limit-results=0",
             "--limit-references=0",
             "--compile-commands-dir=" + CDB_DIR,
-            "--pch-storage=memory",
+            "--pch-storage=" + PCH,
         ]
         self.proc = subprocess.Popen(
             cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -210,8 +213,9 @@ def cmd_warm(interval):
         try:
             cur = proc_cpu_jiffies(c.proc.pid)
         except (FileNotFoundError, ProcessLookupError):
-            print("clangd exited; shards on disk: %d" % n, flush=True)
-            break
+            print("index INCOMPLETE: clangd exited early; shards on "
+                  "disk: %d" % n, flush=True)
+            sys.exit(1)
         cpu = 0.0 if last_cpu is None \
             else (cur - last_cpu) / clk / interval * 100.0
         last_cpu = cur
