@@ -101,7 +101,10 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
    `ninja -t compdb`（cxx/cc/asm 规则，约半分钟，~99% 源文件覆盖）生成
 3. **musl nullptr_t 补丁**（`apply_musl_fix.py`）：修 libcxx-ohos 与 musl 的
    头文件错配，否则所有 C++ TU 解析降级（每次全量构建后需重新应用，自动完成）
-4. **确保源码根 `.clangd`**：注入 libcxx-ohos include 路径（缺失时自动生成）
+4. **确保源码根 `.clangd`**：注入 libcxx-ohos include 路径（缺失时自动生成），
+   并按 sysroot 重排 include 顺序（libcxx 置前、musl 目录显式排后、移除抢位的
+   `--sysroot`），根治 musl stddef.h 劫持 libc++ 头链的 nullptr_t 级联错误；
+   配置层修复对交互会话同样生效，不依赖索引构建期打的 musl shim
 5. **CDB 切分 + 并行构建**：按源文件 crc32 切成 N 份，N 个 clangd 实例
    通过符号链接写同一索引目录（temp+rename 原子写，产物等价）
 6. **断点续建**：已有 shard 按文件摘要校验跳过，增量构建只处理变更文件
