@@ -114,22 +114,90 @@ def clangd_version(clangd_bin):
         return 0
 
 
-def ensure_clangd_config(root):
-    """Write a .clangd at the source root if none exists.
+def _clangd_config_isystem_dead(path, base_dir):
+    """True when the existing .clangd aims its -isystem at a path that is
+    missing on this machine (e.g. the file was generated on another host
+    and shipped over). Relative paths are resolved against base_dir (the
+    directory the compile commands run from), not the process cwd."""
+    try:
+        with open(path) as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return False
+    for i, line in enumerate(lines):
+        if line.strip() == "- -isystem" and i + 1 < len(lines):
+            target = lines[i + 1].strip().lstrip("-").strip()
+            if not target:
+                return False
+            if not os.path.isabs(target):
+                target = os.path.normpath(os.path.join(base_dir, target))
+            return not os.path.exists(target)
+    return False
+
+
+def _pick_libcxx(root, out_dir):
+    """Pick the libcxx-ohos include directory matching the toolchain the
+    compile commands actually use, falling back to any linux toolchain.
+
+    glob order is arbitrary, which is how a windows-x86_64 path ended up
+    on linux hosts in the first place.
+    """
+    candidates = sorted(glob.glob(os.path.join(
+        root, "prebuilts", "clang", "ohos", "*", "llvm", "include",
+        "libcxx-ohos", "include", "c++", "v1")))
+    if not candidates:
+        return None
+
+    def platform(path):
+        parts = os.path.normpath(path).split(os.sep)
+        if "ohos" in parts:
+            i = parts.index("ohos")
+            if i + 1 < len(parts):
+                return parts[i + 1]
+        return ""
+
+    wanted = ""
+    if out_dir:
+        try:
+            with open(os.path.join(out_dir, "compile_commands.json"),
+                      "r", encoding="utf-8", errors="replace") as f:
+                head = f.read(1 << 20)
+            match = re.search(
+                r"prebuilts[/\\]clang[/\\]ohos[/\\]([^/\\\s\"']+)", head)
+            if match:
+                wanted = match.group(1)
+        except OSError:
+            pass
+    if wanted:
+        for cand in candidates:
+            if platform(cand) == wanted:
+                return cand
+    for cand in candidates:
+        if platform(cand).startswith("linux"):
+            return cand
+    return candidates[0]
+
+
+def ensure_clangd_config(root, out_dir=None):
+    """Write a .clangd at the source root if none exists (or is stale).
 
     The libcxx-ohos include path is not part of the compile commands (the
     OHOS clang driver adds it implicitly), so clangd needs it via config.
-    Paths are absolute as computed on this build machine; the generated
-    index is path-bound anyway.
+    The include is written relative to the out dir (compile commands run
+    from there), which keeps the file relocatable across machines. An
+    existing config is left untouched unless its -isystem points at a
+    directory missing on this machine, in which case it is regenerated.
     """
     path = os.path.join(root, ".clangd")
+    stale = False
     if os.path.exists(path):
-        return "exists (left untouched)"
-    libcxx = glob.glob(os.path.join(
-        root, "prebuilts", "clang", "ohos", "*", "llvm", "include",
-        "libcxx-ohos", "include", "c++", "v1"))
-    if not libcxx:
+        if not _clangd_config_isystem_dead(path, out_dir or root):
+            return "exists (left untouched)"
+        stale = True
+    libcxx = _pick_libcxx(root, out_dir)
+    if libcxx is None:
         return "SKIPPED (libcxx-ohos not found; C++ indexing may degrade)"
+    include = os.path.relpath(libcxx, out_dir or root)
     content = (
         "Index:\n"
         "  Background: Build\n"
@@ -143,27 +211,219 @@ def ensure_clangd_config(root):
         "    - %s\n"
         "  Remove:\n"
         "    - -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang\n"
+        "    - -fstack-protector-ret-strong\n"
+        "    - -fcfi-trap-function=__cfi_fail_report\n"
         "\n"
         "Diagnostics:\n"
         "  ClangTidy:\n"
         '    Checks: "-*"\n'
         "  UnusedIncludes: None\n"
         "  MissingIncludes: None\n"
-    ) % libcxx[0]
+    ) % include
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
+    if stale:
+        return "regenerated (previous -isystem was missing on this machine)"
     return "generated"
 
 
+def _cgroup_file(*paths):
+    for path in paths:
+        try:
+            with open(path) as f:
+                value = f.read().strip()
+            if value:
+                return value
+        except OSError:
+            continue
+    return None
+
+
+def cgroup_memory_limit_bytes():
+    """Closest cgroup memory limit, or None when unlimited/unreadable.
+
+    /proc/meminfo reports host-wide values inside containers, so the pod
+    limit is the real ceiling. Covers cgroup v2 (memory.max) and v1
+    (memory/memory.limit_in_bytes); "max" and absurdly large sentinels
+    mean unlimited.
+    """
+    raw = _cgroup_file("/sys/fs/cgroup/memory.max",
+                       "/sys/fs/cgroup/memory/memory.limit_in_bytes")
+    if raw is None or raw == "max":
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    if value <= 0 or value >= (1 << 45):
+        return None
+    return value
+
+
+def cgroup_memory_usage_bytes():
+    """Current cgroup memory usage minus reclaimable page cache.
+
+    memory.usage_in_bytes / memory.current count the page cache, which
+    the kernel reclaims under pressure, so the working-set style figure
+    (usage minus file cache) is the honest consumed amount for planning.
+    """
+    raw = _cgroup_file("/sys/fs/cgroup/memory.current",
+                       "/sys/fs/cgroup/memory/memory.usage_in_bytes")
+    if not raw:
+        return None
+    try:
+        usage = int(raw)
+    except ValueError:
+        return None
+    stat = _cgroup_file("/sys/fs/cgroup/memory.stat",
+                        "/sys/fs/cgroup/memory/memory.stat")
+    if stat:
+        cache = 0
+        for line in stat.splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[0] in (
+                    "file", "total_cache", "cache"):
+                try:
+                    cache = max(cache, int(fields[1]))
+                except ValueError:
+                    continue
+        if cache:
+            return max(0, usage - cache)
+    return usage
+
+
+def effective_cpu_count():
+    """CPU count after the cgroup CFS quota (containers see host CPUs)."""
+    raw = os.cpu_count() or 8
+    v2 = _cgroup_file("/sys/fs/cgroup/cpu.max")
+    if v2:
+        fields = v2.split()
+        if len(fields) == 2 and fields[0] not in ("max", "-1"):
+            try:
+                quota, period = int(fields[0]), int(fields[1])
+            except ValueError:
+                return raw
+            if quota > 0 and period > 0:
+                return max(1, min(raw, quota // period))
+    quota = _cgroup_file("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+    period = _cgroup_file("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+    try:
+        if quota and period and quota not in ("-1", "max"):
+            value = int(int(quota) / int(period))
+            if value > 0:
+                return max(1, min(raw, value))
+    except ValueError:
+        pass
+    return raw
+
+
+def _looks_like_container():
+    """Best-effort container detection (docker/podman/k8s/lxc)."""
+    if os.path.exists("/.dockerenv") or os.path.exists("/run/.containerenv"):
+        return True
+    try:
+        with open("/proc/1/cgroup") as f:
+            content = f.read()
+    except OSError:
+        content = ""
+    return any(k in content for k in
+               ("kubepods", "docker", "containerd", "lxc", "machine-runc"))
+
+
+def memory_info_trusted():
+    """True when the memory numbers are trustworthy for planning.
+
+    Untrusted inside a container whose cgroup limit/usage cannot be read:
+    /proc/meminfo then reports the host-wide free memory, which is not
+    what this container may actually consume.
+    """
+    if cgroup_memory_limit_bytes():
+        return cgroup_memory_usage_bytes() is not None
+    return not _looks_like_container()
+
+
+def plan_parallelism(instances_arg, jobs_arg, cpu, avail_gb, trusted, cdb_gb):
+    """Decide (instances, jobs, pch) from measured resources.
+
+    Budget model (calibrated on a full wukong100 build on a 48 GB pod):
+    a parse worker takes ~0.55 GB with in-memory PCH and ~0.30 GB with
+    disk PCH, each instance holds ~3.5 GB on top of its workers (slice
+    CDB plus the growing merged index), and the parent peaks at ~5x the
+    CDB size while partitioning. 70% of the available memory is spent.
+
+    The PCH placement adapts to the resource profile: when memory is
+    plentiful the memory-PCH plan already saturates the CPU and stays
+    fastest per parse (big build hosts keep their historical behavior);
+    when memory is the binding constraint, disk PCH roughly halves the
+    per-worker cost and buys extra workers.
+
+    When the memory numbers cannot be trusted, fall back to a
+    conservative default of 2 disk-PCH workers rather than
+    over-committing. Explicit --instances/--jobs-per-instance always win.
+    """
+    if not trusted:
+        instances = instances_arg or 1
+        jobs = jobs_arg or 2
+        print("[lsp] memory detection unavailable inside this container "
+              "(host view shows {:.1f} GB, not trustworthy); conservative "
+              "default: {} instances x {} jobs = {} workers (disk pch)".format(
+                  avail_gb, instances, jobs, instances * jobs))
+        return instances, jobs, "disk"
+    budget_gb = avail_gb * 0.7
+
+    def _budget(inst, per_worker):
+        fixed = cdb_gb * 5 + inst * 3.5 + 1.0
+        return fixed, max(1, min(cpu, int((budget_gb - fixed) / per_worker)))
+
+    instances = instances_arg or (4 if cpu >= 48 else 2 if cpu >= 24 else 1)
+    fixed, w_mem = _budget(instances, 0.55)
+    _, w_disk = _budget(instances, 0.30)
+    if instances > 1 and min(w_mem, w_disk) < instances:
+        print("[lsp] low free RAM (available {:.1f} GB); falling back to 1 "
+              "instance (no CDB slice)".format(avail_gb))
+        instances = 1
+        fixed, w_mem = _budget(1, 0.55)
+        _, w_disk = _budget(1, 0.30)
+    if w_mem >= cpu:
+        pch, total_jobs, worker_cost = "memory", w_mem, 0.55
+    elif w_disk > w_mem:
+        pch, total_jobs, worker_cost = "disk", w_disk, 0.30
+    else:
+        pch, total_jobs, worker_cost = "memory", w_mem, 0.55
+    jobs = jobs_arg or max(1, min(60, total_jobs // instances))
+    print("[lsp] resources: effective cpu {}, available memory {:.1f} GB "
+          "(using {:.1f} GB); plan: {} instances x {} jobs = {} workers, "
+          "pch={} (est. {:.1f} GB)".format(
+              cpu, avail_gb, budget_gb, instances, jobs,
+              instances * jobs, pch,
+              fixed + instances * jobs * worker_cost))
+    return instances, jobs, pch
+
+
 def mem_available_gb():
+    """Best-effort available RAM in GB, cgroup-aware.
+
+    Falls back to /proc/meminfo (host view) when the cgroup limit or
+    usage cannot be read; inside containers the cgroup headroom
+    (limit minus usage) is the trustworthy number.
+    """
     try:
         with open("/proc/meminfo") as f:
             for line in f:
                 if line.startswith("MemAvailable:"):
-                    return int(line.split()[1]) / (1 << 20)
+                    avail = int(line.split()[1]) / (1 << 20)
+                    break
+            else:
+                avail = 16.0
     except OSError:
-        pass
-    return 16.0
+        avail = 16.0
+    limit = cgroup_memory_limit_bytes()
+    usage = cgroup_memory_usage_bytes()
+    if limit and usage is not None:
+        headroom = (limit - usage) / (1 << 30)
+        if headroom < avail:
+            return max(0.0, headroom)
+    return avail
 
 
 def partition_cdb(cdb_path, n, work_dir, index_dir):
@@ -269,9 +529,12 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
     """Generate the consumer-side MCP config and symlink it to the root.
 
     Writes oskm/lsp/lsp-mcp.json from the actual build parameters (product
-    out dir, the very clangd that built the index, a real kickoff file from
-    the CDB), then symlinks <root>/.lsp-mcp.json to it so consumers need no
-    manual setup. All paths are relative to the source root: the root config
+    out dir, the clangd_wrapper.py launcher, a real kickoff file from the
+    CDB), then symlinks <root>/.lsp-mcp.json to it so consumers need no
+    manual setup. The wrapper binds the build-host path recorded in
+    compile_commands.json to the local workspace with a symlink so the
+    pipeline-built index loads as-is (see clangd_wrapper.py). All
+    paths are relative to the source root: the root config
     is only discovered when the MCP is launched from the source root, so
     relative paths are always self-consistent and the whole tree stays
     relocatable. An existing regular file at the root is left untouched
@@ -279,7 +542,11 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
     """
     here_rel = os.path.relpath(HERE, root)
     config_path = os.path.join(HERE, "lsp-mcp.json")
-    clangd_rel = os.path.relpath(clangd_bin, root)
+    wrapper_rel = os.path.relpath(os.path.join(HERE, "clangd_wrapper.py"), root)
+    try:
+        os.chmod(os.path.join(HERE, "clangd_wrapper.py"), 0o755)
+    except OSError:
+        pass
     out_rel = os.path.relpath(out_dir, root)
     warmup_rel = None
     if kickoff and os.path.isfile(kickoff):
@@ -290,15 +557,16 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
             "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".hh",
                            ".cxx", ".hxx", ".c++", ".h++"],
             "languageIds": ["c", "cpp"],
-            "command": clangd_rel,
+            "command": wrapper_rel,
             "args": [
                 "--background-index",
                 "--compile-commands-dir=" + out_rel,
-                "-j=32",
-                "--pch-storage=memory",
+                "-j=8",
+                "--pch-storage=disk",
                 "--limit-references=0",
                 "--limit-results=0",
             ],
+            "env": {},
             "rootPatterns": [".clangd", "compile_commands.json"],
             "warmup": warmup_rel,
         }],
@@ -435,7 +703,51 @@ def _report_revert(results):
                   for p, s in results) or "no musl sysroot found"))
 
 
+MAIN_SHARD_RE = re.compile(
+    r"\.(?:cpp|cxx|cc|c|C|s|S|m|mm)\.[0-9A-F]{16}\.idx$")
+CDB_FILE_KEY = b'"file":'
+
+
+def count_main_shards(index_dir):
+    """Main-file shards in the index, or -1 when unreadable."""
+    try:
+        return sum(1 for name in os.listdir(index_dir)
+                   if MAIN_SHARD_RE.search(name))
+    except OSError:
+        return -1
+
+
+def count_cdb_entries(cdb_path):
+    """Entry count of a compile database, or -1 when unreadable.
+
+    Streams the file counting '"file":' key occurrences; pretty-printed
+    and minified layouts both match.
+    """
+    total = 0
+    carry = b""
+    try:
+        with open(cdb_path, "rb") as f:
+            while True:
+                chunk = f.read(8 << 20)
+                if not chunk:
+                    break
+                buf = carry + chunk
+                cut = len(buf) - len(CDB_FILE_KEY) + 1
+                if cut > 0:
+                    total += buf[:cut].count(CDB_FILE_KEY)
+                    carry = buf[cut:]
+                else:
+                    carry = buf
+    except OSError:
+        return -1
+    return total + carry.count(CDB_FILE_KEY)
+
+
 def main():
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
     parser = argparse.ArgumentParser(
         description="Build the clangd background index for an OHOS build.")
     parser.add_argument("-i", "--input", required=True,
@@ -447,6 +759,12 @@ def main():
     parser.add_argument("--timeout-hours", type=float, default=0,
                         help="abort after N hours (0 = unlimited; "
                              "partial progress is kept and resumed next run)")
+    parser.add_argument("--cdb-filter", choices=["testfuzz", "off"],
+                        default="testfuzz",
+                        help="trim compile_commands.json before indexing: "
+                             "drop test/fuzz entries that were never built "
+                             "and keep one command per source file "
+                             "(off = keep the full build graph)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan and checks without building")
     args = parser.parse_args()
@@ -482,6 +800,18 @@ def main():
     os.makedirs(index_dir, exist_ok=True)
     print("[lsp] cdb: {}".format(cdb_status))
 
+    if args.cdb_filter != "off":
+        from cdb_trim import trim_if_stale
+        stats = trim_if_stale(cdb, out_dir)
+        if stats:
+            print("[lsp] cdb trimmed: {} -> {} entries "
+                  "(test/fuzz: -{}, duplicates: -{})".format(
+                      stats["total"], stats["kept"],
+                      stats["test"], stats["dup"]))
+        else:
+            print("[lsp] cdb trim: skipped (already trimmed or "
+                  "unsupported layout)")
+
     clangd_bin = find_clangd(root)
     if not clangd_bin:
         print("[lsp] no clangd found (set LSP_CLANGD_BIN, bundle one at "
@@ -493,18 +823,16 @@ def main():
         ver_note = ("WARNING: clangd {} < 20: outgoingCalls unsupported, "
                     "C++ index quality degraded".format(ver))
 
-    cpu = os.cpu_count() or 8
-    instances = args.instances or (4 if cpu >= 48 else 2 if cpu >= 24 else 1)
-    # 内存紧张时退回单实例（无需切分 CDB）
+    cpu = effective_cpu_count()
+    avail_gb = mem_available_gb()
     cdb_gb = os.path.getsize(cdb) / (1 << 30)
-    if instances > 1 and mem_available_gb() < cdb_gb * 6 + 4:
-        print("[lsp] low free RAM; falling back to 1 instance (no CDB slice)")
-        instances = 1
-    jobs = args.jobs_per_instance or max(1, min(60, cpu // instances))
+    instances, jobs, pch = plan_parallelism(
+        args.instances, args.jobs_per_instance, cpu, avail_gb,
+        memory_info_trusted(), cdb_gb)
 
     from apply_musl_fix import apply_musl_fix, revert_musl_fix
     musl_results = apply_musl_fix(out_dir)
-    clangd_cfg = ensure_clangd_config(root)
+    clangd_cfg = ensure_clangd_config(root, out_dir)
 
     print("[lsp] root: {}".format(root))
     print("[lsp] out:  {}".format(out_dir))
@@ -558,6 +886,7 @@ def main():
                    CDB_DIR=cdb_dir,
                    CLANGD_BIN=clangd_bin,
                    CLANGD_JOBS=str(jobs),
+                   CLANGD_PCH=pch,
                    KICKOFF_FILE=kickoffs[i] if instances > 1 else kickoffs[0])
         log = open(os.path.join(work_dir, "instance-{}.log".format(i)), "w")
         procs.append(subprocess.Popen(
@@ -585,6 +914,23 @@ def main():
             if p.poll() is None:
                 p.terminate()
 
+    failed = [(i, p.returncode) for i, p in enumerate(procs)
+              if p.returncode not in (0, None, -15)]
+    for i, code in failed:
+        print("[lsp] WARNING: instance {} exited with code {} "
+              "(its share of the index is INCOMPLETE)".format(i, code))
+
+    mains = count_main_shards(index_dir)
+    entries = count_cdb_entries(cdb)
+    incomplete = bool(failed)
+    if mains >= 0 and entries > 0 and mains < entries * 0.9:
+        incomplete = True
+        print("[lsp] WARNING: only {} main-file shards for {} CDB "
+              "entries (index INCOMPLETE)".format(mains, entries))
+    elif mains >= 0 and entries > 0:
+        print("[lsp] index coverage: {} main-file shards for {} CDB "
+              "entries".format(mains, entries))
+
     if instances > 1:
         for i in range(instances):
             shutil.rmtree(os.path.join(work_dir, str(i)), ignore_errors=True)
@@ -593,14 +939,15 @@ def main():
 
     import glob as _glob
     shards = len(_glob.glob(os.path.join(index_dir, "*.idx")))
-    print("[lsp] done in {:.0f}s: {} shards in {}".format(
-        time.time() - t0, shards, index_dir))
+    print("[lsp] done in {:.0f}s: {} shards in {}{}".format(
+        time.time() - t0, shards, index_dir,
+        " (INCOMPLETE)" if incomplete else ""))
 
     mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
                                     kickoff=kickoffs[0])
     print("[lsp] mcp config: {}".format(mcp_status))
     _report_revert(revert_musl_fix(out_dir))
-    return 0
+    return 1 if incomplete else 0
 
 
 if __name__ == "__main__":
