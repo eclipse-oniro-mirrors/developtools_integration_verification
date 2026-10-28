@@ -4,10 +4,6 @@
     "description": "开机测试"
   },
   {
-    "case_file": "testcases/test_process.py",
-    "description": "进程检查"
-  },
-  {
     "case_file": "testcases/test_apl_check.py",
     "description": "外部用例APL白名单检查"
   },
@@ -20,16 +16,16 @@
     "description": "备忘录应用测试"
   },
   {
-    "case_file": "testcases/test_settings_wifi.py",
-    "description": "设置和wlan开关测试"
-  },
-  {
     "case_file": "testcases/test_photos.py",
     "description": "图库测试"
   },
   {
     "case_file": "testcases/test_camera.py",
     "description": "照相机测试"
+  },
+  {
+    "case_file": "testcases/test_process.py",
+    "description": "进程检查"
   },
   {
     "case_file": "testcases/test_contacts.py",
@@ -46,6 +42,10 @@
   {
     "case_file": "testcases/test_controller_center.py",
     "description": "控制中心测试"
+  },
+  {
+    "case_file": "testcases/test_settings_wifi.py",
+    "description": "设置和wlan开关测试"
   },
   {
     "case_file": "testcases/test_crash_check.py",
