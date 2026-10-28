@@ -457,5 +457,13 @@
     "acls": [
       "ohos.permission.MANAGE_TOOL_TOKENID"
     ]
+  },
+  {
+    "processName": "subfoundation",
+    "acls": [
+      "ohos.permission.NOTIFICATION_CONTROLLER",
+      "ohos.permission.GRANT_URI_PERMISSION_PRIVILEGED",
+      "ohos.permission.START_INVISIBLE_ABILITY"
+    ]
   }
 ]
