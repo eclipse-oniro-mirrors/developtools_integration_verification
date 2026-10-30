@@ -23,6 +23,7 @@ from pathlib import Path
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 
 VIRTUAL_ROOT = "/tmp/ohos-clangd-workspace"
@@ -157,10 +158,41 @@ def clangd_version(binary):
                           capture_output=True, text=True, timeout=30).stdout.strip()
 
 
-def namespace_command(workspace, command, cache=None):
+def ensure_bwrap():
+    """Install bubblewrap when a portable producer or consumer needs it."""
+    bwrap = shutil.which("bwrap")
+    if bwrap:
+        return bwrap
+    apt = shutil.which("apt")
+    if not apt:
+        raise RuntimeError("Portable index requires bubblewrap (bwrap); "
+                           "apt is unavailable, install bubblewrap manually")
+    prefix = []
+    if os.geteuid() != 0:
+        sudo = shutil.which("sudo")
+        if not sudo:
+            raise RuntimeError("Installing bubblewrap requires root or passwordless sudo; "
+                               "run apt update && apt install bubblewrap as root")
+        prefix = [sudo, "-n"]
+    print("[lsp] bwrap not found; installing bubblewrap with apt", file=sys.stderr, flush=True)
+    env = dict(os.environ, DEBIAN_FRONTEND="noninteractive")
+    for arguments in (["update"], ["install", "-y", "bubblewrap"]):
+        command = prefix + [apt] + arguments
+        try:
+            subprocess.run(command, check=True, stdin=subprocess.DEVNULL,
+                           stdout=sys.stderr, stderr=sys.stderr, env=env)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError("Automatic bubblewrap installation failed at {}: {}; "
+                               "run apt update && apt install bubblewrap as root "
+                               "and retry".format(" ".join(command), exc)) from exc
     bwrap = shutil.which("bwrap")
     if not bwrap:
-        raise RuntimeError("Portable index requires bubblewrap (bwrap); no native rebuild fallback")
+        raise RuntimeError("bubblewrap installation finished but bwrap is not on PATH")
+    return bwrap
+
+
+def namespace_command(workspace, command, cache=None):
+    bwrap = ensure_bwrap()
     root = str(Path(workspace).resolve())
     args = [bwrap, "--die-with-parent", "--ro-bind", "/", "/",
             "--tmpfs", "/tmp", "--bind", root, VIRTUAL_ROOT,
