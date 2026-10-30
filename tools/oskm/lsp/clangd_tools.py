@@ -41,6 +41,8 @@ import subprocess
 import sys
 import threading
 import time
+import atexit
+from portable_index import launch_command, tree_cpu_jiffies
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ.get("OH_ROOT") or os.path.normpath(
@@ -73,10 +75,7 @@ def shard_count():
 
 
 def proc_cpu_jiffies(pid):
-    with open("/proc/%d/stat" % pid) as f:
-        data = f.read()
-    rest = data[data.rfind(")") + 2:].split()
-    return int(rest[11]) + int(rest[12])
+    return tree_cpu_jiffies(pid)
 
 
 class Clangd:
@@ -93,14 +92,33 @@ class Clangd:
             "--compile-commands-dir=" + CDB_DIR,
             "--pch-storage=" + PCH,
         ]
+        cmd = launch_command(ROOT, CLANGD, cmd[1:],
+                             building=bool(os.environ.get("LSP_PORTABLE_ARTIFACT")))
         self.proc = subprocess.Popen(
             cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
         self.next_id = 1
+        self.write_lock = threading.Lock()
         self.responses = {}
         self.progress = []
         self.cv = threading.Condition()
         threading.Thread(target=self._reader, daemon=True).start()
+        atexit.register(self.close)
+
+    def close(self):
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+
+    def send(self, msg):
+        data = json.dumps(msg).encode()
+        with self.write_lock:
+            self.proc.stdin.write(b"Content-Length: %d\r\n\r\n%s" % (len(data), data))
+            self.proc.stdin.flush()
 
     def _reader(self):
         while True:
@@ -122,11 +140,15 @@ class Clangd:
                     return
                 body += chunk
             msg = json.loads(body.decode("utf-8"))
+            if "id" in msg and "method" in msg:
+                self.send({"jsonrpc": "2.0", "id": msg["id"], "result": None})
+                continue
             with self.cv:
                 if "id" in msg:
                     self.responses[msg["id"]] = msg
                 elif "method" in msg:
                     self.progress.append(msg)
+                    self.progress = self.progress[-100:]
                 self.cv.notify_all()
 
     def request(self, method, params, timeout=3600):
@@ -134,25 +156,21 @@ class Clangd:
             rid = self.next_id
             self.next_id += 1
         msg = {"jsonrpc": "2.0", "id": rid, "method": method, "params": params}
-        data = json.dumps(msg).encode()
-        self.proc.stdin.write(
-            b"Content-Length: %d\r\n\r\n%s" % (len(data), data))
-        self.proc.stdin.flush()
+        self.send(msg)
         deadline = time.time() + timeout
         with self.cv:
             while rid not in self.responses:
                 left = deadline - time.time()
                 if left <= 0:
                     raise TimeoutError(method)
-                self.cv.wait(left)
+                if self.proc.poll() is not None:
+                    raise RuntimeError("clangd exited: {}".format(self.proc.returncode))
+                self.cv.wait(min(left, 1))
             return self.responses.pop(rid)
 
     def notify(self, method, params):
         msg = {"jsonrpc": "2.0", "method": method, "params": params}
-        data = json.dumps(msg).encode()
-        self.proc.stdin.write(
-            b"Content-Length: %d\r\n\r\n%s" % (len(data), data))
-        self.proc.stdin.flush()
+        self.send(msg)
 
     def initialize(self):
         r = self.request("initialize", {
@@ -288,7 +306,9 @@ if __name__ == "__main__":
         print(__doc__)
         sys.exit(1)
     if sys.argv[1] == "warm":
-        interval = int(sys.argv[3]) if len(sys.argv) > 3 else 60
+        interval = int(sys.argv[-1]) if len(sys.argv) > 2 else 60
+        if interval <= 0:
+            sys.exit("interval must be positive")
         cmd_warm(interval)
     elif sys.argv[1] == "status":
         cmd_status()
