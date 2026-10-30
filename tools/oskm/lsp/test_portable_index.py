@@ -166,6 +166,64 @@ class PortableTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "bubblewrap"):
                 portable.namespace_command(self.root, ["/usr/bin/true"])
 
+    def test_existing_bwrap_skips_installation(self):
+        with patch.object(portable.shutil, "which", return_value="/usr/bin/bwrap"), \
+                patch.object(portable.subprocess, "run") as run:
+            self.assertEqual(portable.ensure_bwrap(), "/usr/bin/bwrap")
+        run.assert_not_called()
+
+    def test_missing_bwrap_installs_before_namespace_launch(self):
+        with patch.object(portable.shutil, "which",
+                          side_effect=[None, "/usr/bin/apt", "/usr/bin/bwrap"]), \
+                patch.object(portable.os, "geteuid", return_value=0), \
+                patch.object(portable.subprocess, "run") as run:
+            command = portable.namespace_command(self.root, ["/usr/bin/true"])
+        self.assertEqual(command[0], "/usr/bin/bwrap")
+        self.assertEqual([call.args[0] for call in run.call_args_list], [
+            ["/usr/bin/apt", "update"], ["/usr/bin/apt", "install", "-y", "bubblewrap"]])
+        for call in run.call_args_list:
+            self.assertTrue(call.kwargs["check"])
+            self.assertEqual(call.kwargs["stdin"], subprocess.DEVNULL)
+            self.assertIs(call.kwargs["stdout"], sys.stderr)
+            self.assertIs(call.kwargs["stderr"], sys.stderr)
+
+    def test_nonroot_installation_uses_noninteractive_sudo(self):
+        with patch.object(portable.shutil, "which", side_effect=[
+                None, "/usr/bin/apt", "/usr/bin/sudo", "/usr/bin/bwrap"]), \
+                patch.object(portable.os, "geteuid", return_value=1000), \
+                patch.object(portable.subprocess, "run") as run:
+            self.assertEqual(portable.ensure_bwrap(), "/usr/bin/bwrap")
+        self.assertEqual([call.args[0] for call in run.call_args_list], [
+            ["/usr/bin/sudo", "-n", "/usr/bin/apt", "update"],
+            ["/usr/bin/sudo", "-n", "/usr/bin/apt", "install", "-y", "bubblewrap"]])
+
+    def test_installation_failure_stops_without_fallback(self):
+        for failed_at in (0, 1):
+            with self.subTest(failed_at=failed_at):
+                error = subprocess.CalledProcessError(100, ["apt"])
+                with patch.object(portable.shutil, "which", side_effect=[None, "/usr/bin/apt"]), \
+                        patch.object(portable.os, "geteuid", return_value=0), \
+                        patch.object(portable.subprocess, "run",
+                                     side_effect=[None] * failed_at + [error]) as run:
+                    with self.assertRaisesRegex(RuntimeError, "Automatic bubblewrap installation failed"):
+                        portable.ensure_bwrap()
+                self.assertEqual(run.call_count, failed_at + 1)
+
+    def test_nonroot_without_sudo_is_explicit(self):
+        with patch.object(portable.shutil, "which", side_effect=[None, "/usr/bin/apt", None]), \
+                patch.object(portable.os, "geteuid", return_value=1000), \
+                patch.object(portable.subprocess, "run") as run:
+            with self.assertRaisesRegex(RuntimeError, "root or passwordless sudo"):
+                portable.ensure_bwrap()
+        run.assert_not_called()
+
+    def test_installation_must_make_bwrap_available(self):
+        with patch.object(portable.shutil, "which", side_effect=[None, "/usr/bin/apt", None]), \
+                patch.object(portable.os, "geteuid", return_value=0), \
+                patch.object(portable.subprocess, "run"):
+            with self.assertRaisesRegex(RuntimeError, "bwrap is not on PATH"):
+                portable.ensure_bwrap()
+
     def test_manifest_checks(self):
         self.prepare()
         with patch.object(portable, "clangd_version", return_value="test-clangd"):

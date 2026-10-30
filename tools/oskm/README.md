@@ -119,7 +119,15 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
 | clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7，~110MB，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级） |
 | Node.js >= 18 | 仅 MCP 消费侧需要 |
 | compile_commands.json | OHOS 构建自动生成于 out 目录 |
-| Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；需允许创建用户/挂载命名空间 |
+| Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；缺失时自动通过 apt 安装，需允许创建用户/挂载命名空间 |
+
+portable 模式生成索引和本地启动 clangd 时，先检查 `bwrap` 是否已在 `PATH` 中；
+已有时直接使用，缺失时依次执行 `apt update`、`apt install -y bubblewrap`。
+root 用户直接安装，普通用户通过 `sudo -n` 安装，需要配置免密 sudo。
+安装日志写入 stderr，避免干扰 MCP/LSP 的 stdio 通信。没有 apt、安装权限不足、
+安装失败或安装后仍找不到 `bwrap` 时明确报错，不回退到 native 模式。
+安装软件包不会解除宿主机对用户/挂载命名空间的限制；已有 `bwrap` 但命名空间
+不可用时仍会失败。native 模式不触发安装。
 
 ### 流水线分发与多套代码
 
