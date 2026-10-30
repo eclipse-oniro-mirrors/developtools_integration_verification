@@ -14,7 +14,7 @@ oskm 作为后编译分析工具集成在 OpenHarmony 构建系统中，通过 `
 
 ```
 out/rk3568/oskm/knowledge.db          # 知识库（SQLite）
-out/rk3568/lsp-portable/             # LSP 可迁移索引、规范化 CDB 和 manifest
+out/rk3568/.cache/clangd/index/       # LSP 代码索引（.idx shards）
 ```
 
 ### 工作原理
@@ -78,8 +78,7 @@ python3 oskm.py list --db out/oskm/knowledge.db
 
 ### 索引生成在哪里
 
-- **默认位置**：`out/<product>/lsp-portable/.cache/clangd/index/`。
-  `--index-mode native` 使用原位置 `out/<product>/.cache/clangd/index/`，仅供当前源码路径使用。
+- **位置**：`out/<product>/.cache/clangd/index/`（约 17 万个 `.idx` shard，~2GB）
 - **触发**：`--enable-oskm-collect` 编译选项 → `postTargetCompilation` 阶段 →
   `oskm_collect.py` → `lsp/build_index.py`
 - **手动执行**：
@@ -92,8 +91,6 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
 #   --jobs-per-instance 32 每实例线程数（默认自动）
 #   --timeout-hours 6      超时中止，进度保留、下次增量续建
 #   --dry-run              只打印计划不执行
-#   --index-mode portable  默认：生成可迁移索引（需要 bwrap）
-#   --index-mode native    原生路径索引
 ```
 
 ### 生成流程（build_index.py 自动完成）
@@ -102,8 +99,8 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
    > `PATH` > OHOS prebuilts 自带（clangd 15，降级：无 outgoingCalls）
 2. **校验/生成** `compile_commands.json`：优先使用构建自带的；缺失时自动通过
    `ninja -t compdb`（cxx/cc/asm 规则，约半分钟，~99% 源文件覆盖）生成
-3. **musl nullptr_t 补丁**（`apply_musl_fix.py`）：仅 native 模式临时应用。
-   portable 模式使用下一步的 include 顺序修复，避免临时 shim 恢复后改变头文件摘要
+3. **musl nullptr_t 补丁**（`apply_musl_fix.py`）：修 libcxx-ohos 与 musl 的
+   头文件错配，否则所有 C++ TU 解析降级（每次全量构建后需重新应用，自动完成）
 4. **确保源码根 `.clangd`**：注入 libcxx-ohos include 路径（缺失时自动生成），
    并按 sysroot 重排 include 顺序（libcxx 置前、musl 目录显式排后、移除抢位的
    `--sysroot`），根治 musl stddef.h 劫持 libc++ 头链的 nullptr_t 级联错误；
@@ -119,36 +116,6 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
 | clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7，~110MB，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级） |
 | Node.js >= 18 | 仅 MCP 消费侧需要 |
 | compile_commands.json | OHOS 构建自动生成于 out 目录 |
-| Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；需允许创建用户/挂载命名空间 |
-
-### 流水线分发与多套代码
-
-portable 模式在每个 clangd 的私有挂载命名空间内，把当前源码根映射为
-`/tmp/ohos-clangd-workspace`，并生成固定路径的规范化 CDB。消费时通过 clangd
-路径映射把跳转结果还原为本机路径，不改写下载的 CDB，不创建机器全局软链接。
-多套代码即使同时运行，也分别映射到各自的源码和缓存，不会互相覆盖。
-
-分发时保留 `out/<product>/lsp-portable/` 整个目录，包括隐藏的 `.cache/`，
-同时提供匹配的源码、SDK、生成头文件和源码根 `.clangd`，保持树内相对目录结构。
-源码树之外的编译依赖仍需在本机可用。生成的 `lsp/lsp-mcp.json` 和源码根
-`.lsp-mcp.json` 软链也应一并分发；其中启动参数使用相对路径，从本机源码根启动 MCP。
-原有索引需要重新生成一次 portable 基线，不能仅改 CDB 前缀实现旧分片迁移。
-
-`portable-index.json` 记录格式、虚拟根、产品目录、clangd 完整版本、CDB 校验和、
-构建状态和可选的 `LSP_SNAPSHOT_ID`。消费前校验这些信息及分片存在性；校验失败
-明确报错，不静默回退为本地全量构建。相同快照可复制到多套工作区，各自独立增量更新；
-不同源码版本或产品分别生成对应产物，避免多个工作区共写一个缓存目录。
-
-回归验证（从 integration_verification 仓库根执行）：
-
-```bash
-LSP_TEST_CLANGD="$PWD/tools/oskm/lsp/clangd/bin/clangd" \
-  python3 tools/oskm/lsp/test_portable_index.py -v
-```
-
-覆盖真实构建入口和 MCP 自动预热、响应文件/生成头文件、双目录同时加载、
-跨文件定义跳转、迁移后分片内容和修改时间不变，以及本地源码变更后的独立增量更新。
-构建进度默认每 60 秒输出，可通过 `LSP_INDEX_INTERVAL` 调整。
 
 ### MCP 配置（消费侧）
 

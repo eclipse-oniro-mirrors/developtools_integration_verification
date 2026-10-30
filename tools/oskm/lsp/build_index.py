@@ -26,7 +26,7 @@ Flow:
   1. resolve source root (from this script's location) and the out dir
   2. locate clangd (LSP_CLANGD_BIN > bundled clangd/ > PATH > OHOS prebuilts)
   3. verify compile_commands.json exists in the out dir
-  4. apply the temporary musl shim only in native mode
+  4. apply the musl stddef nullptr_t patch (C++ parse quality)
   5. ensure a .clangd config exists at the source root (libcxx include
      path + musl sysroot include order; see ensure_clangd_config)
   6. stream-partition the compile database; run N clangd instances in
@@ -34,9 +34,8 @@ Flow:
   7. clean up the slice work dirs, keeping the small instance logs
   8. print a summary
 
-Portable mode writes <out_dir>/lsp-portable/.cache/clangd/index inside a
-private fixed-root mount namespace. Native mode retains the original
-<out_dir>/.cache/clangd/index layout. Both support incremental indexing.
+The index lands in <out_dir>/.cache/clangd/index and is fully incremental:
+existing shards whose source files are unchanged are validated and skipped.
 """
 
 import argparse
@@ -49,8 +48,6 @@ import subprocess
 import sys
 import time
 import zlib
-from pathlib import Path
-from portable_index import prepare, finish, local_path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.join(HERE, "..", "..", "..", "..", "..")  # -> source root
@@ -537,13 +534,8 @@ def partition_cdb(cdb_path, n, work_dir, index_dir):
         os.makedirs(os.path.join(work_dir, str(i), ".cache", "clangd"),
                     exist_ok=True)
         link = os.path.join(work_dir, str(i), ".cache", "clangd", "index")
-        target = os.path.relpath(index_dir, os.path.dirname(link))
         if not os.path.lexists(link):
-            os.symlink(target, link)
-        elif os.path.islink(link) and os.readlink(link) != target:
-            temporary = link + ".tmp-{}".format(os.getpid())
-            os.symlink(target, temporary)
-            os.replace(temporary, link)
+            os.symlink(index_dir, link)
 
     if use_json:
         with open(cdb_path, "r", encoding="utf-8") as f:
@@ -626,14 +618,15 @@ def partition_cdb(cdb_path, n, work_dir, index_dir):
     return result, total
 
 
-def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None, portable_artifact=None):
+def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None):
     """Generate the consumer-side MCP config and symlink it to the root.
 
     Writes oskm/lsp/lsp-mcp.json from the actual build parameters (product
     out dir, the clangd_wrapper.py launcher, a real kickoff file from the
     CDB), then symlinks <root>/.lsp-mcp.json to it so consumers need no
-    manual setup. Portable indices use the wrapper's private mount namespace;
-    native indices remain specific to the original workspace. All generated
+    manual setup. The wrapper binds the build-host path recorded in
+    compile_commands.json to the local workspace with a symlink so the
+    pipeline-built index loads as-is (see clangd_wrapper.py). All
     paths are relative to the source root: the root config
     is only discovered when the MCP is launched from the source root, so
     relative paths are always self-consistent and the whole tree stays
@@ -647,7 +640,7 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None, portable_artifact
         os.chmod(os.path.join(HERE, "clangd_wrapper.py"), 0o755)
     except OSError:
         pass
-    out_rel = os.path.relpath(portable_artifact or out_dir, root)
+    out_rel = os.path.relpath(out_dir, root)
     warmup_rel = None
     if kickoff and os.path.isfile(kickoff):
         warmup_rel = os.path.relpath(kickoff, root)
@@ -666,8 +659,8 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None, portable_artifact
                 "--limit-references=0",
                 "--limit-results=0",
             ],
-            "env": {"LSP_CLANGD_BIN": os.path.relpath(clangd_bin, root)},
-            "rootPatterns": [".repo"],
+            "env": {},
+            "rootPatterns": [".clangd", "compile_commands.json"],
             "warmup": warmup_rel,
         }],
         "requestTimeout": 600000,
@@ -867,8 +860,6 @@ def main():
                              "(off = keep the full build graph)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the plan and checks without building")
-    parser.add_argument("--index-mode", choices=["portable", "native"], default="portable",
-                        help="portable uses a private fixed-root mount (requires bwrap)")
     args = parser.parse_args()
 
     root = find_root()
@@ -933,15 +924,8 @@ def main():
         memory_info_trusted(), cdb_gb)
 
     from apply_musl_fix import apply_musl_fix, revert_musl_fix
-    musl_results = apply_musl_fix(out_dir) if args.index_mode == "native" else []
+    musl_results = apply_musl_fix(out_dir)
     clangd_cfg = ensure_clangd_config(root, out_dir)
-    portable = None
-    if args.index_mode == "portable":
-        portable = prepare(root, cdb, os.path.join(out_dir, "lsp-portable"),
-                           clangd_bin, os.path.relpath(out_dir, root))
-        cdb = str(portable / "compile_commands.json")
-        index_dir = str(portable / ".cache" / "clangd" / "index")
-        os.makedirs(index_dir, exist_ok=True)
 
     print("[lsp] root: {}".format(root))
     print("[lsp] out:  {}".format(out_dir))
@@ -983,13 +967,9 @@ def main():
                                                       m.group(1)))]
     if not kickoffs or not kickoffs[0]:
         print("[lsp] cannot determine a kickoff file from the CDB")
-        if portable:
-            finish(portable, False)
-        if args.index_mode == "native":
-            _report_revert(revert_musl_fix(out_dir))
+        _report_revert(revert_musl_fix(out_dir))
         return 1
     kickoffs = [k or kickoffs[0] for k in kickoffs]
-    kickoffs = [local_path(k, root) for k in kickoffs]
 
     procs = []
     for i in range(instances):
@@ -1000,20 +980,15 @@ def main():
                    CLANGD_BIN=clangd_bin,
                    CLANGD_JOBS=str(jobs),
                    CLANGD_PCH=pch,
-                   LSP_PORTABLE_ARTIFACT=str(portable) if portable else "",
                    KICKOFF_FILE=kickoffs[i] if instances > 1 else kickoffs[0])
         log = open(os.path.join(work_dir, "instance-{}.log".format(i)), "w")
         procs.append(subprocess.Popen(
-            [sys.executable, os.path.join(HERE, "clangd_tools.py"), "warm",
-             os.environ.get("LSP_INDEX_INTERVAL", "60")],
-            cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT,
-            start_new_session=True))
-        log.close()
+            [sys.executable, os.path.join(HERE, "clangd_tools.py"), "warm", "60"],
+            cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT))
         print("[lsp] instance {} started (cdb slice: {}, log: {}/instance-{}.log)"
               .format(i, cdb_dir, work_dir, i))
 
     deadline = time.time() + args.timeout_hours * 3600 if args.timeout_hours else 0
-    timed_out = False
     try:
         for i, p in enumerate(procs):
             remaining = None
@@ -1024,21 +999,13 @@ def main():
             except subprocess.TimeoutExpired:
                 print("[lsp] timeout reached; terminating instances "
                       "(progress kept, resumed next run)")
-                timed_out = True
+                for q in procs:
+                    q.terminate()
                 break
     finally:
-        import signal
         for p in procs:
-            try:
-                os.killpg(p.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-        for p in procs:
-            try:
-                p.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                os.killpg(p.pid, signal.SIGKILL)
-                p.wait()
+            if p.poll() is None:
+                p.terminate()
 
     failed = [(i, p.returncode) for i, p in enumerate(procs)
               if p.returncode not in (0, None, -15)]
@@ -1048,7 +1015,7 @@ def main():
 
     mains = count_main_shards(index_dir)
     entries = count_cdb_entries(cdb)
-    incomplete = bool(failed) or timed_out
+    incomplete = bool(failed)
     if mains >= 0 and entries > 0 and mains < entries * 0.9:
         incomplete = True
         print("[lsp] WARNING: only {} main-file shards for {} CDB "
@@ -1069,13 +1036,10 @@ def main():
         time.time() - t0, shards, index_dir,
         " (INCOMPLETE)" if incomplete else ""))
 
-    if portable:
-        finish(portable, not incomplete)
     mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
-                                  kickoff=kickoffs[0], portable_artifact=portable)
+                                    kickoff=kickoffs[0])
     print("[lsp] mcp config: {}".format(mcp_status))
-    if args.index_mode == "native":
-        _report_revert(revert_musl_fix(out_dir))
+    _report_revert(revert_musl_fix(out_dir))
     return 1 if incomplete else 0
 
 

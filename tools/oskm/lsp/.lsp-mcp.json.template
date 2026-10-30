@@ -1,23 +1,20 @@
 {
-  "_comment": "消费侧 MCP 配置模板。需先生成 portable 索引，再复制到源码树根目录命名为 .lsp-mcp.json；从源码树根目录启动 MCP。把 out/rk3568 换成实际产品目录。需 Linux、bwrap 和与生成侧完全相同版本的 clangd。",
+  "_comment": "消费侧 MCP 配置模板。复制到源码树根目录命名为 .lsp-mcp.json，且必须从源码树根目录启动 opencode（相对路径按启动目录解析）。把 out/rk3568 换成实际产品输出目录；clangd 需 >= 20（建议放入 PATH 或改成本机绝对路径）。",
   "servers": [
     {
       "id": "cpp",
       "extensions": [".c", ".h", ".cpp", ".hpp", ".cc", ".hh", ".cxx", ".hxx", ".c++", ".h++"],
       "languageIds": ["c", "cpp"],
-      "command": "developtools/integration_verification/tools/oskm/lsp/clangd_wrapper.py",
+      "command": "clangd",
       "args": [
         "--background-index",
-        "--compile-commands-dir=out/rk3568/lsp-portable",
+        "--compile-commands-dir=out/rk3568",
         "-j=32",
         "--pch-storage=memory",
         "--limit-references=0",
         "--limit-results=0"
       ],
-      "env": {
-        "LSP_CLANGD_BIN": "developtools/integration_verification/tools/oskm/lsp/clangd/bin/clangd"
-      },
-      "rootPatterns": [".repo"],
+      "rootPatterns": [".clangd", "compile_commands.json"],
       "warmup": "base/startup/init/interfaces/innerkits/service_watcher/service_watcher.c"
     }
   ],
