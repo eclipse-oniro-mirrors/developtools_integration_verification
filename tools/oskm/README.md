@@ -116,7 +116,7 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
 
 | 依赖 | 说明 |
 |---|---|
-| clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7，~110MB，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级） |
+| clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7-oskm1，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级）。修复、源码补丁和重编说明见 [clangd/README.md](lsp/clangd/README.md) |
 | Node.js >= 18 | 仅 MCP 消费侧需要 |
 | compile_commands.json | OHOS 构建自动生成于 out 目录 |
 | Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；缺失时自动通过 apt 安装，需允许创建用户/挂载命名空间 |
@@ -232,7 +232,7 @@ oskm/
 │   ├── clangd_tools.py      ← headless clangd 驱动
 │   ├── apply_musl_fix.py    ← musl nullptr_t 补丁
 │   ├── .lsp-mcp.json.template
-│   ├── clangd/              ← 捆绑 clangd 21.1.7（bin + 内置头）
+│   ├── clangd/              ← 捆绑 clangd 21.1.7-oskm1（bin + 内置头 + 源码补丁）
 │   └── mcp/                 ← lsp-mcp-server（dist + 生产依赖）
 ├── README.md
 └── AGENTS.md
