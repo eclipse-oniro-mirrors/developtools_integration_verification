@@ -52,7 +52,7 @@ import sys
 import time
 import zlib
 from pathlib import Path
-from portable_index import prepare, finish, local_path
+from portable_index import prepare, finish, local_path, atomic_json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.join(HERE, "..", "..", "..", "..", "..")  # -> source root
@@ -697,6 +697,37 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None, portable_artifact
     return "symlinked <root>/.lsp-mcp.json -> {}".format(target_rel)
 
 
+def ensure_opencode_config(root):
+    """Register the bundled MCP without overwriting user OpenCode settings."""
+    link = os.path.join(root, "opencode.json")
+    target = os.path.relpath(os.path.join(HERE, "opencode.json"), root)
+    if os.path.lexists(os.path.join(root, "opencode.jsonc")):
+        return "user opencode.jsonc exists (left untouched; merge lsp manually)"
+    if os.path.islink(link):
+        if os.readlink(link) == target:
+            return "root opencode.json already linked -> {}".format(target)
+        return "user opencode.json symlink exists (left untouched)"
+    if os.path.lexists(link):
+        try:
+            with open(link, encoding="utf-8") as stream:
+                config = json.load(stream)
+        except (OSError, ValueError):
+            return "user opencode.json is unreadable or not JSON (left untouched)"
+        if not isinstance(config, dict) or not isinstance(config.get("mcp", {}), dict):
+            return "user opencode.json has incompatible settings (left untouched)"
+        if "lsp" in config.get("mcp", {}):
+            return "user opencode.json already defines mcp.lsp (left untouched)"
+        with open(os.path.join(HERE, "opencode.json"), encoding="utf-8") as stream:
+            bundled = json.load(stream)
+        config.setdefault("mcp", {})["lsp"] = bundled["mcp"]["lsp"]
+        mode = os.stat(link).st_mode & 0o777
+        atomic_json(link, config)
+        os.chmod(link, mode)
+        return "added mcp.lsp to root opencode.json (other settings kept)"
+    os.symlink(target, link)
+    return "symlinked <root>/opencode.json -> {}".format(target)
+
+
 def ensure_cdb(out_dir, root):
     """Return (cdb_path, status); generate the CDB if it is missing.
 
@@ -1122,6 +1153,7 @@ def _build_index(args, root, out_dir, work_dir, log_dir):
     mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
                                   kickoff=kickoffs[0], portable_artifact=portable)
     print("[lsp] mcp config: {}".format(mcp_status))
+    print("[lsp] opencode config: {}".format(ensure_opencode_config(root)))
     if args.index_mode == "native":
         _report_revert(revert_musl_fix(out_dir))
     return 1 if incomplete else 0

@@ -170,22 +170,15 @@ MCP 服务本体在 `lsp/mcp/dist/index.js`（已含生产依赖，无需 npm in
    （产品 out 目录、实际使用的捆绑 clangd）生成 `lsp/lsp-mcp.json`，并在
    **源码树根目录创建软链** `.lsp-mcp.json` 指向它——开发侧无需任何配置。
    （`lsp/.lsp-mcp.json.template` 仅供未执行过构建时手工参考）
-2. 在 opencode 的 `~/.config/opencode/opencode.json` 注册 MCP（一次性）：
-
-```json
-{
-  "mcp": {
-    "lsp": {
-      "type": "local",
-      "command": ["node", "<源码树绝对路径>/developtools/integration_verification/tools/oskm/lsp/mcp/dist/index.js"],
-      "timeout": 30000,
-      "enabled": true
-    }
-  }
-}
-```
-
-3. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）
+2. **OpenCode 零手工注册**：同一构建流程将源码根 `opencode.json` 相对软链到
+   仓库自带的 [`lsp/opencode.json`](lsp/opencode.json)。从源码根启动 `opencode`
+   即可发现 `lsp` MCP，无需修改全局配置。命令、工作目录均为相对路径，源码根
+   改名后无需重写配置；仍需保留源码、生成文件和 `out/<product>/lsp-portable`。
+3. 已有普通 JSON 配置时，只补充缺失的 `mcp.lsp`，保留模型、其他 MCP 等设置；
+   已有 `mcp.lsp`、JSONC 配置或自定义软链不覆盖，构建日志明确说明。
+   JSONC 用户可将 `lsp/opencode.json` 中的 `mcp.lsp` 手动合并到原配置。
+4. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）。
+   可用 `opencode mcp list` 检查连接；首次启动仍需等待 clangd 加载现有索引。
 
 ### 提供的功能（29 个 lsp_* 工具）
 
