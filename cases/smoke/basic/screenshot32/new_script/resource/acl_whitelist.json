@@ -75,7 +75,8 @@
       "ohos.permission.PUBLISH_CAST_PLUGGED_EVENT",
       "ohos.permission.NOTIFICATION_CONTROLLER",
       "ohos.permission.NOTIFICATION_AGENT_CONTROLLER",
-      "ohos.permission.ACCESS_SCREEN_LOCK_INNER"
+      "ohos.permission.ACCESS_SCREEN_LOCK_INNER",
+      "ohos.permission.kernel.ALLOW_APP_CODE_DECRYPT"
 
     ]
   },
@@ -458,6 +459,12 @@
       "ohos.permission.NOTIFICATION_CONTROLLER",
       "ohos.permission.GRANT_URI_PERMISSION_PRIVILEGED",
       "ohos.permission.START_INVISIBLE_ABILITY"
+    ]
+  },
+  {
+    "processName": "installs",
+    "acls": [
+      "ohos.permission.kernel.ALLOW_APP_CODE_DECRYPT"
     ]
   }
 ]
