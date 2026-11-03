@@ -336,6 +336,16 @@ class PortableTests(unittest.TestCase):
                 env=env, capture_output=True, text=True, timeout=10)
             self.assertEqual(status.returncode, 0, status.stderr)
             self.assertIn("cdb:     " + str(artifact), status.stdout)
+        else:
+            self.assertFalse((out / ".cache").exists())
+            self.assertFalse((out / ".clangd-lsp-work").exists())
+            self.assertIn("[lsp] done in", (artifact / "logs/build-index.log").read_text())
+            for instance in range(2):
+                self.assertIn("index build appears complete", (
+                    artifact / "logs" / ("instance-%d.log" % instance)).read_text())
+                self.assertIn("Indexed", (
+                    artifact / "logs" / ("instance-%d.clangd.log" % instance)).read_text())
+                self.assertFalse((artifact / "work" / str(instance)).exists())
         # Run the real MCP distribution with the configuration produced above.
         # Only tools/call(status) is sent: no manual open-file/start request.
         mcp = here.parent.parent / "mcp/arkweb_lsp/dist/index.js" if arkweb else here / "mcp/dist/index.js"

@@ -34,12 +34,14 @@ Flow:
   7. clean up the slice work dirs, keeping the small instance logs
   8. print a summary
 
-Portable mode writes <out_dir>/lsp-portable/.cache/clangd/index inside a
-private fixed-root mount namespace. Native mode retains the original
+Portable mode keeps the index, work slices and logs under
+<out_dir>/lsp-portable/ inside a private fixed-root mount namespace.
+Native mode retains the original
 <out_dir>/.cache/clangd/index layout. Both support incremental indexing.
 """
 
 import argparse
+import contextlib
 import glob
 import json
 import os
@@ -808,6 +810,27 @@ MAIN_SHARD_RE = re.compile(
 CDB_FILE_KEY = b'"file":'
 
 
+class _Tee:
+    """Keep console output and a persistent build log in sync."""
+
+    def __init__(self, console, log):
+        self.console = console
+        self.log = log
+
+    def write(self, text):
+        written = self.console.write(text)
+        self.log.write(text)
+        self.log.flush()
+        return written
+
+    def flush(self):
+        self.console.flush()
+        self.log.flush()
+
+    def __getattr__(self, name):
+        return getattr(self.console, name)
+
+
 def count_main_shards(index_dir):
     """Main-file shards in the index, or -1 when unreadable."""
     try:
@@ -894,12 +917,33 @@ def main():
         print("[lsp] (dry-run) would launch instances and generate mcp config")
         return 0
 
+    if args.index_mode == "portable":
+        artifact_dir = os.path.join(out_dir, "lsp-portable")
+        work_dir = os.path.join(artifact_dir, "work")
+        log_dir = os.path.join(artifact_dir, "logs")
+    else:
+        work_dir = os.path.join(out_dir, ".clangd-lsp-work")
+        log_dir = work_dir
+    os.makedirs(log_dir, exist_ok=True)
+    with open(os.path.join(log_dir, "build-index.log"), "w",
+              encoding="utf-8") as log:
+        with contextlib.redirect_stdout(_Tee(sys.stdout, log)), \
+                contextlib.redirect_stderr(_Tee(sys.stderr, log)):
+            started = time.monotonic()
+            print("[lsp] build started: {}".format(
+                time.strftime("%Y-%m-%d %H:%M:%S %z")))
+            try:
+                return _build_index(args, root, out_dir, work_dir, log_dir)
+            finally:
+                print("[lsp] total elapsed: {:.3f}s".format(
+                    time.monotonic() - started))
+
+
+def _build_index(args, root, out_dir, work_dir, log_dir):
     cdb, cdb_status = ensure_cdb(out_dir, root)
     if not cdb:
         print("[lsp] compile_commands.json unavailable: {}".format(cdb_status))
         return 1
-    index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
-    os.makedirs(index_dir, exist_ok=True)
     print("[lsp] cdb: {}".format(cdb_status))
 
     if args.cdb_filter != "off":
@@ -941,7 +985,9 @@ def main():
                            clangd_bin, os.path.relpath(out_dir, root))
         cdb = str(portable / "compile_commands.json")
         index_dir = str(portable / ".cache" / "clangd" / "index")
-        os.makedirs(index_dir, exist_ok=True)
+    else:
+        index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
+    os.makedirs(index_dir, exist_ok=True)
 
     print("[lsp] root: {}".format(root))
     print("[lsp] out:  {}".format(out_dir))
@@ -955,7 +1001,6 @@ def main():
     print("[lsp] .clangd: {}".format(clangd_cfg))
     print("[lsp] index: {}".format(index_dir))
 
-    work_dir = os.path.join(out_dir, ".clangd-lsp-work")
     os.makedirs(work_dir, exist_ok=True)
     t0 = time.time()
     if instances == 1:
@@ -1000,9 +1045,11 @@ def main():
                    CLANGD_BIN=clangd_bin,
                    CLANGD_JOBS=str(jobs),
                    CLANGD_PCH=pch,
+                   CLANGD_LOG_FILE=os.path.join(
+                       log_dir, "instance-{}.clangd.log".format(i)),
                    LSP_PORTABLE_ARTIFACT=str(portable) if portable else "",
                    KICKOFF_FILE=kickoffs[i] if instances > 1 else kickoffs[0])
-        log = open(os.path.join(work_dir, "instance-{}.log".format(i)), "w")
+        log = open(os.path.join(log_dir, "instance-{}.log".format(i)), "w")
         procs.append(subprocess.Popen(
             [sys.executable, os.path.join(HERE, "clangd_tools.py"), "warm",
              os.environ.get("LSP_INDEX_INTERVAL", "60")],
@@ -1010,7 +1057,7 @@ def main():
             start_new_session=True))
         log.close()
         print("[lsp] instance {} started (cdb slice: {}, log: {}/instance-{}.log)"
-              .format(i, cdb_dir, work_dir, i))
+              .format(i, cdb_dir, log_dir, i))
 
     deadline = time.time() + args.timeout_hours * 3600 if args.timeout_hours else 0
     timed_out = False
@@ -1061,7 +1108,7 @@ def main():
         for i in range(instances):
             shutil.rmtree(os.path.join(work_dir, str(i)), ignore_errors=True)
         print("[lsp] work slices cleaned (instance logs kept: {})"
-              .format(work_dir))
+              .format(log_dir))
 
     import glob as _glob
     shards = len(_glob.glob(os.path.join(index_dir, "*.idx")))

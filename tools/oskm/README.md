@@ -80,6 +80,10 @@ python3 oskm.py list --db out/oskm/knowledge.db
 
 - **默认位置**：`out/<product>/lsp-portable/.cache/clangd/index/`。
   `--index-mode native` 使用原位置 `out/<product>/.cache/clangd/index/`，仅供当前源码路径使用。
+- **portable 工作目录**：`out/<product>/lsp-portable/work/`，完成后清理分片工作子目录。
+- **portable 构建日志**：`out/<product>/lsp-portable/logs/`，保留 `build-index.log`、
+  `instance-N.log` 和 clangd 原始诊断 `instance-N.clangd.log`。
+  portable 模式不再创建产品 out 下的 `.cache/` 或 `.clangd-lsp-work/`。
 - **触发**：`--enable-oskm-collect` 编译选项 → `postTargetCompilation` 阶段 →
   `oskm_collect.py` → `lsp/build_index.py`
 - **手动执行**：
