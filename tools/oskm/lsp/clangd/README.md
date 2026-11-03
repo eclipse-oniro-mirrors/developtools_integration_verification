@@ -3,7 +3,9 @@
 `bin/clangd` is a Linux x86_64 build of LLVM **llvmorg-21.1.7**
 (`292dc2b86f66e39f4b85ec8b185fd8b60f5213ce`) with the two source patches
 in `patches/`. The resource headers in `lib/clang/21/` remain from 21.1.7.
-The binary is distributed through Git LFS. Run `git lfs pull` after checkout.
+The binary is a Release build with LLVM assertions disabled, matching the
+previous bundled binary. The binary is distributed through Git LFS. Run
+`git lfs pull` after checkout.
 
 ## Background index fixes
 
@@ -60,7 +62,7 @@ cmake -S "$llvm_source/llvm" -B "$llvm_build" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   '-DLLVM_ENABLE_PROJECTS=clang;clang-tools-extra' \
   '-DLLVM_TARGETS_TO_BUILD=X86;AArch64;ARM' \
-  -DLLVM_INCLUDE_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DLLVM_INCLUDE_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=OFF \
   -DLLVM_ENABLE_LIBXML2=OFF -DLLVM_ENABLE_ZSTD=OFF \
   -DLLVM_ENABLE_ZLIB=ON -DLLVM_ENABLE_LIBEDIT=OFF -DLLVM_USE_LINKER=lld \
   -DCLANG_ENABLE_STATIC_ANALYZER=OFF -DCLANG_ENABLE_ARCMT=OFF \

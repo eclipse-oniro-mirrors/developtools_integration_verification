@@ -11,7 +11,7 @@
     "-DLLVM_ENABLE_PROJECTS=clang;clang-tools-extra",
     "-DLLVM_TARGETS_TO_BUILD=X86;AArch64;ARM",
     "-DLLVM_INCLUDE_TESTS=ON",
-    "-DLLVM_ENABLE_ASSERTIONS=ON",
+    "-DLLVM_ENABLE_ASSERTIONS=OFF",
     "-DLLVM_ENABLE_TERMINFO=OFF",
     "-DLLVM_ENABLE_LIBXML2=OFF",
     "-DLLVM_ENABLE_ZSTD=OFF",
@@ -26,8 +26,8 @@
   ],
   "resource_headers_version": "21.1.7",
   "binary": "bin/clangd",
-  "binary_sha256": "baaac9e93a0b45220b7314e85527d62e21439b446edd85438706e51b010ec7dd",
-  "binary_size": 68706128,
+  "binary_sha256": "f8ad1cde7e42be147ae152ffc5fbb56dbfd2c2476d46d06a3afeb182418a0fd4",
+  "binary_size": 53657280,
   "patches": [
     {
       "path": "patches/0001-remember-successful-header-upgrades.patch",

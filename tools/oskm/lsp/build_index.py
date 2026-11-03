@@ -1062,19 +1062,20 @@ def _build_index(args, root, out_dir, work_dir, log_dir):
     deadline = time.time() + args.timeout_hours * 3600 if args.timeout_hours else 0
     timed_out = False
     try:
-        for i, p in enumerate(procs):
-            remaining = None
-            if deadline:
-                remaining = max(1, int(deadline - time.time()))
-            try:
-                p.wait(timeout=remaining)
-            except subprocess.TimeoutExpired:
+        while any(p.poll() is None for p in procs):
+            if any(p.poll() not in (0, None) for p in procs):
+                print("[lsp] instance failed; stopping remaining instances")
+                break
+            if deadline and time.time() >= deadline:
                 print("[lsp] timeout reached; terminating instances "
                       "(progress kept, resumed next run)")
                 timed_out = True
                 break
+            time.sleep(1)
     finally:
         import signal
+        # Snapshot exits before our own cleanup terminates live workers.
+        returncodes = [p.poll() for p in procs]
         for p in procs:
             try:
                 os.killpg(p.pid, signal.SIGTERM)
@@ -1087,8 +1088,8 @@ def _build_index(args, root, out_dir, work_dir, log_dir):
                 os.killpg(p.pid, signal.SIGKILL)
                 p.wait()
 
-    failed = [(i, p.returncode) for i, p in enumerate(procs)
-              if p.returncode not in (0, None, -15)]
+    failed = [(i, code) for i, code in enumerate(returncodes)
+              if code not in (0, None)]
     for i, code in failed:
         print("[lsp] WARNING: instance {} exited with code {} "
               "(its share of the index is INCOMPLETE)".format(i, code))

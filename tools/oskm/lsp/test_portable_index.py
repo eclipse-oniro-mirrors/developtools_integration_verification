@@ -263,6 +263,81 @@ class PortableTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cyclic"):
             portable.expand_response(["@" + str(self.root / "flags.rsp")], self.root)
 
+    def exiting_clangd(self, stall_second=False):
+        fake = self.root / "exiting-clangd"
+        fake.write_text("#!" + sys.executable + "\nSTALL_SECOND = " +
+                        repr(stall_second) + "\n" + r'''
+import json
+import sys
+import time
+
+if "--version" in sys.argv:
+    print("clangd version 21.1.7-test")
+    sys.exit(0)
+
+while True:
+    headers = {}
+    while True:
+        line = sys.stdin.buffer.readline()
+        if not line:
+            sys.exit(2)
+        if not line.strip():
+            break
+        key, value = line.decode().split(":", 1)
+        headers[key.lower()] = value.strip()
+    message = json.loads(sys.stdin.buffer.read(int(headers["content-length"])))
+    if message.get("method") == "initialize":
+        response = json.dumps({"jsonrpc": "2.0", "id": message["id"],
+                               "result": {"capabilities": {}}}).encode()
+        sys.stdout.buffer.write(b"Content-Length: %d\r\n\r\n" % len(response) + response)
+        sys.stdout.buffer.flush()
+    if message.get("method") == "textDocument/didOpen":
+        if STALL_SECOND and any(arg.endswith("/1") for arg in sys.argv):
+            time.sleep(60)
+        sys.exit(17)
+''')
+        fake.chmod(0o755)
+        return fake
+
+    def test_worker_exit_is_reported_incomplete(self):
+        # A real child initializes LSP, then fails after didOpen. Existing
+        # partial shards must not make the warm driver report completion.
+        fake = self.exiting_clangd()
+        cache = self.cdb.parent / ".cache/clangd/index"
+        cache.mkdir(parents=True)
+        (cache / "partial.idx").touch()
+        env = dict(os.environ, OH_ROOT=str(self.root), CDB_DIR=str(self.cdb.parent),
+                   CLANGD_BIN=str(fake), KICKOFF_FILE=str(self.root / "main.cc"),
+                   LSP_PORTABLE_ARTIFACT="")
+        driver = Path(__file__).resolve().parent / "clangd_tools.py"
+        result = subprocess.run([sys.executable, str(driver), "warm", "1"],
+            env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("clangd exited early (code 17)", result.stdout)
+        self.assertNotIn("appears complete", result.stdout)
+
+    @unittest.skipUnless(shutil.which("bwrap"), "requires bwrap")
+    def test_build_entrypoint_stops_other_workers_on_failure(self):
+        here = Path(__file__).resolve().parent
+        tool = self.root / "developtools/integration_verification/tools/oskm/lsp"
+        tool.mkdir(parents=True)
+        (self.root / "build.sh").touch()
+        for name in ("build_index.py", "clangd_tools.py", "portable_index.py",
+                     "cdb_trim.py", "apply_musl_fix.py"):
+            shutil.copy2(here / name, tool)
+        out = self.root / "out/rk3568"
+        out.mkdir(parents=True)
+        shutil.copy2(self.cdb, out / "compile_commands.json")
+        fake = self.exiting_clangd(stall_second=True)
+        env = dict(os.environ, LSP_CLANGD_BIN=str(fake), LSP_INDEX_INTERVAL="1")
+        result = subprocess.run([sys.executable, str(tool / "build_index.py"),
+            "-i", str(out), "--instances", "2", "--jobs-per-instance", "1"],
+            env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("instance failed; stopping remaining instances", result.stdout)
+        manifest = json.loads((out / "lsp-portable" / portable.MANIFEST).read_text())
+        self.assertEqual(manifest["status"], "incomplete")
+
     def snapshot(self, artifact):
         return {p.name: (portable.digest(p), p.stat().st_mtime_ns)
                 for p in (artifact / ".cache/clangd/index").glob("*.idx")}

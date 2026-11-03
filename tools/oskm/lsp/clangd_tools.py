@@ -235,6 +235,11 @@ def cmd_warm(interval):
     while True:
         time.sleep(interval)
         n = shard_count()
+        exit_code = c.proc.poll()
+        if exit_code is not None:
+            print("index INCOMPLETE: clangd exited early (code %d); "
+                  "shards on disk: %d" % (exit_code, n), flush=True)
+            sys.exit(1)
         try:
             cur = proc_cpu_jiffies(c.proc.pid)
         except (FileNotFoundError, ProcessLookupError):
@@ -242,7 +247,7 @@ def cmd_warm(interval):
                   "disk: %d" % n, flush=True)
             sys.exit(1)
         cpu = 0.0 if last_cpu is None \
-            else (cur - last_cpu) / clk / interval * 100.0
+            else max(0, cur - last_cpu) / clk / interval * 100.0
         last_cpu = cur
         for msg in c.latest_progress():
             if msg.get("params", {}).get("value", {}).get("kind") == "end":
