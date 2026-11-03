@@ -16,6 +16,7 @@ import concurrent.futures
 import json
 import os
 import select
+import signal
 from pathlib import Path
 import shlex
 import shutil
@@ -161,6 +162,58 @@ class PortableTests(unittest.TestCase):
         self.assertEqual(portable.map_token("--sysroot=" + str(self.root / "sdk"), self.root),
                          "--sysroot=" + portable.VIRTUAL_ROOT + "/sdk")
 
+    def opencode_tool(self):
+        tool = self.root / "developtools/integration_verification/tools/oskm/lsp"
+        tool.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(__file__).parent / "opencode.json", tool / "opencode.json")
+        return tool
+
+    def test_opencode_registration_survives_root_rename(self):
+        import build_index
+        tool = self.opencode_tool()
+        with patch.object(build_index, "HERE", str(tool)):
+            self.assertIn("symlinked", build_index.ensure_opencode_config(str(self.root)))
+            self.assertIn("already linked", build_index.ensure_opencode_config(str(self.root)))
+        link = self.root / "opencode.json"
+        self.assertFalse(os.path.isabs(os.readlink(link)))
+        self.assertEqual(json.loads(link.read_text())["mcp"]["lsp"]["cwd"], ".")
+        renamed = self.base / "renamed checkout"
+        self.root.rename(renamed)
+        self.assertEqual(json.loads((renamed / "opencode.json").read_text()),
+                         json.loads((renamed / tool.relative_to(self.root) / "opencode.json").read_text()))
+
+    def test_opencode_registration_preserves_user_settings(self):
+        import build_index
+        tool = self.opencode_tool()
+        link = self.root / "opencode.json"
+        config = {"model": "example/model", "mcp": {"other": {"enabled": False}}}
+        link.write_text(json.dumps(config))
+        link.chmod(0o640)
+        with patch.object(build_index, "HERE", str(tool)):
+            self.assertIn("added mcp.lsp", build_index.ensure_opencode_config(str(self.root)))
+            merged = json.loads(link.read_text())
+            self.assertEqual(merged["model"], config["model"])
+            self.assertEqual(merged["mcp"]["other"], config["mcp"]["other"])
+            self.assertEqual(link.stat().st_mode & 0o777, 0o640)
+            merged["mcp"]["lsp"] = {"enabled": False}
+            original = json.dumps(merged)
+            link.write_text(original)
+            build_index.ensure_opencode_config(str(self.root))
+            self.assertEqual(link.read_text(), original)
+            link.unlink()
+            custom = self.root / "custom.json"
+            custom.write_text("{}")
+            link.symlink_to("custom.json")
+            build_index.ensure_opencode_config(str(self.root))
+            self.assertEqual(os.readlink(link), "custom.json")
+            link.unlink()
+            jsonc = self.root / "opencode.jsonc"
+            original = '{ // custom settings\n"model": "example/model"\n}'
+            jsonc.write_text(original)
+            build_index.ensure_opencode_config(str(self.root))
+            self.assertEqual(jsonc.read_text(), original)
+            self.assertFalse(link.exists())
+
     def test_missing_namespace_support_is_explicit(self):
         with patch.object(portable.shutil, "which", return_value=None):
             with self.assertRaisesRegex(RuntimeError, "bubblewrap"):
@@ -263,6 +316,81 @@ class PortableTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cyclic"):
             portable.expand_response(["@" + str(self.root / "flags.rsp")], self.root)
 
+    def exiting_clangd(self, stall_second=False):
+        fake = self.root / "exiting-clangd"
+        fake.write_text("#!" + sys.executable + "\nSTALL_SECOND = " +
+                        repr(stall_second) + "\n" + r'''
+import json
+import sys
+import time
+
+if "--version" in sys.argv:
+    print("clangd version 21.1.7-test")
+    sys.exit(0)
+
+while True:
+    headers = {}
+    while True:
+        line = sys.stdin.buffer.readline()
+        if not line:
+            sys.exit(2)
+        if not line.strip():
+            break
+        key, value = line.decode().split(":", 1)
+        headers[key.lower()] = value.strip()
+    message = json.loads(sys.stdin.buffer.read(int(headers["content-length"])))
+    if message.get("method") == "initialize":
+        response = json.dumps({"jsonrpc": "2.0", "id": message["id"],
+                               "result": {"capabilities": {}}}).encode()
+        sys.stdout.buffer.write(b"Content-Length: %d\r\n\r\n" % len(response) + response)
+        sys.stdout.buffer.flush()
+    if message.get("method") == "textDocument/didOpen":
+        if STALL_SECOND and any(arg.endswith("/1") for arg in sys.argv):
+            time.sleep(60)
+        sys.exit(17)
+''')
+        fake.chmod(0o755)
+        return fake
+
+    def test_worker_exit_is_reported_incomplete(self):
+        # A real child initializes LSP, then fails after didOpen. Existing
+        # partial shards must not make the warm driver report completion.
+        fake = self.exiting_clangd()
+        cache = self.cdb.parent / ".cache/clangd/index"
+        cache.mkdir(parents=True)
+        (cache / "partial.idx").touch()
+        env = dict(os.environ, OH_ROOT=str(self.root), CDB_DIR=str(self.cdb.parent),
+                   CLANGD_BIN=str(fake), KICKOFF_FILE=str(self.root / "main.cc"),
+                   LSP_PORTABLE_ARTIFACT="")
+        driver = Path(__file__).resolve().parent / "clangd_tools.py"
+        result = subprocess.run([sys.executable, str(driver), "warm", "1"],
+            env=env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("clangd exited early (code 17)", result.stdout)
+        self.assertNotIn("appears complete", result.stdout)
+
+    @unittest.skipUnless(shutil.which("bwrap"), "requires bwrap")
+    def test_build_entrypoint_stops_other_workers_on_failure(self):
+        here = Path(__file__).resolve().parent
+        tool = self.root / "developtools/integration_verification/tools/oskm/lsp"
+        tool.mkdir(parents=True)
+        (self.root / "build.sh").touch()
+        for name in ("build_index.py", "clangd_tools.py", "portable_index.py",
+                     "cdb_trim.py", "apply_musl_fix.py"):
+            shutil.copy2(here / name, tool)
+        out = self.root / "out/rk3568"
+        out.mkdir(parents=True)
+        shutil.copy2(self.cdb, out / "compile_commands.json")
+        fake = self.exiting_clangd(stall_second=True)
+        env = dict(os.environ, LSP_CLANGD_BIN=str(fake), LSP_INDEX_INTERVAL="1")
+        result = subprocess.run([sys.executable, str(tool / "build_index.py"),
+            "-i", str(out), "--instances", "2", "--jobs-per-instance", "1"],
+            env=env, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("instance failed; stopping remaining instances", result.stdout)
+        manifest = json.loads((out / "lsp-portable" / portable.MANIFEST).read_text())
+        self.assertEqual(manifest["status"], "incomplete")
+
     def snapshot(self, artifact):
         return {p.name: (portable.digest(p), p.stat().st_mtime_ns)
                 for p in (artifact / ".cache/clangd/index").glob("*.idx")}
@@ -317,7 +445,7 @@ class PortableTests(unittest.TestCase):
             artifact = out / "lsp-portable"
         for name in ("build_index.py", "clangd_tools.py", "clangd_wrapper.py",
                      "portable_index.py", "cdb_trim.py", "config_locator.py",
-                     "apply_musl_fix.py"):
+                     "apply_musl_fix.py", "opencode.json"):
             if (here / name).is_file():
                 shutil.copy2(here / name, tool)
         out.mkdir(parents=True)
@@ -336,11 +464,65 @@ class PortableTests(unittest.TestCase):
                 env=env, capture_output=True, text=True, timeout=10)
             self.assertEqual(status.returncode, 0, status.stderr)
             self.assertIn("cdb:     " + str(artifact), status.stdout)
+        else:
+            registration = self.root / "opencode.json"
+            self.assertTrue(registration.is_symlink())
+            self.assertFalse(os.path.isabs(os.readlink(registration)))
+            self.assertEqual(json.loads(registration.read_text()),
+                             json.loads((here / "opencode.json").read_text()))
+            self.assertFalse((out / ".cache").exists())
+            self.assertFalse((out / ".clangd-lsp-work").exists())
+            self.assertIn("[lsp] done in", (artifact / "logs/build-index.log").read_text())
+            for instance in range(2):
+                self.assertIn("index build appears complete", (
+                    artifact / "logs" / ("instance-%d.log" % instance)).read_text())
+                self.assertIn("Indexed", (
+                    artifact / "logs" / ("instance-%d.clangd.log" % instance)).read_text())
+                self.assertFalse((artifact / "work" / str(instance)).exists())
         # Run the real MCP distribution with the configuration produced above.
         # Only tools/call(status) is sent: no manual open-file/start request.
         mcp = here.parent.parent / "mcp/arkweb_lsp/dist/index.js" if arkweb else here / "mcp/dist/index.js"
         if shutil.which("node") and mcp.is_file():
             self.check_mcp_warmup(mcp)
+            if not arkweb and os.environ.get("LSP_TEST_OPENCODE"):
+                self.check_opencode_registration(tool, mcp)
+
+    def check_opencode_registration(self, tool, mcp):
+        """Exercise OpenCode itself with no user/global MCP configuration."""
+        shutil.copytree(mcp.parent.parent, tool / "mcp")
+        artifact = self.root / "out/rk3568/lsp-portable"
+        before = self.snapshot(artifact)
+        env = dict(os.environ, OPENCODE_DISABLE_AUTOUPDATE="true",
+                   OPENCODE_DISABLE_MODELS_FETCH="true")
+        for key in ("OPENCODE_CONFIG", "OPENCODE_CONFIG_CONTENT", "OPENCODE_CONFIG_DIR",
+                    "OPENCODE_DISABLE_PROJECT_CONFIG"):
+            env.pop(key, None)
+        for key in ("CONFIG", "DATA", "STATE", "CACHE"):
+            env["XDG_{}_HOME".format(key)] = str(self.base / ("opencode-" + key.lower()))
+        for label in ("original", "renamed"):
+            process = subprocess.Popen([os.environ["LSP_TEST_OPENCODE"], "mcp", "list", "--pure"],
+                cwd=self.root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, start_new_session=True)
+            try:
+                output, _ = process.communicate(timeout=60)
+                (self.base / ("opencode-" + label + ".log")).write_text(output)
+                self.assertEqual(process.returncode, 0, output)
+                self.assertIn("lsp", output)
+                self.assertIn("connected", output)
+                self.assertNotIn("failed", output.lower())
+            finally:
+                try:
+                    os.killpg(process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                if process.poll() is None:
+                    process.wait(timeout=10)
+            if label == "original":
+                renamed = self.base / "OpenCode renamed checkout"
+                self.root.rename(renamed)
+                self.root = renamed
+        self.check_mcp_warmup(mcp)
+        self.assertEqual(self.snapshot(self.root / "out/rk3568/lsp-portable"), before)
 
     def check_mcp_warmup(self, mcp):
         errors = self.base / "mcp.log"
@@ -377,6 +559,13 @@ class PortableTests(unittest.TestCase):
                     time.sleep(0.2)
                 else:
                     self.fail("Portable MCP warmup failed: " + errors.read_text()[-3000:])
+                source = self.root / "main.cc"
+                definition = rpc(100, "tools/call", {"name": "lsp_goto_definition", "arguments": {
+                    "file_path": str(source), "line": 2,
+                    "column": source.read_text().splitlines()[1].index("portable_target") + 1}})
+                self.assertFalse(definition.get("isError"), definition)
+                targets = json.loads(definition["content"][0]["text"])["definitions"]
+                self.assertTrue(any(item["path"] == str(self.root / "lib.cc") for item in targets), targets)
             finally:
                 process.terminate()
                 try:

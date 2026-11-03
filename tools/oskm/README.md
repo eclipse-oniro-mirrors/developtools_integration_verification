@@ -80,6 +80,10 @@ python3 oskm.py list --db out/oskm/knowledge.db
 
 - **默认位置**：`out/<product>/lsp-portable/.cache/clangd/index/`。
   `--index-mode native` 使用原位置 `out/<product>/.cache/clangd/index/`，仅供当前源码路径使用。
+- **portable 工作目录**：`out/<product>/lsp-portable/work/`，完成后清理分片工作子目录。
+- **portable 构建日志**：`out/<product>/lsp-portable/logs/`，保留 `build-index.log`、
+  `instance-N.log` 和 clangd 原始诊断 `instance-N.clangd.log`。
+  portable 模式不再创建产品 out 下的 `.cache/` 或 `.clangd-lsp-work/`。
 - **触发**：`--enable-oskm-collect` 编译选项 → `postTargetCompilation` 阶段 →
   `oskm_collect.py` → `lsp/build_index.py`
 - **手动执行**：
@@ -116,7 +120,7 @@ python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
 
 | 依赖 | 说明 |
 |---|---|
-| clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7，~110MB，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级） |
+| clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7-oskm1，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级）。修复、源码补丁和重编说明见 [clangd/README.md](lsp/clangd/README.md) |
 | Node.js >= 18 | 仅 MCP 消费侧需要 |
 | compile_commands.json | OHOS 构建自动生成于 out 目录 |
 | Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；缺失时自动通过 apt 安装，需允许创建用户/挂载命名空间 |
@@ -166,22 +170,15 @@ MCP 服务本体在 `lsp/mcp/dist/index.js`（已含生产依赖，无需 npm in
    （产品 out 目录、实际使用的捆绑 clangd）生成 `lsp/lsp-mcp.json`，并在
    **源码树根目录创建软链** `.lsp-mcp.json` 指向它——开发侧无需任何配置。
    （`lsp/.lsp-mcp.json.template` 仅供未执行过构建时手工参考）
-2. 在 opencode 的 `~/.config/opencode/opencode.json` 注册 MCP（一次性）：
-
-```json
-{
-  "mcp": {
-    "lsp": {
-      "type": "local",
-      "command": ["node", "<源码树绝对路径>/developtools/integration_verification/tools/oskm/lsp/mcp/dist/index.js"],
-      "timeout": 30000,
-      "enabled": true
-    }
-  }
-}
-```
-
-3. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）
+2. **OpenCode 零手工注册**：同一构建流程将源码根 `opencode.json` 相对软链到
+   仓库自带的 [`lsp/opencode.json`](lsp/opencode.json)。从源码根启动 `opencode`
+   即可发现 `lsp` MCP，无需修改全局配置。命令、工作目录均为相对路径，源码根
+   改名后无需重写配置；仍需保留源码、生成文件和 `out/<product>/lsp-portable`。
+3. 已有普通 JSON 配置时，只补充缺失的 `mcp.lsp`，保留模型、其他 MCP 等设置；
+   已有 `mcp.lsp`、JSONC 配置或自定义软链不覆盖，构建日志明确说明。
+   JSONC 用户可将 `lsp/opencode.json` 中的 `mcp.lsp` 手动合并到原配置。
+4. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）。
+   可用 `opencode mcp list` 检查连接；首次启动仍需等待 clangd 加载现有索引。
 
 ### 提供的功能（29 个 lsp_* 工具）
 
@@ -232,7 +229,7 @@ oskm/
 │   ├── clangd_tools.py      ← headless clangd 驱动
 │   ├── apply_musl_fix.py    ← musl nullptr_t 补丁
 │   ├── .lsp-mcp.json.template
-│   ├── clangd/              ← 捆绑 clangd 21.1.7（bin + 内置头）
+│   ├── clangd/              ← 捆绑 clangd 21.1.7-oskm1（bin + 内置头 + 源码补丁）
 │   └── mcp/                 ← lsp-mcp-server（dist + 生产依赖）
 ├── README.md
 └── AGENTS.md

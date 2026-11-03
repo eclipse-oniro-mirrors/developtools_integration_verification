@@ -1,0 +1,195 @@
+--- a/llvm/lib/Support/Unix/Signals.inc
++++ b/llvm/lib/Support/Unix/Signals.inc
+@@ -96,6 +96,10 @@
+     nullptr;
+ 
+ namespace {
++/// Sentinel stored in a node after the signal handler has removed the file;
++/// not a valid path, never freed.
++static char InvalidPathSentinel[] = "\01\02\03\04";
++
+ /// Signal-safe removal of files.
+ /// Inserting and erasing from the list isn't signal-safe, but removal of files
+ /// themselves is signal-safe. Memory is freed when the head is freed, deletion
+@@ -105,8 +109,8 @@
+   std::atomic<FileToRemoveList *> Next = nullptr;
+ 
+   FileToRemoveList() = default;
+-  // Not signal-safe.
+-  FileToRemoveList(const std::string &str) : Filename(strdup(str.c_str())) {}
++  // Takes ownership of \p filename.
++  FileToRemoveList(char *filename) : Filename(filename) {}
+ 
+ public:
+   // Not signal-safe.
+@@ -114,19 +118,35 @@
+     if (FileToRemoveList *N = Next.exchange(nullptr))
+       delete N;
+     if (char *F = Filename.exchange(nullptr))
+-      free(F);
++      if (F != InvalidPathSentinel)
++        free(F);
+   }
+ 
+   // Not signal-safe.
+   static void insert(std::atomic<FileToRemoveList *> &Head,
+                      const std::string &Filename) {
+-    // Insert the new file at the end of the list.
+-    FileToRemoveList *NewHead = new FileToRemoveList(Filename);
++    // Reuse a node with a null filename (left behind by erase) if one exists.
++    // There are two cases where Filename can be special:
++    // - nullptr: a node left behind by a previous file that we had to remove
++    // - InvalidPathSentinel: a node whose file is actively being removed by a
++    //   signal handler right now, in which case it's OK if this file doesn't
++    //   get removed.
++    char *NewFilename = strdup(Filename.c_str());
+     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
+-    FileToRemoveList *OldHead = nullptr;
+-    while (!InsertionPoint->compare_exchange_strong(OldHead, NewHead)) {
+-      InsertionPoint = &OldHead->Next;
+-      OldHead = nullptr;
++    for (FileToRemoveList *Current = Head.load(); Current;
++         Current = Current->Next.load()) {
++      char *NullFilename = nullptr;
++      if (Current->Filename.compare_exchange_strong(NullFilename, NewFilename))
++        return; // Reused a slot.
++      InsertionPoint = &Current->Next;
++    }
++
++    // Append the new node at the end; on CAS failure, advance to the new tail.
++    FileToRemoveList *NewNode = new FileToRemoveList(NewFilename);
++    FileToRemoveList *OldNext = nullptr;
++    while (!InsertionPoint->compare_exchange_strong(OldNext, NewNode)) {
++      InsertionPoint = &OldNext->Next;
++      OldNext = nullptr;
+     }
+   }
+ 
+@@ -143,11 +163,15 @@
+       if (char *OldFilename = Current->Filename.load()) {
+         if (OldFilename != Filename)
+           continue;
+-        // Leave an empty filename.
+-        OldFilename = Current->Filename.exchange(nullptr);
+-        // The filename might have become null between the time we
+-        // compared it and we exchanged it.
+-        if (OldFilename)
++        // Leave an empty filename. Use CAS to avoid racing with the signal
++        // handler (which can't take the writer lock); only clear and free
++        // if we still own the pointer.
++        char *Expected = OldFilename;
++        while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
++          if (Expected == nullptr || Expected == InvalidPathSentinel)
++            break;
++        }
++        if (Expected == OldFilename)
+           free(OldFilename);
+       }
+     }
+@@ -173,21 +197,23 @@
+ 
+   // Signal-safe.
+   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
+-    // If cleanup were to occur while we're removing files we'd have a bad time.
+-    // Make sure we're OK by preventing cleanup from doing anything while we're
+-    // removing files. If cleanup races with us and we win we'll have a leak,
+-    // but we won't crash.
++    // This signal-safe code cannot acquire the writer lock, and needs to defend
++    // against racing writes from the `erase` method above.
+     FileToRemoveList *OldHead = Head.exchange(nullptr);
+ 
+     for (FileToRemoveList *currentFile = OldHead; currentFile;
+          currentFile = currentFile->Next.load()) {
+-      // If erasing was occuring while we're trying to remove files we'd look
+-      // at free'd data. Take away the path and put it back when done.
+-      if (char *path = currentFile->Filename.exchange(nullptr)) {
+-        removeFile(path);
+-
+-        // We're done removing the file, erasing can safely proceed.
+-        currentFile->Filename.exchange(path);
++      // Take exclusive ownership by swapping in the sentinel (signal-safe: no
++      // allocation or free). Then put the path back so we don't leak.
++      char *Path = currentFile->Filename.exchange(InvalidPathSentinel);
++      if (!Path) {
++        // Restore an empty slot so future insertions can reuse it.
++        currentFile->Filename.exchange(nullptr);
++      } else if (Path != InvalidPathSentinel) {
++        removeFile(Path);
++        // Add the path back to the list to create a global root referencing the
++        // heap allocation, which will pacify leak checkers that run at exit.
++        currentFile->Filename.exchange(Path);
+       }
+     }
+ 
+--- a/llvm/unittests/Support/SignalsTest.cpp
++++ b/llvm/unittests/Support/SignalsTest.cpp
+@@ -12,6 +12,9 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #include "llvm/Support/Signals.h"
++#include "llvm/Support/FileSystem.h"
++#include <thread>
++#include <vector>
+ #include "llvm/ADT/ScopeExit.h"
+ #include "llvm/Config/config.h"
+ #include "gmock/gmock.h"
+@@ -62,3 +65,59 @@
+ }
+ 
+ #endif // defined(HAVE_BACKTRACE) && ...
++
++
++#if defined(LLVM_ON_UNIX)
++TEST(SignalsTest, ReusedRegistrationsPreserveCleanup) {
++  SmallString<128> Removed, Kept;
++  ASSERT_FALSE(fs::createTemporaryFile("signal-removed", "tmp", Removed));
++  ASSERT_FALSE(fs::createTemporaryFile("signal-kept", "tmp", Kept));
++  auto Cleanup = make_scope_exit([&] {
++    DontRemoveFileOnSignal(Removed);
++    DontRemoveFileOnSignal(Kept);
++    fs::remove(Removed);
++    fs::remove(Kept);
++  });
++  // Repeatedly cancel and re-register a filename before running cleanup.
++  for (unsigned I = 0; I != 1000; ++I) {
++    ASSERT_FALSE(RemoveFileOnSignal(Kept));
++    DontRemoveFileOnSignal(Kept);
++  }
++  ASSERT_FALSE(RemoveFileOnSignal(Removed));
++  RunInterruptHandlers();
++  EXPECT_FALSE(fs::exists(Removed));
++  EXPECT_TRUE(fs::exists(Kept));
++
++  // Cleanup must leave empty slots reusable, and a registered file must still
++  // be removed after a previous cleanup pass.
++  ASSERT_FALSE(RemoveFileOnSignal(Kept));
++  RunInterruptHandlers();
++  EXPECT_FALSE(fs::exists(Kept));
++}
++
++#if LLVM_ENABLE_THREADS
++TEST(SignalsTest, ConcurrentRegistrationsPreserveKeptFiles) {
++  SmallString<128> Kept;
++  ASSERT_FALSE(fs::createTemporaryFile("signal-parallel-kept", "tmp", Kept));
++  auto Cleanup = make_scope_exit([&] {
++    DontRemoveFileOnSignal(Kept);
++    fs::remove(Kept);
++  });
++  std::vector<std::thread> Threads;
++  for (unsigned T = 0; T != 16; ++T)
++    Threads.emplace_back([T] {
++      std::string Name = "llvm-signal-registration-" + std::to_string(T);
++      for (unsigned I = 0; I != 1000; ++I) {
++        RemoveFileOnSignal(Name);
++        DontRemoveFileOnSignal(Name);
++      }
++    });
++  for (auto &Thread : Threads)
++    Thread.join();
++  ASSERT_FALSE(RemoveFileOnSignal(Kept));
++  DontRemoveFileOnSignal(Kept);
++  RunInterruptHandlers();
++  EXPECT_TRUE(fs::exists(Kept));
++}
++#endif
++#endif

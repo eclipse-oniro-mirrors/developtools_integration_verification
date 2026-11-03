@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "lsp": {
+      "type": "local",
+      "command": [
+        "node",
+        "developtools/integration_verification/tools/oskm/lsp/mcp/dist/index.js"
+      ],
+      "cwd": ".",
+      "enabled": true,
+      "timeout": 600000
+    }
+  }
+}

@@ -1,0 +1,89 @@
+--- a/clang-tools-extra/clangd/index/Background.cpp
++++ b/clang-tools-extra/clangd/index/Background.cpp
+@@ -235,7 +235,8 @@
+       ShardVersion &SV = DigestIt.first->second;
+       // Skip if file is already up to date, unless previous index was broken
+       // and this one is not.
+-      if (!DigestIt.second && SV.Digest == Hash && SV.HadErrors && !HadErrors)
++      if (!DigestIt.second && SV.Digest == Hash &&
++          (!SV.HadErrors || HadErrors))
+         continue;
+       SV.Digest = Hash;
+       SV.HadErrors = HadErrors;
+--- a/clang-tools-extra/clangd/unittests/BackgroundIndexTests.cpp
++++ b/clang-tools-extra/clangd/unittests/BackgroundIndexTests.cpp
+@@ -62,6 +62,7 @@
+                          IndexFileOut Shard) const override {
+     std::lock_guard<std::mutex> Lock(StorageMu);
+     AccessedPaths.insert(ShardIdentifier);
++    ++StoreCounts[ShardIdentifier];
+     Storage[ShardIdentifier] = llvm::to_string(Shard);
+     return llvm::Error::success();
+   }
+@@ -84,6 +85,7 @@
+   }
+ 
+   mutable llvm::StringSet<> AccessedPaths;
++  mutable llvm::StringMap<unsigned> StoreCounts;
+ };
+ 
+ class BackgroundIndexTest : public ::testing::Test {
+@@ -618,6 +620,58 @@
+   }
+ }
+ 
++TEST_F(BackgroundIndexTest, SuccessfulHeaderUpgradeIsRemembered) {
++  MockFS FS;
++  FS.Files[testPath("common.h")] = R"cpp(
++    #ifdef COMPLETE
++    void complete_symbol();
++    #else
++    void incomplete_symbol();
++    #endif
++  )cpp";
++  FS.Files[testPath("bad.cc")] =
++      "#include \"common.h\"\n#include \"missing_generated.h\"\n";
++  FS.Files[testPath("good.cc")] = "#include \"common.h\"\n";
++  FS.Files[testPath("another.cc")] = "#include \"common.h\"\n";
++  llvm::StringMap<std::string> Storage;
++  size_t CacheHits = 0;
++  MemoryShardStorage MSS(Storage, CacheHits);
++  OverlayCDB CDB(/*Base=*/nullptr);
++  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
++                      /*Opts=*/{});
++  auto Index = [&](llvm::StringRef Name, bool Complete) {
++    tooling::CompileCommand Cmd;
++    Cmd.Filename = testPath(Name);
++    Cmd.Directory = testRoot();
++    Cmd.CommandLine = {"clang++", Cmd.Filename};
++    if (Complete)
++      Cmd.CommandLine.push_back("-DCOMPLETE");
++    CDB.setCompileCommand(Cmd.Filename, Cmd);
++    return Idx.blockUntilIdleForTest();
++  };
++
++  // A missing generated header marks even otherwise valid common headers.
++  ASSERT_TRUE(Index("bad.cc", false));
++  EXPECT_THAT(MSS.loadShard(testPath("common.h"))->Sources->lookup(
++                  "unittest:///common.h"),
++              hadErrors());
++  EXPECT_EQ(MSS.StoreCounts.lookup(testPath("common.h")), 1U);
++
++  // A successful TU must replace the incomplete in-memory and disk shards.
++  ASSERT_TRUE(Index("good.cc", true));
++  EXPECT_THAT(runFuzzyFind(Idx, "complete_symbol"),
++              ElementsAre(named("complete_symbol")));
++  EXPECT_THAT(runFuzzyFind(Idx, "incomplete_symbol"), ElementsAre());
++  EXPECT_THAT(MSS.loadShard(testPath("common.h"))->Sources->lookup(
++                  "unittest:///common.h"),
++              Not(hadErrors()));
++  EXPECT_EQ(MSS.StoreCounts.lookup(testPath("common.h")), 2U);
++
++  // An unchanged header must no longer be rewritten by every successful TU.
++  ASSERT_TRUE(Index("another.cc", true));
++  EXPECT_EQ(MSS.StoreCounts.lookup(testPath("common.h")), 2U);
++}
++
+ TEST_F(BackgroundIndexTest, CmdLineHash) {
+   MockFS FS;
+   llvm::StringMap<std::string> Storage;

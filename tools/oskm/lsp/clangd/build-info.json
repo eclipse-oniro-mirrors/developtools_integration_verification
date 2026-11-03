@@ -1,0 +1,41 @@
+{
+  "version": "21.1.7-oskm1",
+  "upstream_tag": "llvmorg-21.1.7",
+  "upstream_commit": "292dc2b86f66e39f4b85ec8b185fd8b60f5213ce",
+  "source_archive_url": "https://codeload.github.com/llvm/llvm-project/tar.gz/refs/tags/llvmorg-21.1.7",
+  "source_archive_sha256": "9ee167cdf8f6b5221d6b02dbe9a664cf8c6fee70fab071aaa4a3889c7c265258",
+  "compiler": "OHOS (dev) clang version 15.0.4 (llvm-project 02fbe8daf56b9704358bc2e7bea9da79938a7abf)\nTarget: x86_64-unknown-linux-gnu\nThread model: posix",
+  "cmake_version": "cmake version 3.22.1",
+  "cmake_options": [
+    "-DCMAKE_BUILD_TYPE=Release",
+    "-DLLVM_ENABLE_PROJECTS=clang;clang-tools-extra",
+    "-DLLVM_TARGETS_TO_BUILD=X86;AArch64;ARM",
+    "-DLLVM_INCLUDE_TESTS=ON",
+    "-DLLVM_ENABLE_ASSERTIONS=OFF",
+    "-DLLVM_ENABLE_TERMINFO=OFF",
+    "-DLLVM_ENABLE_LIBXML2=OFF",
+    "-DLLVM_ENABLE_ZSTD=OFF",
+    "-DLLVM_ENABLE_ZLIB=ON",
+    "-DLLVM_ENABLE_LIBEDIT=OFF",
+    "-DLLVM_USE_LINKER=lld",
+    "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",
+    "-DCLANG_ENABLE_ARCMT=OFF",
+    "-DCLANGD_ENABLE_REMOTE=OFF",
+    "-DCLANGD_ENABLE_GRPC=OFF",
+    "-DLLVM_VERSION_SUFFIX=-oskm1"
+  ],
+  "resource_headers_version": "21.1.7",
+  "binary": "bin/clangd",
+  "binary_sha256": "f8ad1cde7e42be147ae152ffc5fbb56dbfd2c2476d46d06a3afeb182418a0fd4",
+  "binary_size": 53657280,
+  "patches": [
+    {
+      "path": "patches/0001-remember-successful-header-upgrades.patch",
+      "sha256": "90b72dbc8acb136fc03d69b8a78c90e8f95c99b99705e2bd4ff2baa24e665c91"
+    },
+    {
+      "path": "patches/0002-reuse-signal-cleanup-nodes.patch",
+      "sha256": "144ce49f0d7ad459eee7f71df2db57631dcb7b63ab924a3126a612b1f58f1e3f"
+    }
+  ]
+}

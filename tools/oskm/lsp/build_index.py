@@ -34,12 +34,14 @@ Flow:
   7. clean up the slice work dirs, keeping the small instance logs
   8. print a summary
 
-Portable mode writes <out_dir>/lsp-portable/.cache/clangd/index inside a
-private fixed-root mount namespace. Native mode retains the original
+Portable mode keeps the index, work slices and logs under
+<out_dir>/lsp-portable/ inside a private fixed-root mount namespace.
+Native mode retains the original
 <out_dir>/.cache/clangd/index layout. Both support incremental indexing.
 """
 
 import argparse
+import contextlib
 import glob
 import json
 import os
@@ -50,7 +52,7 @@ import sys
 import time
 import zlib
 from pathlib import Path
-from portable_index import prepare, finish, local_path
+from portable_index import prepare, finish, local_path, atomic_json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS_DIR = os.path.join(HERE, "..", "..", "..", "..", "..")  # -> source root
@@ -695,6 +697,37 @@ def ensure_mcp_config(root, out_dir, clangd_bin, kickoff=None, portable_artifact
     return "symlinked <root>/.lsp-mcp.json -> {}".format(target_rel)
 
 
+def ensure_opencode_config(root):
+    """Register the bundled MCP without overwriting user OpenCode settings."""
+    link = os.path.join(root, "opencode.json")
+    target = os.path.relpath(os.path.join(HERE, "opencode.json"), root)
+    if os.path.lexists(os.path.join(root, "opencode.jsonc")):
+        return "user opencode.jsonc exists (left untouched; merge lsp manually)"
+    if os.path.islink(link):
+        if os.readlink(link) == target:
+            return "root opencode.json already linked -> {}".format(target)
+        return "user opencode.json symlink exists (left untouched)"
+    if os.path.lexists(link):
+        try:
+            with open(link, encoding="utf-8") as stream:
+                config = json.load(stream)
+        except (OSError, ValueError):
+            return "user opencode.json is unreadable or not JSON (left untouched)"
+        if not isinstance(config, dict) or not isinstance(config.get("mcp", {}), dict):
+            return "user opencode.json has incompatible settings (left untouched)"
+        if "lsp" in config.get("mcp", {}):
+            return "user opencode.json already defines mcp.lsp (left untouched)"
+        with open(os.path.join(HERE, "opencode.json"), encoding="utf-8") as stream:
+            bundled = json.load(stream)
+        config.setdefault("mcp", {})["lsp"] = bundled["mcp"]["lsp"]
+        mode = os.stat(link).st_mode & 0o777
+        atomic_json(link, config)
+        os.chmod(link, mode)
+        return "added mcp.lsp to root opencode.json (other settings kept)"
+    os.symlink(target, link)
+    return "symlinked <root>/opencode.json -> {}".format(target)
+
+
 def ensure_cdb(out_dir, root):
     """Return (cdb_path, status); generate the CDB if it is missing.
 
@@ -808,6 +841,27 @@ MAIN_SHARD_RE = re.compile(
 CDB_FILE_KEY = b'"file":'
 
 
+class _Tee:
+    """Keep console output and a persistent build log in sync."""
+
+    def __init__(self, console, log):
+        self.console = console
+        self.log = log
+
+    def write(self, text):
+        written = self.console.write(text)
+        self.log.write(text)
+        self.log.flush()
+        return written
+
+    def flush(self):
+        self.console.flush()
+        self.log.flush()
+
+    def __getattr__(self, name):
+        return getattr(self.console, name)
+
+
 def count_main_shards(index_dir):
     """Main-file shards in the index, or -1 when unreadable."""
     try:
@@ -894,12 +948,33 @@ def main():
         print("[lsp] (dry-run) would launch instances and generate mcp config")
         return 0
 
+    if args.index_mode == "portable":
+        artifact_dir = os.path.join(out_dir, "lsp-portable")
+        work_dir = os.path.join(artifact_dir, "work")
+        log_dir = os.path.join(artifact_dir, "logs")
+    else:
+        work_dir = os.path.join(out_dir, ".clangd-lsp-work")
+        log_dir = work_dir
+    os.makedirs(log_dir, exist_ok=True)
+    with open(os.path.join(log_dir, "build-index.log"), "w",
+              encoding="utf-8") as log:
+        with contextlib.redirect_stdout(_Tee(sys.stdout, log)), \
+                contextlib.redirect_stderr(_Tee(sys.stderr, log)):
+            started = time.monotonic()
+            print("[lsp] build started: {}".format(
+                time.strftime("%Y-%m-%d %H:%M:%S %z")))
+            try:
+                return _build_index(args, root, out_dir, work_dir, log_dir)
+            finally:
+                print("[lsp] total elapsed: {:.3f}s".format(
+                    time.monotonic() - started))
+
+
+def _build_index(args, root, out_dir, work_dir, log_dir):
     cdb, cdb_status = ensure_cdb(out_dir, root)
     if not cdb:
         print("[lsp] compile_commands.json unavailable: {}".format(cdb_status))
         return 1
-    index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
-    os.makedirs(index_dir, exist_ok=True)
     print("[lsp] cdb: {}".format(cdb_status))
 
     if args.cdb_filter != "off":
@@ -941,7 +1016,9 @@ def main():
                            clangd_bin, os.path.relpath(out_dir, root))
         cdb = str(portable / "compile_commands.json")
         index_dir = str(portable / ".cache" / "clangd" / "index")
-        os.makedirs(index_dir, exist_ok=True)
+    else:
+        index_dir = os.path.join(out_dir, ".cache", "clangd", "index")
+    os.makedirs(index_dir, exist_ok=True)
 
     print("[lsp] root: {}".format(root))
     print("[lsp] out:  {}".format(out_dir))
@@ -955,7 +1032,6 @@ def main():
     print("[lsp] .clangd: {}".format(clangd_cfg))
     print("[lsp] index: {}".format(index_dir))
 
-    work_dir = os.path.join(out_dir, ".clangd-lsp-work")
     os.makedirs(work_dir, exist_ok=True)
     t0 = time.time()
     if instances == 1:
@@ -1000,9 +1076,11 @@ def main():
                    CLANGD_BIN=clangd_bin,
                    CLANGD_JOBS=str(jobs),
                    CLANGD_PCH=pch,
+                   CLANGD_LOG_FILE=os.path.join(
+                       log_dir, "instance-{}.clangd.log".format(i)),
                    LSP_PORTABLE_ARTIFACT=str(portable) if portable else "",
                    KICKOFF_FILE=kickoffs[i] if instances > 1 else kickoffs[0])
-        log = open(os.path.join(work_dir, "instance-{}.log".format(i)), "w")
+        log = open(os.path.join(log_dir, "instance-{}.log".format(i)), "w")
         procs.append(subprocess.Popen(
             [sys.executable, os.path.join(HERE, "clangd_tools.py"), "warm",
              os.environ.get("LSP_INDEX_INTERVAL", "60")],
@@ -1010,24 +1088,25 @@ def main():
             start_new_session=True))
         log.close()
         print("[lsp] instance {} started (cdb slice: {}, log: {}/instance-{}.log)"
-              .format(i, cdb_dir, work_dir, i))
+              .format(i, cdb_dir, log_dir, i))
 
     deadline = time.time() + args.timeout_hours * 3600 if args.timeout_hours else 0
     timed_out = False
     try:
-        for i, p in enumerate(procs):
-            remaining = None
-            if deadline:
-                remaining = max(1, int(deadline - time.time()))
-            try:
-                p.wait(timeout=remaining)
-            except subprocess.TimeoutExpired:
+        while any(p.poll() is None for p in procs):
+            if any(p.poll() not in (0, None) for p in procs):
+                print("[lsp] instance failed; stopping remaining instances")
+                break
+            if deadline and time.time() >= deadline:
                 print("[lsp] timeout reached; terminating instances "
                       "(progress kept, resumed next run)")
                 timed_out = True
                 break
+            time.sleep(1)
     finally:
         import signal
+        # Snapshot exits before our own cleanup terminates live workers.
+        returncodes = [p.poll() for p in procs]
         for p in procs:
             try:
                 os.killpg(p.pid, signal.SIGTERM)
@@ -1040,8 +1119,8 @@ def main():
                 os.killpg(p.pid, signal.SIGKILL)
                 p.wait()
 
-    failed = [(i, p.returncode) for i, p in enumerate(procs)
-              if p.returncode not in (0, None, -15)]
+    failed = [(i, code) for i, code in enumerate(returncodes)
+              if code not in (0, None)]
     for i, code in failed:
         print("[lsp] WARNING: instance {} exited with code {} "
               "(its share of the index is INCOMPLETE)".format(i, code))
@@ -1061,7 +1140,7 @@ def main():
         for i in range(instances):
             shutil.rmtree(os.path.join(work_dir, str(i)), ignore_errors=True)
         print("[lsp] work slices cleaned (instance logs kept: {})"
-              .format(work_dir))
+              .format(log_dir))
 
     import glob as _glob
     shards = len(_glob.glob(os.path.join(index_dir, "*.idx")))
@@ -1074,6 +1153,7 @@ def main():
     mcp_status = ensure_mcp_config(root, out_dir, clangd_bin,
                                   kickoff=kickoffs[0], portable_artifact=portable)
     print("[lsp] mcp config: {}".format(mcp_status))
+    print("[lsp] opencode config: {}".format(ensure_opencode_config(root)))
     if args.index_mode == "native":
         _report_revert(revert_musl_fix(out_dir))
     return 1 if incomplete else 0
