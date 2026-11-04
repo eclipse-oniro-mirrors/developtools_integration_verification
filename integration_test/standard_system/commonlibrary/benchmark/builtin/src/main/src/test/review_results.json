@@ -1,0 +1,226 @@
+[
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 144,
+    "testCase": "PerformanceTest_AsyncLockState_Property_0100",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let res = state.held;` inside for loop uses block-scoped `let`, shadowing outer `res`. The `res1 = res` on line 148 captures the pre-Stime outer `res`, not the loop result. Loop body could be optimized away."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 159,
+    "testCase": "PerformanceTest_AsyncLockState_Property_0200",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let res = state.pending;` inside for loop shadows outer `res`. `res1 = res` on line 163 captures pre-Stime value, not loop result."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 174,
+    "testCase": "PerformanceTest_AsyncLockInfo_Property_0100",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let mode = info.mode;` inside for loop shadows outer `mode`. `res1 = mode` on line 178 captures pre-Stime value, not loop result."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 189,
+    "testCase": "PerformanceTest_AsyncLockInfo_Property_0200",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let contextId = info.contextId;` inside for loop shadows outer `contextId`. `res1 = contextId` on line 193 captures pre-Stime value."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 204,
+    "testCase": "PerformanceTest_AsyncLockOptions_Property_0100",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let available = options.isAvailable;` inside for loop shadows outer `available`. `res = available` on line 208 captures pre-Stime value."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 219,
+    "testCase": "PerformanceTest_AsyncLockOptions_Property_0200",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let signal = options.signal;` inside for loop shadows outer `signal`. `res = signal` on line 223 captures pre-Stime value."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 234,
+    "testCase": "PerformanceTest_AsyncLockOptions_Property_0300",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let timeout = options.timeout;` inside for loop shadows outer `timeout`. `res = timeout` on line 238 captures pre-Stime value."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 60,
+    "testCase": "PerformanceTest_AsyncLockState_Constructor_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`. Naming inconsistent with convention."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 76,
+    "testCase": "PerformanceTest_AsyncLockState_Constructor_0200",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`. Naming inconsistent with convention."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 90,
+    "testCase": "PerformanceTest_AsyncLockInfo_Constructor_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 104,
+    "testCase": "PerformanceTest_AsyncLockInfo_Constructor_0200",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 119,
+    "testCase": "PerformanceTest_AsyncLockOptions_Constructor_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockManagerPerfTest.test.ets",
+    "line": 133,
+    "testCase": "PerformanceTest_AsyncLockOptions_Constructor_0200",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 54,
+    "testCase": "PerformanceTest_AsyncLock_AsyncLockMode_0100",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let res = AsyncLockMode.EXCLUSIVE;` inside for loop shadows outer `res`. `result = res` on line 58 captures pre-Stime value, not loop result. Loop body could be optimized away."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 69,
+    "testCase": "PerformanceTest_AsyncLock_AsyncLockMode_0200",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let mode = AsyncLockMode.SHARED;` inside loop creates unused local variable (wrong name: `mode` vs outer `res`). Outer `res` is never updated in loop. `result = res` on line 73 captures pre-Stime value. Also double semicolons `;;` on line 73."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 84,
+    "testCase": "PerformanceTest_AsyncLock_AsyncLockMode_0300",
+    "severity": "Error",
+    "rule": "7",
+    "description": "`let res = AsyncLockMode.UNLOCKED;` inside for loop shadows outer `res`. `res1 = res` on line 88 captures pre-Stime value, not loop result."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 104,
+    "testCase": "PerformanceTest_AsyncLock_Constructor_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 119,
+    "testCase": "PerformanceTest_AsyncLock_Static_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = result` instead of `let res1 = result`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 141,
+    "testCase": "PerformanceTest_AsyncLock_Instance_0100",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 162,
+    "testCase": "PerformanceTest_AsyncLock_Instance_0200",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 185,
+    "testCase": "PerformanceTest_AsyncLock_Instance_0300",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 210,
+    "testCase": "PerformanceTest_AsyncLock_Static_0200",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 233,
+    "testCase": "PerformanceTest_AsyncLock_Static_0300",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncLockPerfTest.test.ets",
+    "line": 256,
+    "testCase": "PerformanceTest_AsyncLock_Instance_0400",
+    "severity": "Suggestion",
+    "rule": "3",
+    "description": "Uses `let res = resultA` instead of `let res1 = resultA`."
+  },
+  {
+    "file": "AsyncRWLockPerTest.test.ets",
+    "line": 102,
+    "testCase": "PerformanceTest_AsyncReadWriteLock_ExecuteReadLock_0100",
+    "severity": "Warning",
+    "rule": "2",
+    "description": "For loop contains `rwLock.unlock();` in addition to the tested API `executeReadLock()`. Extra code in the loop may inflate measured time."
+  },
+  {
+    "file": "AsyncRWLockPerTest.test.ets",
+    "line": 131,
+    "testCase": "PerformanceTest_AsyncReadWriteLock_Unlock_0100",
+    "severity": "Warning",
+    "rule": "2",
+    "description": "For loop contains `await rwLock.executeReadLock();` in addition to the tested API `unlock()`. Extra code in the loop may inflate measured time."
+  },
+  {
+    "file": "AsyncRWLockPerTest.test.ets",
+    "line": 182,
+    "testCase": "PerformanceTest_AsyncReadLock_Unlock_0100",
+    "severity": "Warning",
+    "rule": "2",
+    "description": "For loop contains `await rLock.lock();` in addition to the tested API `unlock()`. Extra code in the loop may inflate measured time."
+  },
+  {
+    "file": "AtomicsPerfTest.test.ets",
+    "line": 810,
+    "testCase": "PerformanceTest_AtomicFloat_Instance_0200",
+    "severity": "Error",
+    "rule": "7",
+    "description": "Duplicate test case name `PerformanceTest_AtomicFloat_Instance_0200`. Another case at line 391 tests `fetchAdd`, while this one tests `store`. The console.info on line 819 says `0201` but it() name says `0200` — name/log mismatch."
+  }
+]
