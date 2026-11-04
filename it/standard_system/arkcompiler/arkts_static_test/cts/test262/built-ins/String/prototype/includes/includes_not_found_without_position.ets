@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: includes_not_found_without_position
+// description: String.prototype.includes returns false when search string not found
+// Conversion notes: test262 B|direct, 1:1 migration.
+
+function main(): void {
+    let str: String = 'The future is cool!';
+    arktest.assertTrue(!str.includes('Flash'), 'Flash not included');
+    arktest.assertTrue(!str.includes('FUTURE'), 'case-sensitive not included');
+}

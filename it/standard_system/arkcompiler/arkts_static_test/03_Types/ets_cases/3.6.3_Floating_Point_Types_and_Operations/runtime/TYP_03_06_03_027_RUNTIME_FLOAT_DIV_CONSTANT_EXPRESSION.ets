@@ -1,0 +1,30 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id TYP_03_06_03_027_RUNTIME_FLOAT_DIV_CONSTANT_EXPRESSION
+ * @expect runtime
+ * @section 3.6.3
+ * @design 浮点常量表达式 (1.0 - 1.0) 作除数 → +Infinity
+ * @note 运行时用例：浮点常量折叠不报错
+ *       对比：整数 10/(1-1) 会编译错误，浮点不会
+ */
+function main(): void {
+  let c: double = 5.0 / (1.0 - 1.0)
+  let posInf: double = 1.0 / 0.0
+  if (c != posInf) {
+    throw new Error("5.0/(1.0-1.0) should be +Infinity")
+  }
+  console.log("5.0/(1.0-1.0) = Infinity verified")
+}

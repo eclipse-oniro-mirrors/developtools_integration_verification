@@ -1,0 +1,34 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: match_zip_code_regexp
+// description: String.prototype.match with a regexp with an optional capture group returns the zip code match
+// Conversion notes: test262 B|direct, 1:1 migration. Optional capture group 2 is undefined.
+
+function main(): void {
+    let s: String = 'Boston, Mass. 02134';
+    let re: RegExp = new RegExp('([\\d]{5})([-\\ ]?[\\d]{4})?$');
+    let m: RegExpMatchArray | null = s.match(re);
+    if (m != null) {
+        arktest.assertEQ(m[0], '02134', 'full match is the zip code');
+        arktest.assertEQ(m[1], '02134', 'capture group 1 is the zip code');
+        arktest.assertTrue(m[2] == undefined, 'optional capture group 2 is undefined');
+        arktest.assertEQ(m.length, 3, 'match array has 3 entries');
+        arktest.assertTrue(m.index == 14, 'match starts at index 14');
+        arktest.assertTrue(m.input == s, 'match input is the source string');
+    } else {
+        arktest.assertTrue(false, 'match should return a result');
+    }
+}

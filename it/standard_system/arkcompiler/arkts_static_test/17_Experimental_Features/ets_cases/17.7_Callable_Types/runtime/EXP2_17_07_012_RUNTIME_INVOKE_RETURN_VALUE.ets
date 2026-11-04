@@ -1,0 +1,34 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id EXP2_17_07_012_RUNTIME_INVOKE_RETURN_VALUE
+ * @expect runtime
+ * @section 17.7
+ * @design 通过 C() 简写调用 $_invoke，返回值正确
+ * @note 运行时用例：验证 $_invoke 调用返回正确的 int 值
+ */
+class CalcCallable {
+  static $_invoke(): int {
+    return 100
+  }
+}
+
+function main(): void {
+  let r: int = CalcCallable()
+  if (r != 100) {
+    throw new Error('assertion failed: expected 100, got ' + r)
+  }
+  console.log('PASS: invoke returned correct value')
+}

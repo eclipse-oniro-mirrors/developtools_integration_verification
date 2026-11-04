@@ -1,0 +1,32 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id CCY_16_CI_023_RUNTIME_promise_chain
+ * @expect runtime
+ * @section 16.6.3
+ * @design Promise 链式调用运行时
+ * @note 运行时用例：验证 Promise.then 链式调用
+ */
+function main(): void {
+    let p: Promise<void> = Promise.resolve<number>(42).then((): void => {
+        console.log('verified');
+});
+    if (p == undefined) {
+    throw new Error('assertion failed');
+  }
+  }
+    }
+console.log('verified');
+}

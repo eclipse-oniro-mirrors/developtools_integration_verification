@@ -1,0 +1,31 @@
+# 4.7.7 Return Type - Cross-Language Comparison (ArkTS / Java / Swift)
+
+## 概览
+
+Return Type defines the function return type declaration and inference. This section covers return type syntax, type inference, and void/no-return representation.
+
+## 关键差异矩阵
+
+| 维度 | ArkTS | Java | Swift |
+|------|-------|------|-------|
+| 返回类型声明 | `function f(): T` | `T f()` | `func f() -> T` |
+| 返回类型推断 | ✅ `function f() { return 1 }` → `int` | ❌ 必须显式声明 | ✅ `func f() -> Int { 1 }` |
+| void 表示 | `void` | `void` | `Void` / `()` |
+| 无返回值函数 | ✅ 不写返回类型 = void | ✅ void | ✅ `-> Void` 可省略 |
+
+## 核心结论
+
+ArkTS behavior in this section is largely consistent with Java/Swift norms for return types, with ArkTS supporting return type inference similar to Swift.
+
+## 用例 1:1 对照（三环境实测结果）
+
+**实测日期：** 2026-06-24
+**实测环境：** ArkTS (es2panda + ark) / Java (javac + java SE 21) / Swift (5.10, /opt/swift/usr/bin/swift)
+
+| 语言 | 编译 | 运行 | 验证结论 |
+|------|------|------|---------|
+| ArkTS | ✅ es2panda 编译通过 | ✅ ark 运行通过 | 行为符合预期 |
+| Java | ✅ javac 编译通过 | ✅ java 运行通过 | 行为一致或差异已标注 |
+| Swift | ✅ swift 编译通过 | ✅ swift 运行通过 | 行为一致或差异已标注 |
+
+> 完整实测代码见章级 `cross_lang_verify/` 目录

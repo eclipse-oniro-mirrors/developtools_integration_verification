@@ -1,0 +1,249 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: identifier_start_unicode_12_0_0
+// description: Unicode 12.0.0 ID_Start characters are valid identifier starts
+
+function main(): void {
+// Copyright 2024 Mathias Bynens. All rights reserved.
+// This code is governed by the BSD license found in the LICENSE file.
+
+
+
+let ຆ: int = 1;
+let ຉ: int = 1;
+let ຌ: int = 1;
+let ຎ: int = 1;
+let ຏ: int = 1;
+let ຐ: int = 1;
+let ຑ: int = 1;
+let ຒ: int = 1;
+let ຓ: int = 1;
+let ຘ: int = 1;
+let ຠ: int = 1;
+let ຨ: int = 1;
+let ຩ: int = 1;
+let ຬ: int = 1;
+let ᳲ: int = 1;
+let ᳳ: int = 1;
+let ᳺ: int = 1;
+let Ꞻ: int = 1;
+let ꞻ: int = 1;
+let Ꞽ: int = 1;
+let ꞽ: int = 1;
+let Ꞿ: int = 1;
+let ꞿ: int = 1;
+let Ꟃ: int = 1;
+let ꟃ: int = 1;
+let Ꞔ: int = 1;
+let Ʂ: int = 1;
+let Ᶎ: int = 1;
+let ꭦ: int = 1;
+let ꭧ: int = 1;
+let 𐿠: int = 1;
+let 𐿡: int = 1;
+let 𐿢: int = 1;
+let 𐿣: int = 1;
+let 𐿤: int = 1;
+let 𐿥: int = 1;
+let 𐿦: int = 1;
+let 𐿧: int = 1;
+let 𐿨: int = 1;
+let 𐿩: int = 1;
+let 𐿪: int = 1;
+let 𐿫: int = 1;
+let 𐿬: int = 1;
+let 𐿭: int = 1;
+let 𐿮: int = 1;
+let 𐿯: int = 1;
+let 𐿰: int = 1;
+let 𐿱: int = 1;
+let 𐿲: int = 1;
+let 𐿳: int = 1;
+let 𐿴: int = 1;
+let 𐿵: int = 1;
+let 𐿶: int = 1;
+let 𑑟: int = 1;
+let 𑚸: int = 1;
+let 𑦠: int = 1;
+let 𑦡: int = 1;
+let 𑦢: int = 1;
+let 𑦣: int = 1;
+let 𑦤: int = 1;
+let 𑦥: int = 1;
+let 𑦦: int = 1;
+let 𑦧: int = 1;
+let 𑦪: int = 1;
+let 𑦫: int = 1;
+let 𑦬: int = 1;
+let 𑦭: int = 1;
+let 𑦮: int = 1;
+let 𑦯: int = 1;
+let 𑦰: int = 1;
+let 𑦱: int = 1;
+let 𑦲: int = 1;
+let 𑦳: int = 1;
+let 𑦴: int = 1;
+let 𑦵: int = 1;
+let 𑦶: int = 1;
+let 𑦷: int = 1;
+let 𑦸: int = 1;
+let 𑦹: int = 1;
+let 𑦺: int = 1;
+let 𑦻: int = 1;
+let 𑦼: int = 1;
+let 𑦽: int = 1;
+let 𑦾: int = 1;
+let 𑦿: int = 1;
+let 𑧀: int = 1;
+let 𑧁: int = 1;
+let 𑧂: int = 1;
+let 𑧃: int = 1;
+let 𑧄: int = 1;
+let 𑧅: int = 1;
+let 𑧆: int = 1;
+let 𑧇: int = 1;
+let 𑧈: int = 1;
+let 𑧉: int = 1;
+let 𑧊: int = 1;
+let 𑧋: int = 1;
+let 𑧌: int = 1;
+let 𑧍: int = 1;
+let 𑧎: int = 1;
+let 𑧏: int = 1;
+let 𑧐: int = 1;
+let 𑧡: int = 1;
+let 𑧣: int = 1;
+let 𑪄: int = 1;
+let 𑪅: int = 1;
+let 𖽅: int = 1;
+let 𖽆: int = 1;
+let 𖽇: int = 1;
+let 𖽈: int = 1;
+let 𖽉: int = 1;
+let 𖽊: int = 1;
+let 𖿣: int = 1;
+let 𘟲: int = 1;
+let 𘟳: int = 1;
+let 𘟴: int = 1;
+let 𘟵: int = 1;
+let 𘟶: int = 1;
+let 𘟷: int = 1;
+let 𛅐: int = 1;
+let 𛅑: int = 1;
+let 𛅒: int = 1;
+let 𛅤: int = 1;
+let 𛅥: int = 1;
+let 𛅦: int = 1;
+let 𛅧: int = 1;
+let 𞄀: int = 1;
+let 𞄁: int = 1;
+let 𞄂: int = 1;
+let 𞄃: int = 1;
+let 𞄄: int = 1;
+let 𞄅: int = 1;
+let 𞄆: int = 1;
+let 𞄇: int = 1;
+let 𞄈: int = 1;
+let 𞄉: int = 1;
+let 𞄊: int = 1;
+let 𞄋: int = 1;
+let 𞄌: int = 1;
+let 𞄍: int = 1;
+let 𞄎: int = 1;
+let 𞄏: int = 1;
+let 𞄐: int = 1;
+let 𞄑: int = 1;
+let 𞄒: int = 1;
+let 𞄓: int = 1;
+let 𞄔: int = 1;
+let 𞄕: int = 1;
+let 𞄖: int = 1;
+let 𞄗: int = 1;
+let 𞄘: int = 1;
+let 𞄙: int = 1;
+let 𞄚: int = 1;
+let 𞄛: int = 1;
+let 𞄜: int = 1;
+let 𞄝: int = 1;
+let 𞄞: int = 1;
+let 𞄟: int = 1;
+let 𞄠: int = 1;
+let 𞄡: int = 1;
+let 𞄢: int = 1;
+let 𞄣: int = 1;
+let 𞄤: int = 1;
+let 𞄥: int = 1;
+let 𞄦: int = 1;
+let 𞄧: int = 1;
+let 𞄨: int = 1;
+let 𞄩: int = 1;
+let 𞄪: int = 1;
+let 𞄫: int = 1;
+let 𞄬: int = 1;
+let 𞄷: int = 1;
+let 𞄸: int = 1;
+let 𞄹: int = 1;
+let 𞄺: int = 1;
+let 𞄻: int = 1;
+let 𞄼: int = 1;
+let 𞄽: int = 1;
+let 𞅎: int = 1;
+let 𞋀: int = 1;
+let 𞋁: int = 1;
+let 𞋂: int = 1;
+let 𞋃: int = 1;
+let 𞋄: int = 1;
+let 𞋅: int = 1;
+let 𞋆: int = 1;
+let 𞋇: int = 1;
+let 𞋈: int = 1;
+let 𞋉: int = 1;
+let 𞋊: int = 1;
+let 𞋋: int = 1;
+let 𞋌: int = 1;
+let 𞋍: int = 1;
+let 𞋎: int = 1;
+let 𞋏: int = 1;
+let 𞋐: int = 1;
+let 𞋑: int = 1;
+let 𞋒: int = 1;
+let 𞋓: int = 1;
+let 𞋔: int = 1;
+let 𞋕: int = 1;
+let 𞋖: int = 1;
+let 𞋗: int = 1;
+let 𞋘: int = 1;
+let 𞋙: int = 1;
+let 𞋚: int = 1;
+let 𞋛: int = 1;
+let 𞋜: int = 1;
+let 𞋝: int = 1;
+let 𞋞: int = 1;
+let 𞋟: int = 1;
+let 𞋠: int = 1;
+let 𞋡: int = 1;
+let 𞋢: int = 1;
+let 𞋣: int = 1;
+let 𞋤: int = 1;
+let 𞋥: int = 1;
+let 𞋦: int = 1;
+let 𞋧: int = 1;
+let 𞋨: int = 1;
+let 𞋩: int = 1;
+let 𞋪: int = 1;
+let 𞋫: int = 1;
+let 𞥋: int = 1;
+}

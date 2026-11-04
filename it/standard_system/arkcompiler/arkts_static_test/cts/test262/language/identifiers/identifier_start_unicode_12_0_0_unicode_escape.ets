@@ -1,0 +1,249 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: identifier_start_unicode_12_0_0_unicode_escape
+// description: Unicode 12.0.0 escaped ID_Start characters are valid identifier starts
+
+function main(): void {
+// Copyright 2024 Mathias Bynens. All rights reserved.
+// This code is governed by the BSD license found in the LICENSE file.
+
+
+
+let \u0E86: int = 1;
+let \u0E89: int = 1;
+let \u0E8C: int = 1;
+let \u0E8E: int = 1;
+let \u0E8F: int = 1;
+let \u0E90: int = 1;
+let \u0E91: int = 1;
+let \u0E92: int = 1;
+let \u0E93: int = 1;
+let \u0E98: int = 1;
+let \u0EA0: int = 1;
+let \u0EA8: int = 1;
+let \u0EA9: int = 1;
+let \u0EAC: int = 1;
+let \u1CF2: int = 1;
+let \u1CF3: int = 1;
+let \u1CFA: int = 1;
+let \uA7BA: int = 1;
+let \uA7BB: int = 1;
+let \uA7BC: int = 1;
+let \uA7BD: int = 1;
+let \uA7BE: int = 1;
+let \uA7BF: int = 1;
+let \uA7C2: int = 1;
+let \uA7C3: int = 1;
+let \uA7C4: int = 1;
+let \uA7C5: int = 1;
+let \uA7C6: int = 1;
+let \uAB66: int = 1;
+let \uAB67: int = 1;
+let \u{10FE0}: int = 1;
+let \u{10FE1}: int = 1;
+let \u{10FE2}: int = 1;
+let \u{10FE3}: int = 1;
+let \u{10FE4}: int = 1;
+let \u{10FE5}: int = 1;
+let \u{10FE6}: int = 1;
+let \u{10FE7}: int = 1;
+let \u{10FE8}: int = 1;
+let \u{10FE9}: int = 1;
+let \u{10FEA}: int = 1;
+let \u{10FEB}: int = 1;
+let \u{10FEC}: int = 1;
+let \u{10FED}: int = 1;
+let \u{10FEE}: int = 1;
+let \u{10FEF}: int = 1;
+let \u{10FF0}: int = 1;
+let \u{10FF1}: int = 1;
+let \u{10FF2}: int = 1;
+let \u{10FF3}: int = 1;
+let \u{10FF4}: int = 1;
+let \u{10FF5}: int = 1;
+let \u{10FF6}: int = 1;
+let \u{1145F}: int = 1;
+let \u{116B8}: int = 1;
+let \u{119A0}: int = 1;
+let \u{119A1}: int = 1;
+let \u{119A2}: int = 1;
+let \u{119A3}: int = 1;
+let \u{119A4}: int = 1;
+let \u{119A5}: int = 1;
+let \u{119A6}: int = 1;
+let \u{119A7}: int = 1;
+let \u{119AA}: int = 1;
+let \u{119AB}: int = 1;
+let \u{119AC}: int = 1;
+let \u{119AD}: int = 1;
+let \u{119AE}: int = 1;
+let \u{119AF}: int = 1;
+let \u{119B0}: int = 1;
+let \u{119B1}: int = 1;
+let \u{119B2}: int = 1;
+let \u{119B3}: int = 1;
+let \u{119B4}: int = 1;
+let \u{119B5}: int = 1;
+let \u{119B6}: int = 1;
+let \u{119B7}: int = 1;
+let \u{119B8}: int = 1;
+let \u{119B9}: int = 1;
+let \u{119BA}: int = 1;
+let \u{119BB}: int = 1;
+let \u{119BC}: int = 1;
+let \u{119BD}: int = 1;
+let \u{119BE}: int = 1;
+let \u{119BF}: int = 1;
+let \u{119C0}: int = 1;
+let \u{119C1}: int = 1;
+let \u{119C2}: int = 1;
+let \u{119C3}: int = 1;
+let \u{119C4}: int = 1;
+let \u{119C5}: int = 1;
+let \u{119C6}: int = 1;
+let \u{119C7}: int = 1;
+let \u{119C8}: int = 1;
+let \u{119C9}: int = 1;
+let \u{119CA}: int = 1;
+let \u{119CB}: int = 1;
+let \u{119CC}: int = 1;
+let \u{119CD}: int = 1;
+let \u{119CE}: int = 1;
+let \u{119CF}: int = 1;
+let \u{119D0}: int = 1;
+let \u{119E1}: int = 1;
+let \u{119E3}: int = 1;
+let \u{11A84}: int = 1;
+let \u{11A85}: int = 1;
+let \u{16F45}: int = 1;
+let \u{16F46}: int = 1;
+let \u{16F47}: int = 1;
+let \u{16F48}: int = 1;
+let \u{16F49}: int = 1;
+let \u{16F4A}: int = 1;
+let \u{16FE3}: int = 1;
+let \u{187F2}: int = 1;
+let \u{187F3}: int = 1;
+let \u{187F4}: int = 1;
+let \u{187F5}: int = 1;
+let \u{187F6}: int = 1;
+let \u{187F7}: int = 1;
+let \u{1B150}: int = 1;
+let \u{1B151}: int = 1;
+let \u{1B152}: int = 1;
+let \u{1B164}: int = 1;
+let \u{1B165}: int = 1;
+let \u{1B166}: int = 1;
+let \u{1B167}: int = 1;
+let \u{1E100}: int = 1;
+let \u{1E101}: int = 1;
+let \u{1E102}: int = 1;
+let \u{1E103}: int = 1;
+let \u{1E104}: int = 1;
+let \u{1E105}: int = 1;
+let \u{1E106}: int = 1;
+let \u{1E107}: int = 1;
+let \u{1E108}: int = 1;
+let \u{1E109}: int = 1;
+let \u{1E10A}: int = 1;
+let \u{1E10B}: int = 1;
+let \u{1E10C}: int = 1;
+let \u{1E10D}: int = 1;
+let \u{1E10E}: int = 1;
+let \u{1E10F}: int = 1;
+let \u{1E110}: int = 1;
+let \u{1E111}: int = 1;
+let \u{1E112}: int = 1;
+let \u{1E113}: int = 1;
+let \u{1E114}: int = 1;
+let \u{1E115}: int = 1;
+let \u{1E116}: int = 1;
+let \u{1E117}: int = 1;
+let \u{1E118}: int = 1;
+let \u{1E119}: int = 1;
+let \u{1E11A}: int = 1;
+let \u{1E11B}: int = 1;
+let \u{1E11C}: int = 1;
+let \u{1E11D}: int = 1;
+let \u{1E11E}: int = 1;
+let \u{1E11F}: int = 1;
+let \u{1E120}: int = 1;
+let \u{1E121}: int = 1;
+let \u{1E122}: int = 1;
+let \u{1E123}: int = 1;
+let \u{1E124}: int = 1;
+let \u{1E125}: int = 1;
+let \u{1E126}: int = 1;
+let \u{1E127}: int = 1;
+let \u{1E128}: int = 1;
+let \u{1E129}: int = 1;
+let \u{1E12A}: int = 1;
+let \u{1E12B}: int = 1;
+let \u{1E12C}: int = 1;
+let \u{1E137}: int = 1;
+let \u{1E138}: int = 1;
+let \u{1E139}: int = 1;
+let \u{1E13A}: int = 1;
+let \u{1E13B}: int = 1;
+let \u{1E13C}: int = 1;
+let \u{1E13D}: int = 1;
+let \u{1E14E}: int = 1;
+let \u{1E2C0}: int = 1;
+let \u{1E2C1}: int = 1;
+let \u{1E2C2}: int = 1;
+let \u{1E2C3}: int = 1;
+let \u{1E2C4}: int = 1;
+let \u{1E2C5}: int = 1;
+let \u{1E2C6}: int = 1;
+let \u{1E2C7}: int = 1;
+let \u{1E2C8}: int = 1;
+let \u{1E2C9}: int = 1;
+let \u{1E2CA}: int = 1;
+let \u{1E2CB}: int = 1;
+let \u{1E2CC}: int = 1;
+let \u{1E2CD}: int = 1;
+let \u{1E2CE}: int = 1;
+let \u{1E2CF}: int = 1;
+let \u{1E2D0}: int = 1;
+let \u{1E2D1}: int = 1;
+let \u{1E2D2}: int = 1;
+let \u{1E2D3}: int = 1;
+let \u{1E2D4}: int = 1;
+let \u{1E2D5}: int = 1;
+let \u{1E2D6}: int = 1;
+let \u{1E2D7}: int = 1;
+let 𞋘: int = 1;
+let \u{1E2D9}: int = 1;
+let \u{1E2DA}: int = 1;
+let \u{1E2DB}: int = 1;
+let \u{1E2DC}: int = 1;
+let \u{1E2DD}: int = 1;
+let \u{1E2DE}: int = 1;
+let \u{1E2DF}: int = 1;
+let \u{1E2E0}: int = 1;
+let \u{1E2E1}: int = 1;
+let \u{1E2E2}: int = 1;
+let \u{1E2E3}: int = 1;
+let \u{1E2E4}: int = 1;
+let \u{1E2E5}: int = 1;
+let \u{1E2E6}: int = 1;
+let \u{1E2E7}: int = 1;
+let \u{1E2E8}: int = 1;
+let \u{1E2E9}: int = 1;
+let \u{1E2EA}: int = 1;
+let \u{1E2EB}: int = 1;
+let \u{1E94B}: int = 1;
+}

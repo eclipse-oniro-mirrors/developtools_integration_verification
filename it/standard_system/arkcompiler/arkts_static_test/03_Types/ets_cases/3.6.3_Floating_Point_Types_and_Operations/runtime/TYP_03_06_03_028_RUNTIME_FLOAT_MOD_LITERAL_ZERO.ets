@@ -1,0 +1,29 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id TYP_03_06_03_028_RUNTIME_FLOAT_MOD_LITERAL_ZERO
+ * @expect runtime
+ * @section 3.6.3
+ * @design 5.0 % 0.0 → NaN（spec §15.17.3 浮点取模规则）
+ * @note 运行时用例：浮点取模 0 不抛错
+ *       对比：整数 % 0 会编译错误或运行时抛 ArithmeticError
+ */
+function main(): void {
+  let c: double = 5.0 % 0.0
+  if (c == c) {
+    throw new Error("5.0 % 0.0 should be NaN")
+  }
+  console.log("5.0 % 0.0 = NaN verified")
+}

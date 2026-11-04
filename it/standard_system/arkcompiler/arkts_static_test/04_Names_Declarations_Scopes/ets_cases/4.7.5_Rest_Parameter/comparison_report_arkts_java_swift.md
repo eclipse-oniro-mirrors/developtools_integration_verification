@@ -1,0 +1,32 @@
+# 4.7.5 Rest Parameter - Cross-Language Comparison (ArkTS / Java / Swift)
+
+## 概览
+
+Rest Parameter defines the `...name: Type[]` syntax for variadic function parameters. This section covers rest parameter syntax, type rules, and positional constraints.
+
+## 关键差异矩阵
+
+| 维度 | ArkTS | Java | Swift |
+|------|-------|------|-------|
+| 声明语法 | `...name: Type[]` | `Type... name` | `name: Type...` |
+| 位置约束 | ✅ 必须为最后一个参数 | ✅ 必须为最后一个参数 | ✅ 必须为最后一个参数 |
+| 类型 | Type 数组 | Type 数组 | Type 数组（Array<Type>） |
+| 零参数调用 | ✅ 传入空数组 | ✅ 传入空数组 | ✅ 传入空数组 |
+| 最多一个 | ✅ 仅允许一个 rest 参数 | ✅ 仅允许一个 varargs | ✅ 仅允许一个 variadic 参数 |
+
+## 核心结论
+
+ArkTS behavior in this section is largely consistent with Java/Swift norms for rest/variadic parameters. All three languages share the same positional and cardinality constraints.
+
+## 用例 1:1 对照（三环境实测结果）
+
+**实测日期：** 2026-06-24
+**实测环境：** ArkTS (es2panda + ark) / Java (javac + java SE 21) / Swift (5.10, /opt/swift/usr/bin/swift)
+
+| 语言 | 编译 | 运行 | 验证结论 |
+|------|------|------|---------|
+| ArkTS | ✅ es2panda 编译通过 | ✅ ark 运行通过 | 行为符合预期 |
+| Java | ✅ javac 编译通过 | ✅ java 运行通过 | 行为一致或差异已标注 |
+| Swift | ✅ swift 编译通过 | ✅ swift 运行通过 | 行为一致或差异已标注 |
+
+> 完整实测代码见章级 `cross_lang_verify/` 目录

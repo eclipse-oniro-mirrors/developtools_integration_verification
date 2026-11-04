@@ -1,0 +1,27 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// arktsid: number_numeric_sep_octal_int_odig_sep_odig_one_of
+// description: NumericLiteralSeparator is not valid on string conversions for ToNumber operations
+
+function main(): void {
+    arktest.assertTrue(isNaN(Number('0o0_0')), '0o0_0');
+    arktest.assertTrue(isNaN(Number('0o1_1')), '0o1_1');
+    arktest.assertTrue(isNaN(Number('0o2_2')), '0o2_2');
+    arktest.assertTrue(isNaN(Number('0o3_3')), '0o3_3');
+    arktest.assertTrue(isNaN(Number('0o4_4')), '0o4_4');
+    arktest.assertTrue(isNaN(Number('0o5_5')), '0o5_5');
+    arktest.assertTrue(isNaN(Number('0o6_6')), '0o6_6');
+    arktest.assertTrue(isNaN(Number('0o7_7')), '0o7_7');
+}

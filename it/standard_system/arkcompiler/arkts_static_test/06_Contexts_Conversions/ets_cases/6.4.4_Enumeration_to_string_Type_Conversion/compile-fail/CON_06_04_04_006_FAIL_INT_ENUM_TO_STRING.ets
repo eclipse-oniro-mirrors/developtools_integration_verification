@@ -1,0 +1,27 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id CON_06_04_04_006_FAIL_INT_ENUM_TO_STRING
+ * @expect compile-fail
+ * @section 6.4.4
+ * @design int 基类型枚举→string: 非 string 基类型无此转换，应编译失败
+ * @note 反向用例：int 枚举不能直接转为 string
+ */
+enum IntEnum { A, B, C }
+
+function testIntEnumToStringFail(): void {
+  let e: IntEnum = IntEnum.A
+  let s: string = e
+}

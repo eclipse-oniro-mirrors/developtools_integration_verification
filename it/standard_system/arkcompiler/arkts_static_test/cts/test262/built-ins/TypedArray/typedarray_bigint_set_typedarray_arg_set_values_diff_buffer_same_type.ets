@@ -1,0 +1,39 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: typedarray_bigint_set_typedarray_arg_set_values_diff_buffer_same_type
+// description: set(typedArray, offset) copies elements from another BigInt typed array of the same type
+// Conversion notes: elements unboxed to bigint for comparison.
+
+function main(): void {
+    let taBi64 = new BigInt64Array(4);
+    taBi64[0] = 1n; taBi64[1] = 2n; taBi64[2] = 3n; taBi64[3] = 4n;
+    let srcBi64 = new BigInt64Array(2);
+    srcBi64[0] = 42n; srcBi64[1] = 43n;
+    taBi64.set(srcBi64, 1);
+    let v1Bi64: bigint = taBi64[1];
+    let v2Bi64: bigint = taBi64[2];
+    arktest.assertEQ(v1Bi64, 42n, 'BigInt64Array set-ta 1');
+    arktest.assertEQ(v2Bi64, 43n, 'BigInt64Array set-ta 2');
+    let taBu64 = new BigUint64Array(4);
+    taBu64[0] = 1n; taBu64[1] = 2n; taBu64[2] = 3n; taBu64[3] = 4n;
+    let srcBu64 = new BigUint64Array(2);
+    srcBu64[0] = 42n; srcBu64[1] = 43n;
+    taBu64.set(srcBu64, 1);
+    let v1Bu64: bigint = taBu64[1];
+    let v2Bu64: bigint = taBu64[2];
+    arktest.assertEQ(v1Bu64, 42n, 'BigUint64Array set-ta 1');
+    arktest.assertEQ(v2Bu64, 43n, 'BigUint64Array set-ta 2');
+}
