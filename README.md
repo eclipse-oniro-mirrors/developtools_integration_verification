@@ -23,7 +23,7 @@
 │       │   └── screenshot64
 │       ├── distributed         # 分布式场景端到端用例
 │       └── video               # 视频用例
-├── it                          # 集成测试用例
+├── integration_test            # 集成测试用例
 │   └── <system_type>           # 值: mini_system，small_system，standard_system
 │       └── <subsytem>          # 子系统名，例如：arkui，arkcompiler
 │           └── <testsuite>     # 测试套名，例如：buildin_dynamic，buildin_static
