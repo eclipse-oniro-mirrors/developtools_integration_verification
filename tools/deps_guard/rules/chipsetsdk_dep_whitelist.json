@@ -4823,32 +4823,32 @@
         "description": "lib libinput_interfaces_service_1.0.z.so with innerapi_tags [passthrough] cannot depend system only lib ld-musl-arm.so.1 in system/lib/ld-musl-arm.so.1"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libdisplay_buffer_proxy_1.0.z.so",
         "dep_file_path": "system/lib/chipset-sdk-sp/libdisplay_buffer_proxy_1.0.z.so",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] deps wrong lib libdisplay_buffer_proxy_1.0.z.so contains innerapi_tags [chipsetsdk_sp_indirect]"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] deps wrong lib libdisplay_buffer_proxy_1.0.z.so contains innerapi_tags [chipsetsdk_sp_indirect]"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libdisplay_buffer_proxy_1.1.z.so",
         "dep_file_path": "system/lib/chipset-sdk-sp/libdisplay_buffer_proxy_1.1.z.so",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] deps wrong lib libdisplay_buffer_proxy_1.1.z.so contains innerapi_tags [chipsetsdk_sp_indirect]"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] deps wrong lib libdisplay_buffer_proxy_1.1.z.so contains innerapi_tags [chipsetsdk_sp_indirect]"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libhilog.so",
         "dep_file_path": "system/lib/chipset-sdk/libhilog.so",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] deps wrong lib libhilog.so contains innerapi_tags [chipsetsdk]"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] deps wrong lib libhilog.so contains innerapi_tags [chipsetsdk]"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "ld-musl-arm.so.1",
         "dep_file_path": "system/lib/ld-musl-arm.so.1",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] cannot depend system only lib ld-musl-arm.so.1 in system/lib/ld-musl-arm.so.1"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] cannot depend system only lib ld-musl-arm.so.1 in system/lib/ld-musl-arm.so.1"
     },
     {
         "so_file_name": "libusb_host_interface_service_2.0.z.so",
@@ -5180,11 +5180,11 @@
         "description": "lib libdisplay_buffer_vendor.z.so with innerapi_tags [passthrough] cannot depend system only lib libutils.z.so in system/lib/module/arkts/libutils.z.so"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libutils.z.so",
         "dep_file_path": "system/lib/module/arkts/libutils.z.so",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] cannot depend system only lib libutils.z.so in system/lib/module/arkts/libutils.z.so"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] cannot depend system only lib libutils.z.so in system/lib/module/arkts/libutils.z.so"
     },{
         "so_file_name": "libextractortool.z.so",
         "so_file_path": "system/lib/chipset-sdk/libextractortool.z.so",
@@ -9652,18 +9652,18 @@
         "description": "lib libmetadata_service_1.1.z.so with innerapi_tags [passthrough] cannot deps system only lib libclang_rt.asan.so in system/lib/libclang_rt.asan.so"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "ld-musl-arm-asan.so.1",
         "dep_file_path": "system/lib/ld-musl-arm-asan.so.1",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] cannot deps system only lib ld-musl-arm-asan.so.1 in system/lib/ld-musl-arm-asan.so.1"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] cannot deps system only lib ld-musl-arm-asan.so.1 in system/lib/ld-musl-arm-asan.so.1"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libclang_rt.asan.so",
         "dep_file_path": "system/lib/libclang_rt.asan.so",
-        "description": "lib libcodec_component_manager_service_4.0.z.so with innerapi_tags [passthrough] cannot deps system only lib libclang_rt.asan.so in system/lib/libclang_rt.asan.so"
+        "description": "lib libcodec_component_manager_service_4.1.z.so with innerapi_tags [passthrough] cannot deps system only lib libclang_rt.asan.so in system/lib/libclang_rt.asan.so"
     },
     {
         "so_file_name": "libmapper_service_1.0.z.so",
@@ -13915,11 +13915,11 @@
         "description": "system only module libmemory_tracker_interface_service_1.0.z.so depends on libmemorytracker.default.so which is unknown so type"
     },
     {
-        "so_file_name": "libcodec_component_manager_service_4.0.z.so",
-        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.0.z.so",
+        "so_file_name": "libcodec_component_manager_service_4.1.z.so",
+        "so_file_path": "vendor/lib/passthrough/libcodec_component_manager_service_4.1.z.so",
         "dep_file_name": "libomx_audio_codec.z.so",
         "dep_file_path": "",
-        "description": "system only module libcodec_component_manager_service_4.0.z.so depends on libomx_audio_codec.z.so which is unknown so type"
+        "description": "system only module libcodec_component_manager_service_4.1.z.so depends on libomx_audio_codec.z.so which is unknown so type"
     },
     	{
 		"so_file_name": "libcodec_image_service_2.1.z.so",
