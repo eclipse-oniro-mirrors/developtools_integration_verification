@@ -493,7 +493,7 @@ while True:
         artifact = self.root / "out/rk3568/lsp-portable"
         before = self.snapshot(artifact)
         env = dict(os.environ, OPENCODE_DISABLE_AUTOUPDATE="true",
-                   OPENCODE_DISABLE_MODELS_FETCH="true")
+                   OPENCODE_DISABLE_MODELS_FETCH="true", OSKM_LSP_IDLE_MS="1000")
         for key in ("OPENCODE_CONFIG", "OPENCODE_CONFIG_CONTENT", "OPENCODE_CONFIG_DIR",
                     "OPENCODE_DISABLE_PROJECT_CONFIG"):
             env.pop(key, None)
@@ -528,7 +528,16 @@ while True:
         errors = self.base / "mcp.log"
         with errors.open("w") as log:
             process = subprocess.Popen(["node", str(mcp)], cwd=self.root,
-                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log)
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log,
+                env=dict(os.environ, OSKM_LSP_IDLE_MS="1000"))
+            def mcp_log():
+                text = errors.read_text()
+                for line in text.splitlines():
+                    if line.startswith("[lsp-shared] connected to "):
+                        owner_log = Path(line.split("connected to ", 1)[1]).with_suffix(".log")
+                        if owner_log.is_file():
+                            text += owner_log.read_text()
+                return text
             def rpc(identifier, method, params):
                 message = {"jsonrpc": "2.0", "id": identifier, "method": method, "params": params}
                 process.stdin.write(json.dumps(message).encode() + b"\n")
@@ -554,11 +563,11 @@ while True:
                     status = rpc(identifier, "tools/call", {"name": "lsp_server_status", "arguments": {}})
                     servers = json.loads(status["content"][0]["text"])["servers"]
                     if any(s["status"] == "running" and s["workspace_root"] == str(self.root)
-                           for s in servers) and "warmup: opened" in errors.read_text():
+                           for s in servers) and "warmup: opened" in mcp_log():
                         break
                     time.sleep(0.2)
                 else:
-                    self.fail("Portable MCP warmup failed: " + errors.read_text()[-3000:])
+                    self.fail("Portable MCP warmup failed: " + mcp_log()[-3000:])
                 source = self.root / "main.cc"
                 definition = rpc(100, "tools/call", {"name": "lsp_goto_definition", "arguments": {
                     "file_path": str(source), "line": 2,

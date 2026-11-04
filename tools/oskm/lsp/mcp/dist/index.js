@@ -855,6 +855,22 @@ async function main() {
     server.setRequestHandler(ListToolsRequestSchema, async () => {
         return { tools: TOOLS };
     });
+    // Shared callers use one disk-backed document state. Order complete tool
+    // operations, including edits and their following queries.
+    let toolQueue = Promise.resolve();
+    const runTool = (handler, args) => {
+        const result = toolQueue.then(async () => {
+            connectionManager.beginOperation();
+            try {
+                return await handler(args);
+            }
+            finally {
+                connectionManager.endOperation();
+            }
+        });
+        toolQueue = result.catch(() => {});
+        return result;
+    };
     // Register call tool handler
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
@@ -877,7 +893,7 @@ async function main() {
             };
         }
         try {
-            const result = await toolEntry.handler(args);
+            const result = await runTool(toolEntry.handler, args);
             return {
                 content: [
                     {
@@ -940,13 +956,18 @@ async function main() {
         }
     });
     // Handle shutdown
+    let shuttingDown = false;
     const shutdown = async () => {
+        if (shuttingDown) return;
+        shuttingDown = true;
         log('info', 'Shutting down...');
         await connectionManager.shutdownAll();
         process.exit(0);
     };
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
+    // SDK stdio does not report stdin EOF. Release clangd if its owner dies.
+    process.stdin.once('end', shutdown);
     // Warm up configured servers: opening one file per server (e.g. clangd)
     // kicks off whole-CDB background indexing, which otherwise only starts on
     // the first real query. Fire-and-forget: failures are logged, not fatal.
@@ -971,7 +992,12 @@ async function main() {
     await server.connect(transport);
     log('info', 'LSP-MCP server running on stdio');
 }
-main().catch((error) => {
+// Preserve every existing stdio registration. Only the shared owner launches
+// the actual tool service and its clangd children.
+const entry = process.argv.includes('--shared-worker')
+    ? main
+    : async () => (await import('./shared.js')).runProxy();
+entry().catch((error) => {
     log('error', `Fatal error: ${error}`);
     process.exit(1);
 });
