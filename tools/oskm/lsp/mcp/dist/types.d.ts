@@ -155,6 +155,8 @@ export interface ConnectionManager {
     stopServer(serverId: string, workspaceRoot?: string): Promise<void>;
     /** Stop all servers */
     shutdownAll(): Promise<void>;
+    beginOperation(): void;
+    endOperation(): void;
     /** List active servers with their workspace roots */
     listActiveServers(): ServerInstance[];
     /** Detect workspace root for a file path */

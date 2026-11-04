@@ -37,6 +37,7 @@ export class ConnectionManagerImpl {
     restartInfo = new Map();
     idleTimers = new Map();
     initLocks = new Map();
+    activeOperations = 0;
     constructor(config = DEFAULT_CONFIG, diagnosticsCache) {
         this.config = config;
         this.diagnosticsCache = diagnosticsCache;
@@ -80,7 +81,7 @@ export class ConnectionManagerImpl {
             return await initPromise;
         }
         finally {
-            this.initLocks.delete(key);
+            if (this.initLocks.get(key) === initPromise) this.initLocks.delete(key);
         }
     }
     /**
@@ -192,12 +193,19 @@ export class ConnectionManagerImpl {
         // Handle server exit
         client.onExit((code) => {
             const instance = this.servers.get(key);
-            if (instance) {
+            if (instance && instance.client === client) {
+                if (instance.status === 'stopping') return;
                 instance.status = code === 0 ? 'stopped' : 'crashed';
                 if (code !== 0 && this.shouldRestart(key)) {
                     logger.warn(`Server crashed, restarting: ${config.id}`, { code });
-                    this.restartServer(key, config, instance.workspaceRoot).catch(err => {
+                    const restart = this.restartServer(key, config, instance.workspaceRoot);
+                    // Queries arriving during crash backoff must join this
+                    // restart, rather than spawning a second language server.
+                    this.initLocks.set(key, restart);
+                    restart.catch(err => {
                         logger.error(`Failed to restart server: ${config.id}`, err);
+                    }).finally(() => {
+                        if (this.initLocks.get(key) === restart) this.initLocks.delete(key);
                     });
                 }
             }
@@ -286,12 +294,24 @@ export class ConnectionManagerImpl {
             workspaceRoot: instance.workspaceRoot,
         });
     }
+    beginOperation() {
+        this.activeOperations++;
+        for (const timer of this.idleTimers.values()) clearTimeout(timer);
+        this.idleTimers.clear();
+    }
+    endOperation() {
+        this.activeOperations--;
+        if (this.activeOperations === 0) {
+            for (const key of this.servers.keys()) this.resetIdleTimer(key);
+        }
+    }
     resetIdleTimer(key) {
         // Clear existing timer
         const existingTimer = this.idleTimers.get(key);
         if (existingTimer) {
             clearTimeout(existingTimer);
         }
+        if (this.activeOperations > 0) return;
         // Set new timer
         const timer = setTimeout(() => {
             logger.info(`Idle timeout, stopping server`, { key });

@@ -31,6 +31,7 @@ export declare class ConnectionManagerImpl implements IConnectionManager {
     private restartInfo;
     private idleTimers;
     private initLocks;
+    private activeOperations;
     constructor(config?: Config, diagnosticsCache?: DiagnosticsCache | undefined);
     /**
      * Get or create a client for a file path.
@@ -52,6 +53,8 @@ export declare class ConnectionManagerImpl implements IConnectionManager {
      * Stop all language servers.
      */
     shutdownAll(): Promise<void>;
+    beginOperation(): void;
+    endOperation(): void;
     /**
      * List all active servers.
      */

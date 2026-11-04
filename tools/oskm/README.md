@@ -180,6 +180,29 @@ MCP 服务本体在 `lsp/mcp/dist/index.js`（已含生产依赖，无需 npm in
 4. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）。
    可用 `opencode mcp list` 检查连接；首次启动仍需等待 clangd 加载现有索引。
 
+同一用户在相同源码根目录启动多个 OpenCode 实例时，`mcp/dist/index.js`
+自动作为 stdio 代理连接同一个后台，后台仅运行一套 MCP 工具服务和 clangd，
+共同使用已加载的内存索引，无需手工启动服务或调整现有 MCP 注册。
+源码目录的真实路径、消费侧有效配置和 MCP 安装路径共同确定共享实例；
+不同源码目录或不同产品配置各用独立后台。并发启动由 Linux `flock` 保证互斥，
+通过当前用户专属的 Unix socket 通信，不监听网络端口，不增加 npm 依赖。
+
+关闭某个窗口不会停止其他窗口使用的 clangd；最后一个连接退出且无请求处理时，
+后台默认保留 5 分钟再退出，可用 `OSKM_LSP_IDLE_MS` 调整该等待时间（毫秒）。
+仍连接的窗口保留后台，但 clangd 继续遵循原 `idleTimeout` 配置。
+同一后台的工具调用按顺序执行，查询前同步磁盘文件；不同窗口不维护各自的未保存缓冲区。
+有多个客户端连接时，`lsp_stop_server` 返回提示，避免停止其他客户端的语言服务。
+代理 stderr 输出 socket 路径；同目录、同前缀的 `.log` 文件记录后台及 clangd 日志。
+socket、日志及锁文件位于 `${TMPDIR:-/tmp}/oskm-lsp-<uid>/`。
+旧版本已经运行的 MCP/clangd 不会被强制终止，已有窗口重新连接后使用共享后台。
+
+共享消费侧回归（只在临时小工程测试，不加载生产全量索引）：
+
+```bash
+LSP_TEST_CLANGD="$PWD/tools/oskm/lsp/clangd/bin/clangd" \
+  node --test tools/oskm/lsp/mcp/test-shared.mjs
+```
+
 ### 提供的功能（29 个 lsp_* 工具）
 
 | 能力 | 工具 |
