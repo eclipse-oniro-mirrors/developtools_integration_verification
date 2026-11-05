@@ -1,0 +1,31 @@
+# 4.2.1 Declaration Distinguishable by Signatures - Cross-Language Comparison (ArkTS / Java / Swift)
+
+## 概览
+
+Declaration Distinguishable by Signatures defines the criteria for when two declarations can be distinguished by their signatures (name + parameter types). This section covers distinguishability rules and edge cases.
+
+## 关键差异矩阵
+
+| 维度 | ArkTS | Java | Swift |
+|------|-------|------|-------|
+| 区分依据 | 名称 + 参数类型 | 名称 + 参数类型 | 名称 + 外部参数名 + 参数类型 |
+| 仅返回值不同 | ❌ 不可区分 | ❌ 不可区分 | ❌ 不可区分 |
+| 泛型擦除后 | ❌ 擦除后相同则拒绝 | ✅ 擦除后通过（运行时冲突） | N/A（无泛型擦除） |
+| 静态/实例同名 | ✅ 可区分 | ✅ 可区分 | ✅ 可区分 |
+
+## 核心结论
+
+ArkTS behavior in this section is largely consistent with Java/Swift norms for signature distinguishability, with stronger static checks for type-erased signatures.
+
+## 用例 1:1 对照（三环境实测结果）
+
+**实测日期：** 2026-06-24
+**实测环境：** ArkTS (es2panda + ark) / Java (javac + java SE 21) / Swift (5.10, /opt/swift/usr/bin/swift)
+
+| 语言 | 编译 | 运行 | 验证结论 |
+|------|------|------|---------|
+| ArkTS | ✅ es2panda 编译通过 | ✅ ark 运行通过 | 行为符合预期 |
+| Java | ✅ javac 编译通过 | ✅ java 运行通过 | 行为一致或差异已标注 |
+| Swift | ✅ swift 编译通过 | ✅ swift 运行通过 | 行为一致或差异已标注 |
+
+> 完整实测代码见章级 `cross_lang_verify/` 目录

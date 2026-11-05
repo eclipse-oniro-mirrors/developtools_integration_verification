@@ -1,0 +1,43 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/**
+ * @id EXP_07_21_06_031_RUNTIME_INT_VALUE
+ * @expect runtime
+ * @section 7.21.6
+ * @design 验证 -int 运行时正确求反。
+ *         -5=-5, -(-3)=3。
+ * @note 运行时用例：-int 求反值正确
+ */
+function main(): void {
+    let a: int = 5;
+    let r1: int = -a;
+    if (r1 != -5) {
+    throw new Error('assertion failed: expected -5=-5, got ' + r1);
+  }
+  }
+  }
+  }
+    }
+    let b: int = -3;
+    let r2: int = -b;
+    if (r2 != 3) {
+    throw new Error('assertion failed: expected -(-3)=3, got ' + r2);
+  }
+  }
+  }
+  }
+    }
+console.log('verified');
+}

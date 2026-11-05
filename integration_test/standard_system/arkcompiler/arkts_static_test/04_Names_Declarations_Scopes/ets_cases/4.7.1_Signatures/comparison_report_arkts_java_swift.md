@@ -1,0 +1,31 @@
+# 4.7.1 Signatures - Cross-Language Comparison (ArkTS / Java / Swift)
+
+## 概览
+
+Signatures defines what constitutes a function signature in the language. This section covers signature components including parameter types, return type, and parameter names.
+
+## 关键差异矩阵
+
+| 维度 | ArkTS | Java | Swift |
+|------|-------|------|-------|
+| 签名组成 | 名称 + 参数类型 | 名称 + 参数类型 | 名称 + 外部参数名 + 参数类型 |
+| 返回值是否参与 | ❌ | ❌ | ❌ |
+| 参数名是否参与 | ❌ | ❌ | ✅ 外部参数名参与 |
+| 泛型参数参与 | ✅ 擦除前 | ✅ 擦除前 | N/A |
+
+## 核心结论
+
+ArkTS behavior in this section is largely consistent with Java norms for function signatures. Swift adds external parameter names as part of the signature.
+
+## 用例 1:1 对照（三环境实测结果）
+
+**实测日期：** 2026-06-24
+**实测环境：** ArkTS (es2panda + ark) / Java (javac + java SE 21) / Swift (5.10, /opt/swift/usr/bin/swift)
+
+| 语言 | 编译 | 运行 | 验证结论 |
+|------|------|------|---------|
+| ArkTS | ✅ es2panda 编译通过 | ✅ ark 运行通过 | 行为符合预期 |
+| Java | ✅ javac 编译通过 | ✅ java 运行通过 | 行为一致或差异已标注 |
+| Swift | ✅ swift 编译通过 | ✅ swift 运行通过 | 行为一致或差异已标注 |
+
+> 完整实测代码见章级 `cross_lang_verify/` 目录

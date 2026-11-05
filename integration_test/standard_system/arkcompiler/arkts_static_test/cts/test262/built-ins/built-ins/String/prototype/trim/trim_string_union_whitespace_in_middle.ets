@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// arktsid: string_trim_string_union_whitespace_in_middle
+// description: String.prototype.trim - 'S' is a string that union of LineTerminator and WhiteSpace in the middle
+
+function main(): void {
+    let lineTerminatorsStr: string = '\u000A\u000D\u2028\u2029';
+        let whiteSpacesStr: string = '\u0009\u000A\u000B\u000C\u000D\u0020\u00A0\u1680\u2000\u2001\u2002\u2003' +
+        '\u2004\u2005\u2006' +
+        '\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF';
+    let str: string = 'ab' + whiteSpacesStr + lineTerminatorsStr + 'cd';
+    arktest.assertEQ(str.trim(), str, 'str.trim()');
+}

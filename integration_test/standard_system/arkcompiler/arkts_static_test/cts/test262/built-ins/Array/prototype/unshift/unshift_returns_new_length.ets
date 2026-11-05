@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: unshift_returns_new_length
+// description: unshift prepends arguments and returns the new length
+
+function main(): void {
+    let x: int[] = [];
+    arktest.assertEQ(x.unshift(1), 1, 'x.unshift(1) returns 1');
+    arktest.assertEQ(x[0], 1, 'x[0]');
+
+    arktest.assertEQ(x.unshift(), 1, 'x.unshift() returns 1 (no change)');
+
+    arktest.assertEQ(x.unshift(-1), 2, 'x.unshift(-1) returns 2');
+    arktest.assertEQ(x[0], -1, 'x[0] is -1');
+    arktest.assertEQ(x[1], 1, 'x[1] is 1');
+    arktest.assertEQ(x.length, 2, 'x.length');
+}

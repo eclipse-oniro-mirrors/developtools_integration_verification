@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) 2026 Hunan OpenValley Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// arktsid: quantifier_optional_01
+// description: Execute /java(script)?/.exec("state: javascript is extension of ecma script") and check results
+
+function main(): void {
+    let r: RegExp = new RegExp('java(script)?');
+    let result: RegExpExecArray | null = r.exec('state: javascript is extension of ecma script');
+    if (result != null) {
+        arktest.assertEQ(result.length, 2, 'length');
+        arktest.assertEQ(result.index, 7, 'index');
+        arktest.assertEQ(result.input, 'state: javascript is extension of ecma script', 'input');
+        arktest.assertEQ(result[0], 'javascript', 'element 0');
+        arktest.assertEQ(result[1], 'script', 'element 1');
+    } else {
+        arktest.assertTrue(false, 'exec should return a match');
+    }
+}

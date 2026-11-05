@@ -1,0 +1,12 @@
+/* Licensed under the Apache License, Version 2.0 */
+/*---
+desc: Accessor set Methods cannot be named "constructor" (class expression)
+tags: [compile-only, negative]
+expected_out_1: ["Syntax error ESY0121: Field type annotation expected."]
+---*/
+
+class C {
+    set constructor(_: number) {
+    }
+}
+

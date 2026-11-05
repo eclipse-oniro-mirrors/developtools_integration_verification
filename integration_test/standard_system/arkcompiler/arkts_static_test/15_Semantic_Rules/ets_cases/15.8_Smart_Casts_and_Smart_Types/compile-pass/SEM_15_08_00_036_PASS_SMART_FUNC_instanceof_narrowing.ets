@@ -1,0 +1,38 @@
+/*
+* Copyright (c) 2021-2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+/*
+ * @id SEM_15_08_00_036_PASS_SMART_FUNC_instanceof_narrowing
+ * @expect compile-pass
+ * @section 15.8
+ * @design 鍑芥暟浣撳唴 Base 鍊肩粡杩?instanceof Derived 鏄惧紡缂╃獎鍚庯紝鍏佽鎸?Derived 浣跨敤銆?
+ * @note Cross-cutting smart type scope case: global/function-scope behavior per section.
+ */
+
+class SmartBase {}
+class SmartDerived extends SmartBase {
+  onlyDerived(): string {
+    return 'derived'
+  }
+}
+
+function main(): void {
+  let b: SmartBase = new SmartDerived()
+  if (b instanceof SmartDerived) {
+    arktest.assertEQ(b.onlyDerived(), 'derived')
+  }
+}
+
+
+
