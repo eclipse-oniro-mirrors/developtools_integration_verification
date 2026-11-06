@@ -1,0 +1,29 @@
+/* 六个列表视图共用的外壳样式。各视图 <style scoped> 里 @import 它。 */
+.view { height: 100%; display: flex; flex-direction: column;
+        padding: var(--space-5) var(--space-5) 0 }
+.view > header { flex: none; margin-bottom: var(--space-3) }
+h1 { margin: 0; font-size: var(--text-xl); line-height: var(--leading-xl);
+     font-weight: 600; color: var(--text-primary) }
+.total { font-size: var(--text-base); font-weight: 400; color: var(--text-secondary);
+         margin-left: var(--space-2) }
+.lede { margin: var(--space-2) 0 0; font-size: var(--text-base); color: var(--text-secondary) }
+
+.kinds { display: flex; gap: var(--space-1); flex-wrap: wrap }
+.chip {
+  font: inherit; font-size: var(--text-sm); padding: var(--space-1) var(--space-3);
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-full);
+  cursor: pointer; transition: all var(--motion-fast) var(--ease-standard);
+}
+.chip:hover { color: var(--text-primary); border-color: var(--border-strong) }
+.chip.on { color: var(--text-primary); background: var(--surface-raised);
+           border-color: var(--entity-component) }
+.chip .n { color: var(--text-secondary); margin-left: var(--space-1) }
+
+.link { font: inherit; font-size: var(--text-sm); color: var(--entity-component);
+        background: none; border: 0; padding: 0; cursor: pointer; text-align: left }
+.link:hover { text-decoration: underline }
+.mono { font-family: var(--font-mono); font-size: var(--text-sm) }
+.dim { color: var(--text-secondary) }
+.empty { padding: var(--space-7); text-align: center; color: var(--text-secondary) }
+@media (max-width: 760px) { .view { padding: var(--space-4) var(--space-3) 0 } }

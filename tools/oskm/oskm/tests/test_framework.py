@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 """Registry enforcement, schema generation and the SQLite scan lifecycle."""
-from oskm.core.schema import Column, Index, SchemaError, Table
+from oskm_schema import Column, Index, SchemaError, Table
 from oskm.core.runner import run
 from oskm.core.models import ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
 from oskm.core.framework import BaseCollector, RegistryError, projection, register
@@ -260,6 +260,42 @@ class ScanTest(unittest.TestCase):
                          [('gadgets', '2.0.0', 2), ('widgets', '1.0.0', 2)])
         self.assertEqual(runs[1]['scope'], '["widgets"]')
 
+    def test_scan_records_zone_and_cpu_arch(self):
+        self.upstream_collectors()
+        request = ScanRequest(self.root, 'generic_generic_arm_64only/general_all_phone_standard',
+                              zone='yellow', cpu_arch='arm64')
+        run(self.database, request, only=['widgets'])
+        scan = self.rows('SELECT product, zone, cpu_arch FROM scans')[0]
+        self.assertEqual(scan, {
+            'product': 'generic_generic_arm_64only/general_all_phone_standard',
+            'zone': 'yellow',
+            'cpu_arch': 'arm64',
+        })
+
+    def test_cpu_arch_defaults_by_zone(self):
+        self.upstream_collectors()
+        run(self.database, ScanRequest(self.root, 'test'), only=['widgets'])
+        run(self.database, ScanRequest(
+            self.root, 'generic_generic_arm_64only/general_all_phone_standard',
+            zone='yellow'), only=['widgets'])
+        scans = self.rows('SELECT zone, cpu_arch FROM scans ORDER BY id')
+        self.assertEqual(scans, [
+            {'zone': 'blue', 'cpu_arch': 'arm'},
+            {'zone': 'yellow', 'cpu_arch': 'arm64'},
+        ])
+
+    def test_begin_scan_applies_the_same_cpu_arch_defaults(self):
+        with self.database.connect() as connection:
+            self.database.create_all(connection, ())
+            with db.transaction(connection):
+                db.begin_scan(connection, 'blue-product', self.root)
+                db.begin_scan(connection, 'yellow-product', self.root, zone='yellow')
+        scans = self.rows('SELECT zone, cpu_arch FROM scans ORDER BY id')
+        self.assertEqual(scans, [
+            {'zone': 'blue', 'cpu_arch': 'arm'},
+            {'zone': 'yellow', 'cpu_arch': 'arm64'},
+        ])
+
     def test_decimal_literals_survive_the_round_trip(self):
         self.upstream_collectors()
         run(self.database, self.request, only=['widgets'])
@@ -409,6 +445,85 @@ class ScanTest(unittest.TestCase):
             request.options['hdi'] = {}
         self.assertEqual(ScanLimits().input_files, 100_000)
 
+    def test_scan_request_rejects_invalid_cpu_arch(self):
+        for value in ('', ' arm', 'arm ', 32):
+            with self.assertRaises(ValueError):
+                ScanRequest(self.root, 'test', cpu_arch=value)
+
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class DiscoverIsMemoised(unittest.TestCase):
+    """`discover()` 默认路径必须是幂等且廉价的。
+
+    调用点从"会话初始化时一次"改成"按需"之后，一次 `component_dependents`
+    会调它 5,958 次。`sys.modules` 只省掉重复 import，`pkgutil.iter_modules`
+    每次仍扫一遍目录——实测 0.63 ms 一次，合计 3.7 秒，
+    把那条查询从 1.15 s 拖到 5.23 s。
+
+    这里不计时（机器快慢不可靠），直接断言**不再扫目录**。
+    """
+
+    def test_repeat_calls_do_not_rescan_the_tree(self):
+        from oskm.core import framework
+        framework.discover()                      # 预热
+        scans = []
+        original = framework.pkgutil.iter_modules
+
+        def counting(*args, **kwargs):
+            scans.append(1)
+            return original(*args, **kwargs)
+
+        framework.pkgutil.iter_modules = counting
+        try:
+            for _ in range(50):
+                framework.discover()
+        finally:
+            framework.pkgutil.iter_modules = original
+        self.assertEqual(scans, [], '默认 discover() 仍在重复扫描采集器目录')
+
+    def test_explicit_package_still_scans(self):
+        """显式传 package 不走缓存——测试要换采集器树时依赖这一点。"""
+        from oskm.core import framework
+        framework.discover()
+        scans = []
+        original = framework.pkgutil.iter_modules
+
+        def counting(*args, **kwargs):
+            scans.append(1)
+            return original(*args, **kwargs)
+
+        framework.pkgutil.iter_modules = counting
+        try:
+            from oskm import collectors
+            framework.discover(collectors)
+        finally:
+            framework.pkgutil.iter_modules = original
+        self.assertEqual(len(scans), 1)
+
+
+class DocumentLinksResolve(unittest.TestCase):
+    """packages/oskm 下的文档相对链接不许悬空。
+
+    `0b6e296` 迁移 domain 文档时断了两条（一条路径多算一级目录，
+    一条指向随迁移删掉的文件），直到 2026-10-30 梳理文档才被发现。
+    这种事该由机器发现，不该靠人读。
+    """
+
+    def test_no_dangling_relative_links(self):
+        import re
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[2]      # packages/oskm
+        dangling = []
+        for markdown in sorted(root.rglob('*.md')):
+            if 'node_modules' in markdown.parts:
+                continue
+            for target in re.findall(r'\]\((\.{1,2}/[^)#\s]+)',
+                                     markdown.read_text(encoding='utf-8')):
+                if 'artifacts/' in target:
+                    continue
+                if not (markdown.parent / target).resolve().exists():
+                    dangling.append(f'{markdown.relative_to(root)} → {target}')
+        self.assertEqual(dangling, [])

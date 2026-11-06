@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 输入 | `out/{product}/packages/phone/*/etc/hdfconfig/hdf_default.hcb` |
+| 输入 | `{build_root}/packages/phone/*/etc/hdfconfig/hdf_default.hcb` |
 | 依赖 | components, install_modules, services |
 | 查询 | 按 serviceName/moduleName/process/partition/component 过滤与聚合 |
 | 设计 | [hdi-scanner-design.md](hdi-scanner-design.md) |

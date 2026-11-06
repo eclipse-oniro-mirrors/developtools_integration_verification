@@ -110,7 +110,11 @@ def normalize_dest(value):
     """
     if not isinstance(value, str) or not value:
         return None
-    if value.startswith('/') or '\\' in value or '\x00' in value:
+    # A single leading slash is a Huawei build quirk: dests are occasionally
+    # declared as absolute image paths even though the file lands at the
+    # relative path. Strip it -- the declaration is still usable.
+    value = value[1:] if value.startswith('/') else value
+    if '\\' in value or '\x00' in value:
         return None
     directory = value.endswith('/')
     parts = []

@@ -96,6 +96,30 @@ class ManifestTest(unittest.TestCase):
             projects, _ = manifest_parser.parse(workspace / '.repo' / 'manifests')
             self.assertEqual(projects['kernel']['clone-depth'], '1')
 
+    def test_fallback_to_manifest_xml_when_default_missing(self):
+        """Yellow-zone workspaces have no default.xml; parse() must fall back to
+        the .repo/manifest.xml symlink target instead of failing."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            manifests = workspace / '.repo' / 'manifests'
+            manifests.mkdir(parents=True, exist_ok=True)
+            # No default.xml; manifest.xml points at system_general.xml.
+            _write(manifests / 'system_general.xml', textwrap.dedent('''\
+                <manifest>
+                  <remote fetch="https://mirror.example.invalid" name="OH"/>
+                  <default remote="OH" revision="master"/>
+                  <include name="ohos.xml"/>
+                </manifest>'''))
+            _write(manifests / 'ohos.xml', textwrap.dedent('''\
+                <manifest>
+                  <project name="ability_base" path="foundation/ability/ability_base"/>
+                </manifest>'''))
+            (workspace / '.repo' / 'manifest.xml').symlink_to('manifests/system_general.xml')
+            projects, remotes = manifest_parser.parse(workspace / '.repo' / 'manifests')
+            self.assertEqual(len(projects), 1)
+            self.assertEqual(projects['ability_base']['remote'], 'OH')
+            self.assertIn('OH', remotes)
+
 
 class GitInfoTest(unittest.TestCase):
     def test_collect_returns_metadata(self):
@@ -108,6 +132,19 @@ class GitInfoTest(unittest.TestCase):
             info = collect(workspace, 'foundation/ability/ability_base')
             self.assertIsNotNone(info['head_commit'])
             self.assertIsNotNone(info['remote_url'])
+
+    def test_collect_remote_url_with_any_remote_name(self):
+        """Non-default remotes must still yield the first fetch URL."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace = Path(tmp)
+            _init_git(workspace, 'foundation/ability/ability_base')
+            repo = workspace / 'foundation/ability/ability_base'
+            subprocess.check_call(['git', 'remote', 'add', 'vendor',
+                                   'https://scm.example.invalid/example/project'], cwd=repo)
+            info = collect(workspace, 'foundation/ability/ability_base')
+            self.assertEqual(
+                info['remote_url'],
+                'https://scm.example.invalid/example/project')
 
 
 class RepoIndexTest(unittest.TestCase):

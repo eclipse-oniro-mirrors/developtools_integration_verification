@@ -27,33 +27,12 @@ from .models import ArgsScanRequest, ArgsResult
 from ...core.framework import BaseCollector, ScanContext, register
 from ...core.ownership import manifest_directories, nearest_component
 from ...core.models import RequestError
-from ...core.schema import Column, Index, Table
-
-GN_ARGS = Table(
-    'gn_args',
-    columns=(
-        Column('name', nullable=False),
-        Column('component_id', 'INTEGER', references='components(id)'),
-        Column('decl_file', nullable=False),
-        Column('decl_line', 'INTEGER', nullable=False),
-        Column('default_value', 'JSON'),
-        Column('has_override', 'INTEGER', nullable=False, default='0'),
-        Column('current_value', 'JSON'),
-        Column('comment'),
-        Column('value_type', nullable=False),
-    ),
-    primary_key=('name',),
-    surrogate=True,
-    indexes=(
-        Index('idx_gn_args_component', ('scan_id', 'component_id')),
-        Index('idx_gn_args_file', ('scan_id', 'decl_file')),
-    ),
-)
+from oskm_schema.args import GN_ARGS
 
 
 class ArgsContext(ScanContext):
     def setup(self):
-        self.out_dir = self.workspace / 'out' / self.request.product
+        self.out_dir = self.build
         self.gn_path = find_gn(self.workspace)
 
 
@@ -79,7 +58,7 @@ class ArgsCollector(BaseCollector):
             ctx.issue(ctx.workspace, 'GN_BUILD_DIR_MISSING', advisory=True)
             return
         ctx.progress('gn-args', 0, 1)
-        output = run_gn_args(ctx.gn_path, ctx.out_dir)
+        output = run_gn_args(ctx.gn_path, ctx.out_dir, ctx.workspace)
         if output is None:
             ctx.issue(ctx.workspace, 'GN_ARGS_TIMEOUT', advisory=True)
             return

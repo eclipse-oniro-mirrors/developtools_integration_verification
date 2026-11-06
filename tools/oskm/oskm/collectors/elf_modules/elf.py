@@ -294,6 +294,7 @@ def _section_facts(handle, sections, ei_class, endian):
     facts = {
         "cangjie": any(section["name"] == ".cjmetadata" for section in sections),
         "ani_constructor": False,
+        "exported_symbols": [],
     }
     for section in sections:
         if section["type"] != SHT_DYNSYM:
@@ -328,7 +329,11 @@ def _section_facts(handle, sections, ei_class, endian):
                 end = len(string_data)
             if string_data[name:end] == b"ANI_Constructor":
                 facts["ani_constructor"] = True
-                break
-        if facts["ani_constructor"]:
-            break
+                continue
+            try:
+                facts["exported_symbols"].append(
+                    string_data[name:end].decode("utf-8"))
+            except UnicodeError:
+                continue
+    facts["exported_symbols"] = tuple(facts["exported_symbols"])
     return facts

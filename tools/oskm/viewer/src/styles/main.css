@@ -1,0 +1,43 @@
+@import './tokens.css';
+@import './element-theme.css';
+
+*, *::before, *::after { box-sizing: border-box }
+
+html { font-size: var(--text-base) }
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--text-primary);
+  background: var(--surface-sunken);
+  -webkit-font-smoothing: antialiased;
+}
+#app { height: 100vh; display: flex; flex-direction: column }
+
+/* 焦点环：任何地方都不准移除 outline（见 implementation-plan §6） */
+:focus-visible {
+  outline: 2px solid var(--entity-component);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+code, kbd, samp, .mono { font-family: var(--font-mono) }
+
+a { color: var(--entity-component); text-decoration: none }
+a:hover { text-decoration: underline }
+
+::-webkit-scrollbar { width: 8px; height: 8px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: var(--radius-full) }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong) }
+
+/* 调测面：刻意更密、更朴素，与产品面形成可见的分界 */
+.debug-surface { --row-height: 28px; --row-padding: var(--space-2) }
+.debug-surface .el-table { font-size: var(--text-sm) }
+.debug-surface .el-table th.el-table__cell { font-size: var(--text-xs) }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

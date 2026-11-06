@@ -30,47 +30,13 @@ from ...core.framework import (BaseCollector, ScanContext, project_columns,
                                projection, register)
 from ...core.models import RequestError
 from ...core.export import rejoin_component, rejoin_install
-from ...core.schema import Column, Index, Table
+from oskm_schema.services import SERVICES
 
 # column, key in the scanned record, how the column holds it
 FIELDS = (('cfg', 'cfg', 'text'), ('name', 'name', 'text'), ('type', 'type', 'text'),
           ('executable', 'executable', 'text'), ('uid', 'uid', 'text'),
           ('start_mode', 'start-mode', 'text'), ('ondemand', 'ondemand', 'bool'),
           ('args', 'args', 'json'), ('gid', 'gid', 'json'))
-
-SERVICES = Table(
-    'services',
-    columns=(
-        Column('position', 'INTEGER', nullable=False),
-        # Projections of the verbatim record: they make filtering and joining
-        # cheap, but `record` stays authoritative (see core.framework.projection).
-        Column('cfg', nullable=False),
-        Column('name'),
-        Column('type'),
-        Column('executable'),
-        Column('uid'),
-        Column('start_mode'),
-        Column('ondemand', 'INTEGER'),
-        Column('args', 'JSON'),
-        Column('gid', 'JSON'),
-        Column('secon'),
-        Column('sandbox', 'INTEGER'),
-        Column('importance', 'INTEGER'),
-        Column('component_id', 'INTEGER', references='components(id)'),
-        # Which build target installed this cfg. Resolved from the install
-        # index by dest, so `label` above and this row agree by construction.
-        Column('install_module_id', 'INTEGER', references='install_modules(id)'),
-        # The cfg declaration exactly as written. Every column above is a
-        # projection of it, kept only for faster access; nothing the scanner
-        # derived (cfg path, executable/args split, type, label) lives here.
-        Column('record', 'JSON', nullable=False),
-    ),
-    primary_key=('position',),
-    surrogate=True,
-    indexes=(Index('idx_services_component', ('scan_id', 'component_id')),
-             Index('idx_services_install', ('scan_id', 'install_module_id')),
-             Index('idx_services_cfg', ('scan_id', 'cfg'))),
-)
 
 
 class ServicesContext(ScanContext):

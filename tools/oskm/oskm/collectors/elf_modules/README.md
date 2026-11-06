@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 上游 | `component_links` / `services` / `hdi` / `sas`（它们分别补充 Inner API 关联与 SA/HDI 命中事实） |
-| 物理输入 | `out/{product}/packages/phone/{install_targets.dest}` |
+| 物理输入 | `{build_root}/packages/phone/{install_targets.dest}` |
 | 输出表 | `elf_modules`, `elf_module_dependencies` |
 | 分类 | `api_type` 为 `public_api` / `inner_api` / `internal_api`；`category` 为有序 JSON 数组，可包含 `napi/ndk/ani/cangjie/extension/platform_sdk*/chipset_sdk*/sa/hdi/hdi_proxy/hdi_stub/anco/other` 中的一个或多个标签；`ndk` 命中后短路其它 public category，未命中 `ndk` 时 `ani` 与 `napi` 互斥 |
 | 同名解析 | 只在 `system/`、`vendor/` 内按 deps_guard 目录顺序取首个命中；未命中时 `callee_id=NULL`，并写 advisory issue |

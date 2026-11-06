@@ -197,7 +197,6 @@ class ScanSession:
             self._context = database.connect()
             connection = self._context.__enter__()
         self.connection = connection
-        framework.discover()
 
     @classmethod
     def open(cls, database, *, scan_id=None, product=None):
@@ -331,8 +330,16 @@ class ScanSession:
 
     # -- internals --
     def _collector(self, name):
+        """按需加载注册表。
+
+        以前在 `__init__` 里无条件 `discover()`，于是**光打开一个只读会话
+        就 import 全部 11 个采集器**（实测 72 个模块）。纯 SQL 查询根本用不到
+        采集器类——只有需要 `export_record` / `TABLES` / 角色映射时才用。
+        挪到这里之后，`sql()` 这类路径一个采集器模块都不加载。
+        """
         if name not in self.collectors:
             raise QueryError(f'COLLECTOR_NOT_IN_SESSION: {name}')
+        framework.discover()
         return framework.get(name)
 
     def _by_id(self, role, identifier):
@@ -343,6 +350,7 @@ class ScanSession:
         return found[0] if found else None
 
     def _provider(self, role):
+        framework.discover()        # 见 _collector：注册表按需加载
         collector = framework.by_role(role)
         if collector is None or collector.NAME not in self.collectors:
             raise QueryError(f'NO_{role.upper()}_PROVIDER_IN_SESSION')

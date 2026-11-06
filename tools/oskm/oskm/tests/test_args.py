@@ -138,6 +138,28 @@ class TestFindGn(unittest.TestCase):
             self.assertEqual(find_gn(tmp), gn_path)
 
 
+class TestRunGnArgs(unittest.TestCase):
+    """gn 靠工作目录向上找 .gn 定位源码根，所以 cwd 不是可有可无的。
+
+    没传 cwd 时，从仓外调用 CLI 会让 gn 0.3 秒就带着
+    `BUILDCONFIG.gn: Not allow import other gni` 退出，stdout 里没有 JSON，
+    采集器只报一条 GN_ARGS_PARSE_FAILED advisory——看起来像"这个产品没配 gn args"，
+    实际是整条链路没跑起来。本机因此长期恒出 0 条。
+    """
+
+    def test_runs_in_source_root(self):
+        with patch('oskm.collectors.args.gn_args.subprocess.run') as run:
+            run.return_value = MagicMock(stdout='[]')
+            run_gn_args('/w/gn', '/w/out/p', '/w')
+        self.assertEqual(run.call_args.kwargs['cwd'], '/w')
+
+    def test_source_root_optional(self):
+        with patch('oskm.collectors.args.gn_args.subprocess.run') as run:
+            run.return_value = MagicMock(stdout='[]')
+            run_gn_args('/w/gn', '/w/out/p')
+        self.assertIsNone(run.call_args.kwargs['cwd'])
+
+
 class TestCollectorRegistration(unittest.TestCase):
     def test_registered(self):
         from oskm.core.framework import discover, names

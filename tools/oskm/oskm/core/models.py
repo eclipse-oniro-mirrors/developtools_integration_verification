@@ -49,6 +49,23 @@ class PublishError(ScanError):
     pass
 
 
+DEFAULT_CPU_ARCH = MappingProxyType({'blue': 'arm', 'yellow': 'arm64'})
+
+
+def resolve_cpu_arch(zone, cpu_arch=None):
+    """Resolve the target ISA, defaulting by build zone when it is omitted."""
+    try:
+        default = DEFAULT_CPU_ARCH[zone]
+    except (KeyError, TypeError) as exc:
+        raise ValueError('INVALID_ZONE') from exc
+    if cpu_arch is None:
+        return default
+    if (not isinstance(cpu_arch, str) or not cpu_arch
+            or cpu_arch != cpu_arch.strip()):
+        raise ValueError('INVALID_CPU_ARCH')
+    return cpu_arch
+
+
 class QueryError(ScanError):
     pass
 
@@ -180,13 +197,33 @@ class ScanRequest:
     collector name, so adding one does not change this contract."""
     workspace_root: Path
     product: str
+    zone: str = 'blue'
     package_root: Path | None = None
     limits: ScanLimits = field(default_factory=ScanLimits)
     resolve_component: bool = True
     options: Mapping = field(default_factory=dict)
+    cpu_arch: str | None = None
 
     def __post_init__(self):
+        if self.zone not in ('blue', 'yellow'):
+            raise ValueError('INVALID_ZONE')
+        object.__setattr__(self, 'cpu_arch',
+                           resolve_cpu_arch(self.zone, self.cpu_arch))
         object.__setattr__(self, 'options', freeze(self.options))
 
     def option(self, collector, name, default=None):
         return self.options.get(collector, {}).get(name, default)
+
+    @property
+    def build_root(self):
+        """Relative path from the workspace root to the build output directory.
+
+        Blue zone (OpenHarmony): out/{product}/
+        Yellow zone (HarmonyOS):  out/{abi}/{device}/  (product is '{abi}/{device}')
+        """
+        if self.zone == 'yellow':
+            parts = self.product.split('/')
+            if len(parts) != 2 or not all(parts):
+                raise RequestError('INVALID_PRODUCT')
+            return Path('out') / parts[0] / parts[1]
+        return Path('out') / self.product
