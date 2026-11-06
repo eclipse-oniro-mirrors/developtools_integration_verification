@@ -100,5 +100,17 @@
         "so_file_name": "libomx_utils.z.so",
         "path": "//device/soc/unisoc/p7885/hardware/omx_il/libutils:libomx_utils",
         "headers": []
+    },
+    {
+        "name": "soc_rk3588:libmpp",
+        "so_file_name": "libmpp.z.so",
+        "path": "//device/soc/rockchip/rk3588/hardware/mpp:libmpp",
+        "headers": []
+    },
+    {
+        "name": "soc_rk3588:libvpu",
+        "so_file_name": "libvpu.z.so",
+        "path": "//device/soc/rockchip/rk3588/hardware/mpp:libvpu",
+        "headers": []
     }
 ]
