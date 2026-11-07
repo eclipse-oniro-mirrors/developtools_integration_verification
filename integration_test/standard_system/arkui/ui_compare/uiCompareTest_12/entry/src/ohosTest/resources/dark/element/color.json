@@ -1,0 +1,36 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#000000"
+    },
+    {
+      "name": "black",
+      "value": "#000000"
+    },
+    {
+      "name": "editor_selected_bg",
+      "value": "#00FF00"
+    },
+    {
+      "name": "text_color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "Pink",
+      "value": "#ffc0cb"
+    },
+    {
+      "name": "yellow",
+      "value": "#FFCFA613"
+    },
+    {
+      "name": "blue",
+      "value": "#0000ff"
+    },
+    {
+      "name": "colorRed",
+      "value": "#FF0000"
+    }
+  ]
+}
