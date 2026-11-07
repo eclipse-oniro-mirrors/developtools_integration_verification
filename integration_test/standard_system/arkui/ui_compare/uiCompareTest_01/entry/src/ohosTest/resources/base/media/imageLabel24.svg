@@ -1,0 +1,33 @@
+<svg
+        viewBox="0 0 200 100"
+        xmlns="http://www.w3.org/2000/svg"
+        width="200"
+        height="100">
+    <clipPath
+            id="cut-bottom">
+        <rect
+                x="0"
+                y="0"
+                width="200"
+                height="50" />
+    </clipPath>
+    <defs>
+        <filter
+                id="blurMe"
+                x="0%"
+                y="0%"
+                width="100%"
+                height="100%">
+            <feOffset
+                    in="FillPaint"
+                    dx="0"
+                    dy="10" />
+        </filter>
+    </defs>
+    <circle
+            cx="100"
+            cy="100"
+            r="100"
+            fill="red"
+            filter="url(#blurMe)" />
+</svg>

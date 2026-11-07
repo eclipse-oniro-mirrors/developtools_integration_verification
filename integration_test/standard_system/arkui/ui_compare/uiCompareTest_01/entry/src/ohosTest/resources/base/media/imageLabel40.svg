@@ -1,0 +1,18 @@
+<svg width="200" height="200">
+    <circle cx="100" cy="150" r="20" fill="red">
+        <animate attributeName="cy"
+                 dur="2s"
+                 repeatCount="2"
+                 keyTimes="0; 0.5; 1"
+                 values="150; 50; 150"
+                 fill="freeze"/>
+        <animateTransform
+                attributeName="transform"
+                begin="0s"
+                dur="10s"
+                type="rotate"
+                from="0 85 85"
+                to="360 85 85"
+                repeatCount="indefinite" />
+    </circle>
+</svg>

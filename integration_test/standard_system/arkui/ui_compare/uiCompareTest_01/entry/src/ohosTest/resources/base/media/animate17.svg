@@ -1,0 +1,8 @@
+<rect x="50" y="50" width="100" height="50" fill="red">
+    <animateTransform attributeName="transform"
+                      type="skewY"
+                      from="-20"
+                      to="20"
+                      dur="3s"
+                      repeatCount="indefinite" />
+</rect>
