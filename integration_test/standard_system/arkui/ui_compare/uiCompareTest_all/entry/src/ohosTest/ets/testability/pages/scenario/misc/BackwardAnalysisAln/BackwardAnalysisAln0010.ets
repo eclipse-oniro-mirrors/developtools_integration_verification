@@ -1,0 +1,62 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@Entry
+@Component
+struct BackwardAnalysisAln0010 {
+  @State dialogVisible: boolean = false
+
+  aboutToAppear() {
+    this.showAlertDialog()
+  }
+
+  showAlertDialog() {
+    AlertDialog.show({
+      title: '提示',
+      message: '验证visualAbility参数控制显隐，不同输入方式获焦情况一致',
+      autoCancel: false,
+      primaryButton: {
+        value: '确定',
+        defaultFocus: true,
+        action: () => {
+          console.info('确定按钮被点击')
+        }
+      },
+      secondaryButton: {
+        value: '取消',
+        action: () => {
+          console.info('取消按钮被点击')
+        }
+      }
+    })
+  }
+
+  build() {
+    Column() {
+      Button('显示AlertDialog')
+        .id('alertdialog_backwardanalysis_aln_1380')
+        .onClick(() => {
+          this.showAlertDialog()
+        })
+        .margin(20)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(HorizontalAlign.Center)
+  }
+}
+
+

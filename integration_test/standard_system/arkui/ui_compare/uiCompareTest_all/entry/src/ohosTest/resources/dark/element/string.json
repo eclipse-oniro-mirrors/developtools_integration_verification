@@ -1,0 +1,304 @@
+{
+  "string": [
+    {
+      "name": "module_test_desc",
+      "value": "test ability description"
+    },
+    {
+      "name": "TestAbility_desc",
+      "value": "the test ability"
+    },
+    {
+      "name": "TestAbility_label",
+      "value": "test label"
+    },
+    {
+      "name": "Font_size",
+      "value": "5vp"
+    },
+    {
+      "name": "Font_pristina",
+      "value": "pristina"
+    },
+    {
+      "name": "color_yellow",
+      "value": "#FFDDD52F"
+    },
+    {
+      "name": "size_30",
+      "value": "30vp"
+    },
+    {
+      "name": "boardSize_10",
+      "value": "0vp"
+    },
+    {
+      "name": "fontfamily_1",
+      "value": "HarmonyOS Sans"
+    },
+    {
+      "name": "span",
+      "value": "span"
+    },
+    {
+      "name": "test_value",
+      "value": "-10"
+    },
+    {
+      "name": "TestAbility_label_p",
+      "value": "100%"
+    },
+    {
+      "name": "abc",
+      "value": "abc"
+    },
+    {
+      "name": "string_value_5",
+      "value": "5"
+    },
+    {
+      "name": "navigation_tools",
+      "value": "icon"
+    },
+    {
+      "name": "navigation_title",
+      "value": "test"
+    },
+    {
+      "name": "apple1",
+      "value": "apple1"
+    },
+    {
+      "name": "apple2",
+      "value": "apple2"
+    },
+    {
+      "name": "apple3",
+      "value": "apple3"
+    },
+    {
+      "name": "apple4",
+      "value": "apple4"
+    },
+    {
+      "name": "titleBar_width",
+      "value": "240"
+    },
+    {
+      "name": "resource_title_short",
+      "value": "resource类型短标题"
+    },
+    {
+      "name": "resource_title_long",
+      "value": "resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题resource类型超长标题"
+    },
+    {
+      "name": "letterSpacing",
+      "value": "8"
+    },
+    {
+      "name": "string45",
+      "value": "200"
+    },
+    {
+      "name": "textIndent",
+      "value": "20"
+    },
+    {
+      "name": "gutter_15",
+      "value": "40"
+    },
+    {
+      "name": "strokeWidth",
+      "value": "20vp"
+    },
+    {
+      "name": "string_value_100",
+      "value": "100vp"
+    },
+    {
+      "name": "font",
+      "value": "21"
+    },
+    {
+      "name": "string_value_20",
+      "value": "20"
+    },
+    {
+      "name": "stroke1",
+      "value": "50vp"
+    },
+    {
+      "name": "stroke2",
+      "value": "50fp"
+    },
+    {
+      "name": "stroke3",
+      "value": "50px"
+    },
+    {
+      "name": "scale",
+      "value": "50"
+    },
+    {
+      "name": "string_value_0",
+      "value": "0"
+    },
+    {
+      "name": "string_value_10",
+      "value": "10"
+    },
+    {
+      "name": "string_value_30",
+      "value": "30"
+    },
+    {
+      "name": "select_select_null",
+      "value": "null"
+    },
+    {
+      "name": "button_text_chinese",
+      "value": "这是一段中文文本"
+    },
+    {
+      "name": "button_text_english",
+      "value": "abcdefghijklmnopqrstuvwxyz"
+    },
+    {
+      "name": "button_text_special",
+      "value": "~！@#￥%……&*（）——+|}{:》?《"
+    },
+    {
+      "name": "string1",
+      "value": "100vp"
+    },
+    {
+      "name": "Pink",
+      "value": "#FFC0CB"
+    },
+    {
+      "name": "borderRadius_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "minHeight_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "padding_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "itemBorderRadius_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "buttonBorderRadius_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "buttonMinHeight_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "buttonPadding_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "itemSpace_100vp",
+      "value": "100vp"
+    },
+    {
+      "name": "itemIconSize_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "itemPadding_40vp",
+      "value": "40vp"
+    },
+    {
+      "name": "itemShadow_50",
+      "value": "50"
+    },
+    {
+      "name": "small",
+      "value": "1.9"
+    },
+    {
+      "name": "small_05",
+      "value": "0.5"
+    },
+    {
+      "name": "scale_1",
+      "value": "1"
+    },
+    {
+      "name": "stringSpace",
+      "value": "30"
+    },
+    {
+      "name": "popup_width_0_string",
+      "value": "0290"
+    },
+    {
+      "name": "popup_width_0lpx",
+      "value": "0260"
+    },
+    {
+      "name": "popup_width_0px",
+      "value": "0170"
+    },
+    {
+      "name": "popup_width_0vp",
+      "value": "0200"
+    },
+    {
+      "name": "popup_width_50fp",
+      "value": "0220"
+    },
+    {
+      "name": "popup_width_50lpx",
+      "value": "0250"
+    },
+    {
+      "name": "popup_width_50px",
+      "value": "0160"
+    },
+    {
+      "name": "popup_width_50vp",
+      "value": "0190"
+    },
+    {
+      "name": "popup_width_80_percent",
+      "value": "0280"
+    },
+    {
+      "name": "popup_width_negative_0fp",
+      "value": "0230"
+    },
+    {
+      "name": "popup_width_negative_50_percent",
+      "value": "0300"
+    },
+    {
+      "name": "popup_width_negative_50fp",
+      "value": "0240"
+    },
+    {
+      "name": "popup_width_negative_50lpx",
+      "value": "0270"
+    },
+    {
+      "name": "popup_width_negative_50px",
+      "value": "0180"
+    },
+    {
+      "name": "popup_width_negative_50vp",
+      "value": "0210"
+    },
+    {
+      "name": "string10",
+      "value": "1560"
+    }
+  ]
+}

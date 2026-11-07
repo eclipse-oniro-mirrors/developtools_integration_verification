@@ -1,0 +1,230 @@
+/*
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@Entry
+@Component
+struct AceEventInformationEnhancement08 {
+  @State testId: string = 'SUB_ACE_EVENT_INFORMATION_ENHANCEMENT_008'
+  @State testDescription: string = '点击鼠标右键text显示right内容'
+  @State mouseButtonLog: string = '等待鼠标事件...'
+  @State mouseEventInfo: string = ''
+
+  build() {
+    Scroll() {
+      Column({ space: 2 }) {
+        Column({ space: 5 }) {
+          Text(this.testId)
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#FF5722')
+          Text(this.testDescription)
+            .fontSize(14)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#666666')
+          Text('Level 3')
+            .fontSize(12)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#999999')
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFFFFF')
+        .borderRadius(8)
+        .shadow({ radius: 5, color: '#E0E0E0', offsetX: 0, offsetY: 2 })
+        .margin({ top: 10 })
+
+        Divider()
+          .width('90%')
+          .color('#EEEEEE')
+
+        Column({ space: 5 }) {
+          Text('MouseEvent测试区域')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF9800')
+            .width('100%')
+
+          Button('Mouse')
+            .fontSize(16)
+            .width('100%')
+            .height(50)
+            .labelStyle({ overflow: TextOverflow.Clip,
+              maxLines: 2,
+              minFontSize: 10,
+              maxFontSize: 20,
+              font: {
+                size: 20,
+                weight: FontWeight.Bolder,
+                family: 'cursive',
+                style: FontStyle.Italic
+              }
+            })
+            .type(ButtonType.Normal)
+            .borderRadius(8)
+            .backgroundColor('#2196F3')
+            .id('AceEventInformationEnhancement08')
+            .onMouse((event: MouseEvent) => {
+              if (event) {
+                let buttonInfo = event.button === MouseButton.Left ? 'left' : 
+                                event.button === MouseButton.Right ? 'right' :
+                                event.button === MouseButton.Middle ? 'middle' : 'unknown'
+                this.mouseButtonLog = `鼠标按键: ${buttonInfo}`
+                this.mouseEventInfo = `MouseAction: ${event.action}\nButton: ${buttonInfo}\n鼠标X: ${event.x.toFixed(2)}\n鼠标Y: ${event.y.toFixed(2)}`
+                console.info(`[MouseEvent] button: ${buttonInfo}`)
+              }
+            })
+          if (this.mouseButtonLog) {
+            Column({ space: 5 }) {
+              Text('鼠标按键信息')
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#4CAF50')
+                .width('100%')
+              Text(this.mouseButtonLog)
+                .fontSize(14)
+                .fontColor('#2E7D32')
+                .width('100%')
+                .padding(10)
+                .backgroundColor('#E8F5E9')
+                .borderRadius(5)
+                .border({ width: 1, color: '#81C784' })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
+          if (this.mouseEventInfo) {
+            Column({ space: 5 }) {
+              Text('鼠标事件详细信息')
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#2196F3')
+                .width('100%')
+              Text(this.mouseEventInfo)
+                .fontSize(14)
+                .fontColor('#1565C0')
+                .width('100%')
+                .padding(10)
+                .backgroundColor('#E3F2FD')
+                .borderRadius(5)
+                .border({ width: 1, color: '#64B5F6' })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
+          Text('提示：点击"Mouse"按钮（鼠标右键），查看按键信息')
+            .fontSize(12)
+            .fontColor('#FF9800')
+            .width('100%')
+            .padding(10)
+            .backgroundColor('#FFF3E0')
+            .borderRadius(5)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFF8E1')
+        .borderRadius(8)
+
+        Column({ space:2 }) {
+          Text(' 测试说明')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#2196F3')
+            .width('100%')
+          Text('本测试用例验证MouseEvent鼠标右键是否显示right内容')
+            .fontSize(13)
+            .fontColor('#333333')
+            .width('100%')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .lineHeight(20)
+          Text('测试步骤:')
+            .fontSize(13)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333333')
+            .width('100%')
+            .margin({ top: 5 })
+          Text('1. 启动应用')
+            .fontSize(12)
+            .fontColor('#666666')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .padding({ left: 10 })
+          Text('3. 点击Mouse按钮')
+            .fontSize(12)
+            .fontColor('#666666')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .padding({ left: 10 })
+          Text('4. 点击鼠标右键')
+            .fontSize(12)
+            .fontColor('#666666')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .padding({ left: 10 })
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#E3F2FD')
+        .borderRadius(8)
+
+        Column({ space: 2 }) {
+          Text('预期结果')
+            .fontSize(15)
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF9800')
+            .width('100%')
+          Text('1. 应用正常启动')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+          Text('2. 点击Mouse按钮后触发onMouse事件')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+          Text('3. text显示right内容')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFF3E0')
+        .borderRadius(8)
+        .margin({ bottom: 20 })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F1F3F5')
+  }
+}

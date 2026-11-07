@@ -1,0 +1,7 @@
+<circle cx="100" cy="150" r="20" fill="red">
+    <animate attributeName="cy"
+             dur="2s"
+             repeatCount="indefinite"
+             values="150; 50; 150"
+             fill="freeze"/>
+</circle>

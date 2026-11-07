@@ -1,0 +1,222 @@
+/*
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { SegmentButton, SegmentButtonOptions, SegmentButtonItemTuple } from '@kit.ArkUI';
+import { abilityManager, Configuration } from '@kit.AbilityKit';
+import { BusinessError } from '@kit.BasicServicesKit';
+
+@Entry
+@Component
+struct UiComponentButtonSegmentButtonAging09 {
+  @State testId: string = 'SUB_ACE_UI_COMPONENT_BUTTON_SEGMENTBUTTOM_AGING_0260';
+  @State currentFontSizeScale: number = 1;
+  @State fontScaleText: string = '标准档 (1倍)';
+  @State singleSelectCapsuleOptions: SegmentButtonOptions = SegmentButtonOptions.capsule({
+    buttons: [{ text: '单选按钮1' }, { text: '单选按钮2' }, { text: '单选按钮3' }] as SegmentButtonItemTuple,
+    multiply: false,
+    backgroundBlurStyle: BlurStyle.BACKGROUND_THICK
+  });
+  @State capsuleSelectedIndexes: number[] = [0];
+  @State testResults: string[] = [];
+
+  async setFontScale(scale: number, scaleName: string): Promise<void> {
+    let configInit: Configuration = {
+      fontSizeScale: scale,
+    };
+
+    abilityManager.updateConfiguration(configInit, (err: BusinessError) => {
+      if (err) {
+        console.error(`updateConfiguration fail, err: ${JSON.stringify(err)}`);
+        this.testResults.push(`设置${scaleName}失败: ${err.message}`);
+      } else {
+        this.currentFontSizeScale = scale;
+        this.fontScaleText = scaleName;
+        console.log(`updateConfiguration success. Scale: ${scale}`);
+        this.testResults.push(`已设置为${scaleName}`);
+      }
+    });
+  }
+
+  build() {
+    Scroll() {
+      Column({ space: 20 }) {
+        Column({ space: 5 }) {
+          SegmentButton({
+            options: this.singleSelectCapsuleOptions,
+            selectedIndexes: this.capsuleSelectedIndexes,
+            maxFontScale: 1.15
+          })
+            .width('90%')
+
+          Text('当前字体档位:')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#4CAF50')
+            .width('100%')
+            .textAlign(TextAlign.Center)
+
+          Text(this.fontScaleText)
+            .fontSize(20)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF6B35')
+            .width('100%')
+            .textAlign(TextAlign.Center)
+
+          Text(`系统字体缩放倍数: ${this.currentFontSizeScale}`)
+            .fontSize(14)
+            .fontColor('#666666')
+            .width('100%')
+            .textAlign(TextAlign.Center)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#E8F5E9')
+        .borderRadius(10)
+
+        Column({ space: 10 }) {
+          Text('字体档位控制:')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#2196F3')
+            .width('100%')
+            .textAlign(TextAlign.Start)
+
+          Row({ space: 10 }) {
+            Button('标准档')
+              .onClick(() => {
+                this.setFontScale(1, '标准档 (1倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_01')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 1 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 1 ? Color.White : Color.Black)
+              .layoutWeight(1)
+
+            Button('大1档')
+              .onClick(() => {
+                this.setFontScale(1.15, '大1档 (1.15倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_02')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 1.15 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 1.15 ? Color.White : Color.Black)
+              .layoutWeight(1)
+          }
+          .width('100%')
+
+          Row({ space: 10 }) {
+            Button('大2档')
+              .onClick(() => {
+                this.setFontScale(1.3, '大2档 (1.3倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_03')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 1.3 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 1.3 ? Color.White : Color.Black)
+              .layoutWeight(1)
+
+            Button('大3档')
+              .onClick(() => {
+                this.setFontScale(1.45, '大3档 (1.45倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_04')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 1.45 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 1.45 ? Color.White : Color.Black)
+              .layoutWeight(1)
+          }
+          .width('100%')
+
+          Row({ space: 10 }) {
+            Button('大4档')
+              .onClick(() => {
+                this.setFontScale(1.75, '大4档 (1.75倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_05')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 1.75 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 1.75 ? Color.White : Color.Black)
+              .layoutWeight(1)
+
+            Button('大5档')
+              .onClick(() => {
+                this.setFontScale(2, '大5档 (2倍)')
+              })
+              .id('UiComponentButtonSegmentButtonAging09_06')
+              .fontSize(14)
+              .backgroundColor(this.currentFontSizeScale === 2 ? '#FF6B35' : '#E0E0E0')
+              .fontColor(this.currentFontSizeScale === 2 ? Color.White : Color.Black)
+              .layoutWeight(1)
+          }
+          .width('100%')
+
+          Button('大6档 (3.2倍)')
+            .onClick(() => {
+              this.setFontScale(3.2, '大6档 (3.2倍)')
+            })
+            .id('UiComponentButtonSegmentButtonAging09_07')
+            .fontSize(14)
+            .backgroundColor(this.currentFontSizeScale === 3.2 ? '#FF6B35' : '#E0E0E0')
+            .fontColor(this.currentFontSizeScale === 3.2 ? Color.White : Color.Black)
+            .width('100%')
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#E3F2FD')
+        .borderRadius(10)
+
+        Column({ space: 8 }) {
+          Text('测试预期:')
+            .fontSize(16)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF5722')
+            .width('100%')
+            .textAlign(TextAlign.Center)
+
+          Text('标准档: 字体大小为默认大小，字体粗细为默认粗细')
+            .fontSize(13)
+            .fontColor('#444444')
+            .width('100%')
+            .textAlign(TextAlign.Start)
+
+          Text('大1档到大6档: 字体大小均为默认大小的1.15倍，字体粗细为默认粗细')
+            .fontSize(13)
+            .fontColor('#444444')
+            .width('100%')
+            .textAlign(TextAlign.Start)
+
+          Divider()
+            .margin({ top: 5, bottom: 5 })
+
+          Text('注意: maxFontScale设置为1.15时，组件字体最大放大到1.15倍。')
+            .fontSize(12)
+            .fontColor('#FF5722')
+            .width('100%')
+            .textAlign(TextAlign.Start)
+            .fontWeight(FontWeight.Bold)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFF3E0')
+        .borderRadius(10)
+      }
+      .width('100%')
+      .padding({ bottom: 30 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#FAFAFA')
+  }
+}

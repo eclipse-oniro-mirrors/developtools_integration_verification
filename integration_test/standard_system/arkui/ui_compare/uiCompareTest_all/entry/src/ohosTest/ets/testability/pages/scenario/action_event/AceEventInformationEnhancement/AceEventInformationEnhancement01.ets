@@ -1,0 +1,238 @@
+/*
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@Entry
+@Component
+struct AceEventInformationEnhancement01 {
+  @State testId: string = 'SUB_ACE_EVENT_INFORMATION_ENHANCEMENT_001'
+  @State testDescription: string = '检测当前手指按下的时间是否正常显示'
+  @State pressedTimeLog: string = '等待触摸事件...'
+  @State touchEventInfo: string = ''
+
+  build() {
+    Scroll() {
+      Column({ space: 10 }) {
+        Column({ space: 5 }) {
+          Text(this.testId)
+            .fontSize(18)
+            .fontWeight(FontWeight.Bold)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#FF5722')
+          Text(this.testDescription)
+            .fontSize(14)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#666666')
+          Text('Level 3')
+            .fontSize(12)
+            .width('100%')
+            .textAlign(TextAlign.Center)
+            .fontColor('#999999')
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFFFFF')
+        .borderRadius(8)
+        .shadow({ radius: 5, color: '#E0E0E0', offsetX: 0, offsetY: 2 })
+        .margin({ top: 10 })
+
+        Divider()
+          .width('90%')
+          .color('#EEEEEE')
+
+        Column({ space: 15 }) {
+          Text('TouchEvent测试区域')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF9800')
+            .width('100%')
+
+          Button('Touch')
+            .fontSize(16)
+            .width('100%')
+            .height(50)
+            .labelStyle({ overflow: TextOverflow.Clip,
+              maxLines: 2,
+              minFontSize: 10,
+              maxFontSize: 20,
+              font: {
+                size: 20,
+                weight: FontWeight.Bolder,
+                family: 'cursive',
+                style: FontStyle.Italic
+              }
+            })
+            .type(ButtonType.Normal)
+            .borderRadius(8)
+            .backgroundColor('#4CAF50')
+            .id('AceEventInformationEnhancement01')
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                let pressedTime = event.timestamp
+                let currentDate = new Date(pressedTime / 1000000)
+                let timeStr = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ` +
+                  `${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}.${currentDate.getMilliseconds().toString().padStart(3, '0')}`
+                this.pressedTimeLog = `按下时间戳: ${pressedTime} ns\n格式化时间: ${timeStr}`
+                this.touchEventInfo = `TouchType: Down\nTimestamp: ${pressedTime} ns\n触摸点X: ${event.touches[0].x.toFixed(2)}\n触摸点Y: ${event.touches[0].y.toFixed(2)}`
+                console.info(`[TouchEvent] pressedTime: ${pressedTime} ns, formatted: ${timeStr}`)
+              }
+            })
+          if (this.pressedTimeLog) {
+            Column({ space: 5 }) {
+              Text('手指按下时间信息')
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#4CAF50')
+                .width('100%')
+              Text(this.pressedTimeLog)
+                .fontSize(14)
+                .fontColor('#2E7D32')
+                .width('100%')
+                .padding(10)
+                .backgroundColor('#E8F5E9')
+                .borderRadius(5)
+                .border({ width: 1, color: '#81C784' })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
+          if (this.touchEventInfo) {
+            Column({ space: 5 }) {
+              Text('触摸事件详细信息')
+                .fontSize(14)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#2196F3')
+                .width('100%')
+              Text(this.touchEventInfo)
+                .fontSize(14)
+                .fontColor('#1565C0')
+                .width('100%')
+                .padding(10)
+                .backgroundColor('#E3F2FD')
+                .borderRadius(5)
+                .border({ width: 1, color: '#64B5F6' })
+            }
+            .width('100%')
+            .margin({ top: 10 })
+          }
+          Text('提示：点击"Touch"按钮，查看手指按下的时间信息')
+            .fontSize(12)
+            .fontColor('#FF9800')
+            .width('100%')
+            .padding(10)
+            .backgroundColor('#FFF3E0')
+            .borderRadius(5)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFF8E1')
+        .borderRadius(8)
+
+        Column({ space:2 }) {
+          Text(' 测试说明')
+            .fontSize(15)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#2196F3')
+            .width('100%')
+          Text('本测试用例验证TouchEvent的pressedTime是否正常显示')
+            .fontSize(13)
+            .fontColor('#333333')
+            .width('100%')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .lineHeight(20)
+          Text('测试步骤:')
+            .fontSize(13)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#333333')
+            .width('100%')
+            .margin({ top: 5 })
+          Text('1. 启动应用')
+            .fontSize(12)
+            .fontColor('#666666')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .padding({ left: 10 })
+          Text('3. 点击Touch按钮')
+            .fontSize(12)
+            .fontColor('#666666')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .padding({ left: 10 })
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#E3F2FD')
+        .borderRadius(8)
+
+        Column({ space: 2 }) {
+          Text('预期结果')
+            .fontSize(15)
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#FF9800')
+            .width('100%')
+          Text('1. 应用正常启动')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+          Text('2. 点击Touch按钮后触发onTouch事件')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+          Text('3. log显示pressedTime（时间戳）')
+            .fontSize(13)
+            .fontColor('#333333')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .width('100%')
+            .lineHeight(22)
+          Text('4. 屏幕显示按下时间信息（时间戳和格式化时间）')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .fontSize(13)
+            .fontColor('#333333')
+            .width('100%')
+            .lineHeight(22)
+          Text('5. 显示触摸事件详细信息（触摸类型、坐标等）')
+            .fontStyle(FontStyle.Italic)
+            .fontWeight(300)
+            .fontSize(13)
+            .fontColor('#333333')
+            .width('100%')
+            .lineHeight(22)
+        }
+        .width('90%')
+        .padding(15)
+        .backgroundColor('#FFF3E0')
+        .borderRadius(8)
+        .margin({ bottom: 20 })
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#F1F3F5')
+  }
+}

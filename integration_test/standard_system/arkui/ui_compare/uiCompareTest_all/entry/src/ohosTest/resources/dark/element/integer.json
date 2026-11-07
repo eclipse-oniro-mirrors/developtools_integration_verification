@@ -1,0 +1,104 @@
+{
+  "integer": [
+    {
+      "name": "0",
+      "value": 0
+    },
+    {
+      "name": "20",
+      "value": 20
+    },
+    {
+      "name": "50",
+      "value": 50
+    },
+    {
+      "name": "integer_30",
+      "value": 30
+    },
+    {
+      "name": "integer_10",
+      "value": 10
+    },
+    {
+      "name": "200",
+      "value": 200
+    },
+    {
+      "name": "integer_value_5",
+      "value": 5
+    },
+    {
+      "name": "integer_value_10",
+      "value": 10
+    },
+    {
+      "name": "integer_value_20",
+      "value": 20
+    },
+    {
+      "name": "select_select_5",
+      "value": 5
+    },
+    {
+      "name": "select_select_20",
+      "value": 20
+    },
+    {
+      "name": "integer_100",
+      "value": 100
+    },
+    {
+      "name": "width_50",
+      "value": 50
+    },
+    {
+      "name": "width_0",
+      "value": 0
+    },
+    {
+      "name": "width_negative_50",
+      "value": -50
+    },
+    {
+      "name": "width_0_resource",
+      "value": 0
+    },
+    {
+      "name": "height_0",
+      "value": 0
+    },
+    {
+      "name": "height_50px",
+      "value": 50
+    },
+    {
+      "name": "height_0px",
+      "value": 0
+    },
+    {
+      "name": "height_negative_50px",
+      "value": -50
+    },
+    {
+      "name": "height_0_resource",
+      "value": 0
+    },
+    {
+      "name": "fontWeight_50",
+      "value": 50
+    },
+    {
+      "name": "fontSize_50",
+      "value": 50
+    },
+    {
+      "name": "fontSize_0",
+      "value": 0
+    },
+    {
+      "name": "fontSize_negative_50",
+      "value": -50
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@Entry
+@Component
+struct ZindexMenubar0230 {
+  @State dialogClickResult: string = ''
+
+  @Builder
+  MyMenu() {
+    Menu() {
+      MenuItem({ content: '菜单选项一' })
+        .onClick(() => {
+          this.dialogClickResult = '菜单选项一被点击'
+        })
+      MenuItem({ content: '菜单选项二' })
+        .onClick(() => {
+          this.dialogClickResult = '菜单选项二被点击'
+        })
+      MenuItem({ content: '菜单选项三' })
+        .onClick(() => {
+          this.dialogClickResult = '菜单选项三被点击'
+        })
+    }
+  }
+
+  build() {
+    Column() {
+      Text('SUB_ACE_UI_ATTRIBUTES_ZINDEX_MENUBAR_0230')
+        .fontSize(16)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 20, bottom: 10 })
+
+      Text('bindContextMenu Z序测试')
+        .fontSize(14)
+        .fontColor(Color.Gray)
+        .margin({ bottom: 10 })
+
+      Text('长按此区域调起菜单')
+        .id('zindex_menubar_0230_context')
+        .fontSize(16)
+        .width('80%')
+        .height(100)
+        .backgroundColor('#E8E8E8')
+        .textAlign(TextAlign.Center)
+        .borderRadius(10)
+        .margin(20)
+        .bindContextMenu(this.MyMenu, ResponseType.LongPress)
+
+      Button('MenuBar功能按钮')
+        .id('zindex_menubar_0230_menubar')
+        .onClick(() => {
+          this.dialogClickResult = 'MenuBar按钮被点击'
+        })
+        .margin(10)
+
+      Text(this.dialogClickResult)
+        .id('zindex_menubar_0230_result')
+        .fontSize(14)
+        .fontColor(Color.Blue)
+        .margin({ top: 20 })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Start)
+    .alignItems(HorizontalAlign.Center)
+    .padding(20)
+  }
+}
+

@@ -1,0 +1,149 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@CustomDialog
+struct FullDialogComponent0130 {
+  controller: CustomDialogController
+  getUpdateFlag: () => number = () => 0
+
+  build() {
+    Column() {
+      Text('Full Screen Dialog')
+        .fontSize(24)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 20, bottom: 20 })
+
+      Text('Normal Lifecycle Callbacks Test')
+        .fontSize(18)
+        .margin({ bottom: 20 })
+
+      Text(`Update Count: ${this.getUpdateFlag()}`)
+        .fontSize(16)
+        .margin({ bottom: 20 })
+        .id('text_update_count_fulldialog_0130')
+
+      Button('Close Dialog')
+        .id('button_close_dialog_in_component_fulldialog_0130')
+        .onClick(() => {
+          this.controller.close()
+        })
+        .margin({ bottom: 20 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(Color.White)
+    .justifyContent(FlexAlign.Center)
+  }
+}
+
+@Entry
+@Component
+struct PopupBoxFullDialog0130 {
+  @State logMessages: string[] = []
+  @State updateFlag: number = 0
+  dialogController: CustomDialogController | null = null
+
+  aboutToAppear() {
+    this.dialogController = new CustomDialogController({
+      builder: FullDialogComponent0130({
+        getUpdateFlag: () => {
+          return this.updateFlag
+        }
+      }),
+      isModal: true,
+      autoCancel: false,
+      customStyle: true,
+      onWillAppear: () => {
+        this.logMessages.push('onWillAppear')
+        console.log('onWillAppear')
+      },
+      onDidAppear: () => {
+        this.logMessages.push('onDidAppear')
+        console.log('onDidAppear')
+      },
+      onWillDisappear: () => {
+        this.logMessages.push('onWillDisappear')
+        console.log('onWillDisappear')
+      },
+      onDidDisappear: () => {
+        this.logMessages.push('onDidDisappear')
+        console.log('onDidDisappear')
+      }
+    })
+  }
+
+  build() {
+    Column() {
+      Text('Normal Dialog Lifecycle Test')
+        .fontSize(24)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 20, bottom: 20 })
+
+      Row() {
+        Button('Open')
+          .id('button_open_fulldialog_0130')
+          .onClick(() => {
+            if (this.dialogController) {
+              this.dialogController.open()
+              this.logMessages.push('Open button clicked')
+            }
+          })
+          .margin({ right: 10 })
+
+        Button('Close')
+          .id('button_close_fulldialog_0130')
+          .onClick(() => {
+            if (this.dialogController) {
+              this.dialogController.close()
+              this.logMessages.push('Close button clicked')
+            }
+          })
+          .margin({ right: 10 })
+
+        Button('Update')
+          .id('button_update_fulldialog_0130')
+          .onClick(() => {
+            this.updateFlag++
+            this.logMessages.push(`Update button clicked: ${this.updateFlag}`)
+          })
+      }
+      .margin({ bottom: 20 })
+
+      Text('Log Messages (Lifecycle Callbacks):')
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .margin({ bottom: 10 })
+
+      Scroll() {
+        Column() {
+          ForEach(this.logMessages, (message: string, index: number) => {
+            Text(`${index + 1}. ${message}`)
+              .fontSize(16)
+              .margin({ bottom: 5 })
+          }, (message: string, index: number) => index.toString())
+        }
+      }
+      .width('90%')
+      .height('60%')
+      .padding(10)
+      .border({ width: 1, color: Color.Gray })
+      .id('log_display_fulldialog_0130')
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Start)
+  }
+}
+

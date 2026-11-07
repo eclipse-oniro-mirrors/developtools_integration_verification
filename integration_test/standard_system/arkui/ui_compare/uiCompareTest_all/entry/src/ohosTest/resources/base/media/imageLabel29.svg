@@ -1,0 +1,27 @@
+<svg
+        xmlns="http://www.w3.org/2000/svg"
+        version="1.1">
+    <defs>
+        <linearGradient
+                id="grad1"
+                x1="0%"
+                y1="0%"
+                x2="50%"
+                y2="50%"
+                spreadMethod="repeat"
+                gradientTransform="skewY(20)">
+            <stop
+                    offset="-10%"
+                    style="stop-color:rgb(255,255,255);stop-opacity:0.5" />
+            <stop
+                    offset="80%"
+                    style极光="stop-color:rgb(255,0,0);stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <ellipse
+            cx="200"
+            cy="70"
+            rx="85"
+            ry="55"
+            fill="url(#grad1)" />
+</svg>

@@ -1,0 +1,117 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { UIContext } from '@kit.ArkUI';
+import { displaySync } from '@kit.ArkGraphics2D';
+
+let backDisplaySync: displaySync.DisplaySync = displaySync.create();
+
+@Entry
+@Component
+struct Keyframe03 {
+  @State myScale: number = 1.0;
+  uiContext: UIContext | undefined = undefined;
+
+  aboutToAppear() {
+    this.uiContext = this.getUIContext?.();
+
+  }
+
+  build() {
+    Column() {
+      Circle()
+        .width(100)
+        .height(100)
+        .fill('#46B1E3')
+        .margin(100)
+        .id('Circle03')
+        .scale({ x: this.myScale, y: this.myScale })
+        .onClick(() => {
+          if (!this.uiContext) {
+            console.info('no uiContext, keyframe failed');
+            return;
+          }
+          this.myScale = 1;
+          // 设置关键帧动画整体播放5次
+          this.uiContext.keyframeAnimateTo(
+            {
+              iterations: 5, delay: 0,
+              onFinish: () => {
+                console.info('custom animate done.');
+              }
+            }, [
+            {
+              // 第一段关键帧动画时长为800ms，scale属性做从1到1.5的动画
+              duration: 1000,
+              event: () => {
+                this.myScale = 1.5;
+              },
+            },
+            {
+              // 第二段关键帧动画时长为500ms，scale属性做从1.5到1的动画
+              duration: 3000,
+              event: () => {
+                this.myScale = 0.2;
+              }
+            }
+          ]);
+        })
+
+      Button('120')
+        .margin({top:20})
+        .fontSize(20)
+        .id('changeRateRange120_03')
+        .onClick(() => {
+          let range : ExpectedFrameRateRange = {
+            expected: 120,
+            max:120,
+            min:60,
+          };
+
+          // 设置DisplaySync期望的帧率
+          backDisplaySync?.setExpectedFrameRateRange(range)
+        })
+
+      Button('60')
+        .margin({top:20})
+        .fontSize(20)
+        .id('changeRateRange60_03')
+        .onClick(() => {
+          let range : ExpectedFrameRateRange = {
+            expected: 60,
+            max:90,
+            min:30,
+          };
+
+          // 设置DisplaySync期望的帧率
+          backDisplaySync?.setExpectedFrameRateRange(range)
+        })
+
+      Button('30')
+        .margin({top:20})
+        .fontSize(20)
+        .id('changeRateRange30_03')
+        .onClick(() => {
+          let range : ExpectedFrameRateRange = {
+            expected: 30,
+            max:60,
+            min:10,
+          };
+
+          // 设置DisplaySync期望的帧率
+          backDisplaySync?.setExpectedFrameRateRange(range)
+        })
+    }.width('100%').margin({ top: 5 })
+  }
+}

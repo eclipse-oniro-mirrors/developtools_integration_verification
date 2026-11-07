@@ -1,0 +1,84 @@
+{
+  "strarray": [
+    {
+      "name": "text_picker_gesture_range",
+      "value": [
+        {
+          "value": "选项1"
+        },
+        {
+          "value": "选项2"
+        },
+        {
+          "value": "选项3"
+        },
+        {
+          "value": "选项4"
+        },
+        {
+          "value": "选项5"
+        },
+        {
+          "value": "选项6"
+        }
+      ]
+    },
+    {
+      "name": "strarray_01",
+      "value": [
+        {
+          "value": "strarray_01"
+        },
+        {
+          "value": "strarray_02"
+        },
+        {
+          "value": "strarray_03"
+        },
+        {
+          "value": "strarray_04"
+        }
+      ]
+    },
+    {
+      "name": "strarray_02",
+      "value": [
+        {
+          "value": "strarray_02"
+        }
+      ]
+    },
+    {
+      "name": "strarray_03",
+      "value": [
+        {
+          "value": "strarray_03"
+        }
+      ]
+    },
+    {
+      "name": "strarray_04",
+      "value": [
+        {
+          "value": "strarray_04"
+        }
+      ]
+    },
+    {
+      "name": "strarray_05",
+      "value": [
+        {
+          "value": "strarray_05"
+        }
+      ]
+    },
+    {
+      "name": "strarray_06",
+      "value": [
+        {
+          "value": "strarray_06"
+        }
+      ]
+    }
+  ]
+}
