@@ -1,0 +1,89 @@
+{
+  "pattern": [
+    {
+      "name": "theme_01",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "theme_02",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "theme_03",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "theme_04",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "theme_05",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    }
+  ]
+}
