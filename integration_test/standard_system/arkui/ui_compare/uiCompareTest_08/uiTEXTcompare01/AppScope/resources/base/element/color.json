@@ -1,0 +1,26 @@
+{
+
+  "color": [
+    {
+      "name": "ColorRed",
+      "value": "#FF0000"
+    },
+    {
+      "name": "ColorBlack",
+      "value": "#000000"
+    },
+    {
+      "name": "Pink",
+      "value": "#ffc0cb"
+    },
+    {
+      "name": "yellow",
+      "value": "#FFCFA613"
+    },
+    {
+      "name": "blue",
+      "value": "#0000ff"
+    }
+  ]
+
+}
