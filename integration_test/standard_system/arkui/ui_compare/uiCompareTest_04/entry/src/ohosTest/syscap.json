@@ -1,0 +1,21 @@
+{
+    "devices": {
+        "general": [],
+        "custom": [
+            {
+                "xts": [
+                    "SystemCapability.Startup.SystemInfo",
+                    "SystemCapability.ArkUI.ArkUI.Circle",
+                    "SystemCapability.ArkUI.ArkUI.Full",
+                    "SystemCapability.Test.UiTest",
+                    "SystemCapability.DistributedDataManager.UDMF.Core",
+                    "SystemCapability.ArkUI.UiAppearance",
+                    "SystemCapability.WindowManager.WindowManager.Core",
+                    "SystemCapability.Window.SessionManager",
+                    "SystemCapability.Notification.CommonEvent",
+                    "SystemCapability.WindowManager.WindowManager.Core"
+                ]
+            }
+        ]
+    }
+}
