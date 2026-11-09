@@ -1,0 +1,89 @@
+{
+  "pattern": [
+    {
+      "name": "pattern_01",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "pattern_02",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "pattern_03",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "pattern_04",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    },
+    {
+      "name": "pattern_05",
+      "value": [
+        {
+          "name": "width",
+          "value": "100vp"
+        },
+        {
+          "name": "height",
+          "value": "100vp"
+        },
+        {
+          "name": "size",
+          "value": "25px"
+        }
+      ]
+    }
+  ]
+}

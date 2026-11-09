@@ -1,0 +1,34 @@
+{
+    "devices": {
+        "general": [
+            "default"
+        ],
+        "custom": [
+            {
+                "xts": [
+                    "SystemCapability.Startup.SystemInfo",
+                    "SystemCapability.Test.UiTest",
+                    "SystemCapability.ArkUI.ArkUI.Full",
+                    "SystemCapability.Base",
+                    "SystemCapability.WindowManager.WindowManager.Core",
+                    "SystemCapability.Communication.NetStack",
+                    "SystemCapability.Multimedia.Image.ImageSource",
+                    "SystemCapability.Multimedia.Image.Core",
+                    "SystemCapability.Multimedia.Image.ImagePacker",
+                    "SystemCapability.Security.AccessToken",
+                    "SystemCapability.FileManagement.File.FileIO",
+                    "SystemCapability.Ability.AbilityRuntime.Core",
+                    "SystemCapability.HiviewDFX.HiLog",
+                    "SystemCapability.Ability.AbilityRuntime.AbilityCore",
+                    "SystemCapability.BundleManager.BundleFramework.Core",
+                    "SystemCapability.BundleManager.BundleFramework.Resource",
+                    "SystemCapability.Ability.AbilityBase",
+                    "SystemCapability.Global.I18n",
+                    "SystemCapability.ArkUI.UiAppearance",
+                    "SystemCapability.MiscServices.Pasteboard",
+                    "SystemCapability.ArkUI.ArkUI.Circle"
+                ]
+            }
+        ]
+    }
+}

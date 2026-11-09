@@ -1,0 +1,92 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "editor_selected_bg",
+      "value": "#FF00FF"
+    },
+    {
+      "name": "text_color",
+      "value": "#000000"
+    },
+    {
+      "name": "Pink",
+      "value": "#ffc0cb"
+    },
+    {
+      "name": "yellow",
+      "value": "#FFCFA613"
+    },
+    {
+      "name": "blue",
+      "value": "#0000ff"
+    },
+    {
+      "name": "colorRed",
+      "value": "#FF0000"
+    },
+    {
+      "name": "black",
+      "value": "#000000"
+    },
+    {
+      "name": "color1",
+      "value": "#FF00FF"
+    },
+    {
+      "name": "ColorBlue",
+      "value": "#0000ff"
+    },
+    {
+      "name": "red",
+      "value": "#FF0000"
+    },
+    {
+      "name": "green",
+      "value": "#339933"
+    },
+    {
+      "name": "app_title_color",
+      "value": "#000000"
+    },
+    {
+      "name": "ColorWhite",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "ColorBlack",
+      "value": "#000000"
+    },
+    {
+      "name": "ColorRed",
+      "value": "#FF0000"
+    },
+    {
+      "name": "white",
+      "value": "#F0F0FF"
+    },
+    {
+      "name": "pink",
+      "value": "#EE5EeE"
+    },
+    {
+      "name": "ColorWhiteNumber",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "ColorPurpleRgba",
+      "value": "#FF64FF80"
+    },
+    {
+      "name": "Blue",
+      "value": "#0066CC"
+    },
+    {
+      "name": "Green",
+      "value": "#00CC66"
+    }
+  ]
+}

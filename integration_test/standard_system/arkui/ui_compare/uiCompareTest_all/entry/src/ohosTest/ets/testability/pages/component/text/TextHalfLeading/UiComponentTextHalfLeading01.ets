@@ -1,0 +1,91 @@
+/*
+ * Copyright (c) 2024 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { drawing } from '@kit.ArkGraphics2D';
+
+@Entry
+@Component
+struct UiComponentTextHalfLeading01 {
+  private ColorFilterMatrix: number[] = [1, 0, 0, 0, 0, 0, 0.616, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0];
+  @State DrawingColorFilterFirst: ColorFilter | undefined = new ColorFilter(this.ColorFilterMatrix);
+  @State halfleading : boolean = false
+  build() {
+    Row() {
+      Column({ space: 10 }) {
+        Button('change halfleading')
+          .onClick(()=>{
+            this.halfleading=true
+          })
+          .fontSize(10)
+          .height(100)
+          .backgroundColor(0x317aff)
+          .width('90%')
+          .labelStyle({ overflow: TextOverflow.Clip,
+            maxLines: 2,
+            minFontSize: 10,
+            maxFontSize: 20,
+            font: {
+              size: 20,
+              weight: FontWeight.Bolder,
+              family: 'cursive',
+              style: FontStyle.Italic
+            }
+          })
+          .id('UiComponentTextHalfLeading01')
+        Text() {
+          Span('Hello World')
+          Span('Hello World')
+          Span('Hello World')
+          Span('Hello World')
+          SymbolSpan($r('sys.symbol.ohos_trash'))
+            .fontWeight(FontWeight.Lighter)
+            .fontSize(30)
+          SymbolSpan($r('sys.symbol.ohos_trash'))
+            .fontWeight(FontWeight.Lighter)
+            .fontSize(30)
+          SymbolSpan($r('sys.symbol.ohos_trash'))
+            .fontWeight(FontWeight.Lighter)
+            .fontSize(30)
+          SymbolSpan($r('sys.symbol.ohos_trash'))
+            .fontWeight(FontWeight.Lighter)
+            .fontSize(30)
+          ImageSpan('/icon.png')
+            .width('60vp')
+            .height('60vp')
+            .verticalAlign(ImageSpanAlignment.BASELINE)
+          ImageSpan('/icon.png')
+            .width('60vp')
+            .height('60vp')
+            .verticalAlign(ImageSpanAlignment.BOTTOM)
+          ImageSpan('/icon.png')
+            .width('60vp')
+            .height('60vp')
+            .verticalAlign(ImageSpanAlignment.TOP)
+          ImageSpan('/icon.png')
+            .width('60vp')
+            .height('60vp')
+            .verticalAlign(ImageSpanAlignment.CENTER)
+        }
+        .lineHeight(60)
+        .width('90%')
+        .fontSize(10)
+        .fontColor(0xCCCCCC)
+        .halfLeading(this.halfleading)
+      }
+      .width('100%')
+    }
+    .height('100%')
+  }
+}

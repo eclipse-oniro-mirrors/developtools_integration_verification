@@ -1,0 +1,144 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { promptAction, LengthMetrics, PromptAction } from '@kit.ArkUI';
+import { BusinessError } from '@kit.BasicServicesKit';
+
+@Entry
+@Component
+struct ToastPromptAction20 {
+  @State toastId1: number = 0;
+  @State toastId2: number = 0;
+  private uiContext: UIContext = this.getUIContext();
+  private promptAction: PromptAction = this.uiContext.getPromptAction();
+
+  build() {
+    Column() {
+      // 页面标题
+      Text('测试用例0200 - 多个Toast组件SYSTEM_Top_Most showMode')
+        .height(50)
+        .fontSize(16)
+        .textAlign(TextAlign.Center)
+        .fontColor(Color.Black)
+        .width('100%')
+        .border({ width: 1 })
+        .lineHeight(20)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 8, bottom: 8 });
+
+      // 状态说明
+      Text('showMode: SYSTEM_Top_Most - 后面一个Toast打开后，前一个Toast自动关闭')
+        .height(35)
+        .fontSize(12)
+        .textAlign(TextAlign.Center)
+        .fontColor(Color.Black)
+        .width('100%')
+        .border({ width: 1 })
+        .lineHeight(16)
+        .fontWeight(300)
+        .margin({ bottom: 8 });
+
+      // 操作按钮
+      Row({ space: 10 }) {
+        Button('Toast1')
+          .id('toast1_button_20')
+          .type(ButtonType.Capsule)
+          .height(100)
+          .onClick(() => {
+            try {
+              this.promptAction.openToast({
+                message: '这是第一个Toast消息',
+                duration: 1500,
+                showMode: promptAction.ToastShowMode.SYSTEM_TOP_MOST
+              }).then((toastId: number) => {
+                this.toastId1 = toastId;
+              });
+            } catch (error) {
+              let message = (error as BusinessError).message;
+              let code = (error as BusinessError).code;
+              console.error(`OpenToast error code is ${code}, message is ${message}`);
+            }
+          })
+        Button('Toast2')
+          .id('toast2_button_20')
+          .type(ButtonType.Capsule)
+          .height(100)
+          .onClick(() => {
+            try {
+              this.promptAction.openToast({
+                message: '这是第二个Toast消息',
+                duration: 1500,
+                showMode: promptAction.ToastShowMode.SYSTEM_TOP_MOST
+              }).then((toastId: number) => {
+                this.toastId2 = toastId;
+              });
+            } catch (error) {
+              let message = (error as BusinessError).message;
+              let code = (error as BusinessError).code;
+              console.error(`OpenToast error code is ${code}, message is ${message}`);
+            }
+          })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.Center)
+      .margin({ bottom: 10 });
+
+      // 说明文字
+      Text('依次启动多个Toast，观察后面一个Toast打开后，前一个Toast是否自动关闭')
+        .fontSize(14)
+        .fontColor(Color.Gray)
+        .textAlign(TextAlign.Center)
+        .width('90%')
+        .margin({ top: 20 });
+
+      // 测试区域
+      Column({ space: 20 }) {
+        Text('测试说明：')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Color.Blue)
+          .width('100%')
+          .textAlign(TextAlign.Center);
+
+        Text('1. 点击Toast1按钮显示第一个Toast')
+          .fontSize(14)
+          .fontColor(Color.Black)
+          .width('100%')
+          .textAlign(TextAlign.Start);
+
+        Text('2. 点击Toast2按钮显示第二个Toast')
+          .fontSize(14)
+          .fontColor(Color.Black)
+          .width('100%')
+          .textAlign(TextAlign.Start);
+
+        Text('3. 预期效果：后面一个Toast打开后，前一个Toast自动关闭')
+          .fontSize(14)
+          .fontColor(Color.Green)
+          .width('100%')
+          .textAlign(TextAlign.Start);
+      }
+      .width('90%')
+      .padding(15)
+      .backgroundColor(0xF5F5F5)
+      .borderRadius(10)
+      .margin({ top: 20 });
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor(0xDCDCDC)
+    .padding({ top: 5, left: 10, right: 10 })
+  }
+}

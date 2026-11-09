@@ -1,0 +1,248 @@
+{
+  "float": [
+    {
+      "name": "boardSize_10",
+      "value": "10"
+    },
+    {
+      "name": "float_value_10",
+      "value": "10"
+    },
+    {
+      "name": "strokeWidth",
+      "value": "19.9vp"
+    },
+    {
+      "name": "boardSize_12",
+      "value": "12.5"
+    },
+    {
+      "name": "boardSize_16",
+      "value": "26.5fp"
+    },
+    {
+      "name": "font_18",
+      "value": "20"
+    },
+    {
+      "name": "float_value_0",
+      "value": "0fp"
+    },
+    {
+      "name": "float_value_5",
+      "value": "5fp"
+    },
+    {
+      "name": "float_value_20",
+      "value": "20fp"
+    },
+    {
+      "name": "float_value_30",
+      "value": "30fp"
+    },
+    {
+      "name": "width_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "width_0vp",
+      "value": "0vp"
+    },
+    {
+      "name": "width_negative_50vp",
+      "value": "-50vp"
+    },
+    {
+      "name": "width_50fp",
+      "value": "50fp"
+    },
+    {
+      "name": "width_0fp",
+      "value": "0fp"
+    },
+    {
+      "name": "width_negative_50fp",
+      "value": "-50fp"
+    },
+    {
+      "name": "width_50lpx",
+      "value": "50lpx"
+    },
+    {
+      "name": "width_0lpx",
+      "value": "0lpx"
+    },
+    {
+      "name": "width_negative_50lpx",
+      "value": "-50lpx"
+    },
+    {
+      "name": "width_80percent",
+      "value": "80%"
+    },
+    {
+      "name": "width_negative_50percent",
+      "value": "-50%"
+    },
+    {
+      "name": "height_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "height_0vp",
+      "value": "0vp"
+    },
+    {
+      "name": "height_negative_50vp",
+      "value": "-50vp"
+    },
+    {
+      "name": "height_50fp",
+      "value": "50fp"
+    },
+    {
+      "name": "height_0fp",
+      "value": "0fp"
+    },
+    {
+      "name": "height_negative_50fp",
+      "value": "-50fp"
+    },
+    {
+      "name": "height_50lpx",
+      "value": "50lpx"
+    },
+    {
+      "name": "height_0lpx",
+      "value": "0lpx"
+    },
+    {
+      "name": "height_negative_50lpx",
+      "value": "-50lpx"
+    },
+    {
+      "name": "height_80percent",
+      "value": "80%"
+    },
+    {
+      "name": "height_negative_50percent",
+      "value": "-50%"
+    },
+    {
+      "name": "width_50vp_resource",
+      "value": "50vp"
+    },
+    {
+      "name": "width_0vp_resource",
+      "value": "0vp"
+    },
+    {
+      "name": "width_negative_50vp_resource",
+      "value": "-50vp"
+    },
+    {
+      "name": "width_50fp_resource",
+      "value": "50fp"
+    },
+    {
+      "name": "width_0fp_resource",
+      "value": "0fp"
+    },
+    {
+      "name": "width_negative_50fp_resource",
+      "value": "-50fp"
+    },
+    {
+      "name": "width_50lpx_resource",
+      "value": "50lpx"
+    },
+    {
+      "name": "width_0lpx_resource",
+      "value": "0lpx"
+    },
+    {
+      "name": "width_negative_50lpx_resource",
+      "value": "-50lpx"
+    },
+    {
+      "name": "width_80percent_resource",
+      "value": "80%"
+    },
+    {
+      "name": "width_negative_50percent_resource",
+      "value": "-50%"
+    },
+    {
+      "name": "height_50vp_resource",
+      "value": "50vp"
+    },
+    {
+      "name": "height_0vp_resource",
+      "value": "0vp"
+    },
+    {
+      "name": "height_negative_50vp_resource",
+      "value": "-50vp"
+    },
+    {
+      "name": "height_50fp_resource",
+      "value": "50fp"
+    },
+    {
+      "name": "height_0fp_resource",
+      "value": "0fp"
+    },
+    {
+      "name": "height_negative_50fp_resource",
+      "value": "-50fp"
+    },
+    {
+      "name": "height_50lpx_resource",
+      "value": "50lpx"
+    },
+    {
+      "name": "height_0lpx_resource",
+      "value": "0lpx"
+    },
+    {
+      "name": "height_negative_50lpx_resource",
+      "value": "-50lpx"
+    },
+    {
+      "name": "height_80percent_resource",
+      "value": "80%"
+    },
+    {
+      "name": "height_negative_50percent_resource",
+      "value": "-50%"
+    },
+    {
+      "name": "fontSize_50vp",
+      "value": "50vp"
+    },
+    {
+      "name": "fontSize_0vp",
+      "value": "0vp"
+    },
+    {
+      "name": "fontSize_negative_50vp",
+      "value": "-50vp"
+    },
+    {
+      "name": "itemMinFontScale",
+      "value": "0.5"
+    },
+    {
+      "name": "itemMaxFontScale",
+      "value": "2.0"
+    },
+    {
+      "name": "itemMaxFontScale_1_9",
+      "value": "1.9"
+    },
+    {
+      "name": "itemMinFontScale_0_5",
+      "value": "0.5"
+    }
+  ]
+}

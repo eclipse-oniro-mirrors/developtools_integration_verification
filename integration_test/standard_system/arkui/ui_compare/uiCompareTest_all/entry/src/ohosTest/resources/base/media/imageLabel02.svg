@@ -1,0 +1,29 @@
+<svg
+        viewBox="0 0 300 300"
+        xmlns="http://www.w3.org/2000/svg"
+        width="300"
+        height="300">
+  <defs>
+    <filter
+            id="blurMe"
+            x="0%"
+            y="0%"
+            width="100%"
+            height="100%"
+            filterUnits="userSpaceOnUse">
+      <feOffset
+              in="BackgroundAlpha"
+              dx="10"
+              dy="-20" />
+      <feGaussianBlur
+              in="SourceGraphic"
+              stdDeviation="20" />
+    </filter>
+  </defs>
+  <circle
+          cx="60"
+          cy="60"
+          r="50"
+          fill="green"
+          filter="url(#blurMe)" />
+</svg>

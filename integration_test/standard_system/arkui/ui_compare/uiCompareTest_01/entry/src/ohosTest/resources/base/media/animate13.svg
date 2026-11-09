@@ -1,0 +1,11 @@
+<svg width="200" height="200" viewBox="0 0 200 200">
+    <rect x="50" y="50" width="50" height="50" fill="blue">
+        <animateTransform attributeName="transform"
+                          type="scale"
+                          from="1"
+                          to="3"
+                          dur="2s"
+                          repeatCount="3"
+                          fill="freeze"/>
+    </rect>
+</svg>

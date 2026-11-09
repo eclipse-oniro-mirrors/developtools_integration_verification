@@ -1,0 +1,12 @@
+<svg width="200" height="200" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="5" fill="red">
+        <animateTransform attributeName="transform"
+                          type="translate"
+                          values="0,0; 50,0; 50,50; 0,50; 0,0"
+                          from="0,0"
+                          to="50,50"
+                          dur="5s"
+                          repeatCount="2"
+                          fill="freeze"/>
+    </circle>
+</svg>

@@ -1,0 +1,44 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { image } from '@kit.ImageKit';
+
+@Entry
+@Component
+struct SnapshotAttribute290 {
+  col:Color = Color.Brown;
+
+  build() {
+    Column() {
+      Text('Hello world')
+        .width(80)
+        .height(80)
+        .margin({ left: -20 })
+        .id('targetComponent') // 为需要截图的组件设置id
+        .foregroundColor(this.col)
+        .shadow({ radius: 10, color: Color.Green, offsetX: 20, offsetY: 20 })
+
+      // 截图按钮
+      Button('点击截图')
+        .onClick(() => {
+          this.col=Color.Blue;
+        })
+        .id('button')
+        .margin(10)
+    }
+    .width('100%')
+    .height('100%')
+    .alignItems(HorizontalAlign.Center)
+  }
+}

@@ -1,0 +1,116 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+@Entry
+@Component
+struct PopupBoxBack0010 {
+  @State isShowActionSheet: boolean = false
+  @State dismissReason: string = ''
+  @State dismissCallbackTriggered: boolean = false
+  private richEditorController: RichEditorController = new RichEditorController()
+
+  build() {
+    Column() {
+      Text('ActionSheet配置onWillDismiss测试')
+        .fontSize(20)
+        .margin(20)
+
+      Button('Click to Show ActionSheet')
+        .id('show_actionsheet_back_0010')
+        .margin(20)
+        .onClick(() => {
+          this.isShowActionSheet = true
+        })
+
+      Text(`Dismiss Callback Triggered: ${this.dismissCallbackTriggered}`)
+        .fontSize(16)
+        .margin(10)
+
+      Text(`Dismiss Reason: ${this.dismissReason}`)
+        .fontSize(16)
+        .margin(10)
+
+      RichEditor({ controller: this.richEditorController })
+        .id('rich_editor_back_0010')
+        .width('90%')
+        .height(100)
+        .margin(20)
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.Start)
+    .bindSheet(this.isShowActionSheet, this.actionSheetBuilder(), {
+      height: 300,
+      showClose: false,
+      dragBar: false,
+      onWillDismiss: (dismissDialog: DismissDialogAction) => {
+        if (dismissDialog.reason === DismissReason.PRESS_BACK || 
+            dismissDialog.reason === DismissReason.TOUCH_OUTSIDE) {
+          // 不触发dismiss回调
+          this.dismissCallbackTriggered = false
+          this.dismissReason = dismissDialog.reason === DismissReason.PRESS_BACK ? 'PRESS_BACK' : 'TOUCH_OUTSIDE'
+        } else {
+          this.dismissCallbackTriggered = true
+          this.dismissReason = 'OTHER'
+        }
+      }
+    })
+  }
+
+  @Builder
+  actionSheetBuilder() {
+    Column() {
+      Text('ActionSheet Test')
+        .fontSize(18)
+        .fontWeight(FontWeight.Bold)
+        .margin(10)
+      
+      Text('Select an option')
+        .fontSize(14)
+        .margin(10)
+
+      Button('Confirm')
+        .width('80%')
+        .margin(10)
+        .onClick(() => {
+          this.isShowActionSheet = false
+        })
+
+      Button('Option 1')
+        .width('80%')
+        .margin(5)
+        .onClick(() => {
+          this.isShowActionSheet = false
+        })
+
+      Button('Option 2')
+        .width('80%')
+        .margin(5)
+        .onClick(() => {
+          this.isShowActionSheet = false
+        })
+
+      Button('Option 3')
+        .width('80%')
+        .margin(5)
+        .onClick(() => {
+          this.isShowActionSheet = false
+        })
+
+    }
+    .padding(20)
+  }
+}

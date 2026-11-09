@@ -1,0 +1,60 @@
+{
+  "string": [
+    {
+      "name": "module_test_desc",
+      "value": "test ability description"
+    },
+    {
+      "name": "TestAbility_desc",
+      "value": "the test ability"
+    },
+    {
+      "name": "TestAbility_label",
+      "value": "test label"
+    },
+    {
+      "name": "Font_size",
+      "value": "5vp"
+    },
+    {
+      "name": "Font_pristina",
+      "value": "pristina"
+    },
+    {
+      "name": "color_yellow",
+      "value": "#FFDDD52F"
+    },
+    {
+      "name": "size_30",
+      "value": "30vp"
+    },
+    {
+      "name": "boardSize_10",
+      "value": "0vp"
+    },
+    {
+      "name": "fontfamily_1",
+      "value": "HarmonyOS Sans"
+    },
+    {
+      "name": "span",
+      "value": "span"
+    },
+    {
+      "name": "test_value",
+      "value": "-10"
+    },
+    {
+      "name": "TestAbility_label_p",
+      "value": "100%"
+    },
+    {
+      "name": "abc",
+      "value": "abc"
+    },
+    {
+      "name": "string_value_5",
+      "value": "5"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { MultiCapsuleSegmentButtonV2, SegmentButtonV2Items, promptAction } from '@kit.ArkUI';
+
+
+@Entry
+@ComponentV2
+struct SegmentButtonV25070 {
+  @Local selectedIndexes: number[] = [0];
+  @Local buttonItems: SegmentButtonV2Items = new SegmentButtonV2Items([
+    { text: '放大镜', icon: $r('app.media.icon') },
+    { text: '扫一扫', icon: $r('app.media.icon') },
+    { text: '分享', icon: $r('app.media.icon') }
+  ]);
+
+  build() {
+    Row() {
+      Column() {
+        Text('SegmentButtonV2 - 自定义图文混排测试')
+          .fontSize(18)
+          .fontWeight(FontWeight.Bold)
+          .margin({ bottom: 10 })
+
+        Text('MultiCapsuleSegmentButtonV2 胶囊型分段按钮（多选）')
+          .fontSize(14)
+          .fontColor('#666666')
+          .margin({ bottom: 20 })
+
+        MultiCapsuleSegmentButtonV2({
+          items: this.buttonItems,
+          selectedIndexes: this.selectedIndexes!!,
+          onItemClicked: (index: number) => {
+            if (this.selectedIndexes.includes(index)) {
+              this.selectedIndexes = this.selectedIndexes.filter(i => i !== index);
+            } else {
+              this.selectedIndexes = [...this.selectedIndexes, index];
+            }
+            promptAction.showToast({
+              message: `点击了第${index}个选项`,
+              duration: 2000
+            });
+          }
+        })
+          .id('segmentButton')
+          .width('100%')
+          .margin({ bottom: 30 })
+
+        Text('参数配置')
+          .fontSize(16)
+          .fontWeight(FontWeight.Bold)
+          .margin({ bottom: 10 })
+          .width('100%')
+
+        Button('自定义')
+          .id('searchButton')
+          .width('90%')
+          .height(40)
+          .margin({ bottom: 10 })
+          .onClick(() => {
+            // 接口已启用
+          })
+
+        Button('重置')
+          .id('resetButton')
+          .width('80%')
+          .height(40)
+          .margin({ bottom: 20 })
+          .onClick(() => {
+            this.selectedIndexes = [0];
+          })
+
+        Text('预期：点击这三个图标：放大镜、扫一扫、分享。分别提示第0、1、2个选项被点击。分段按钮正常切换，样式符合UX规范')
+          .fontSize(14)
+          .fontColor('#FF6600')
+          .fontWeight(FontWeight.Bold)
+          .margin({ top: 10 })
+          .width('100%')
+      }
+      .width('100%')
+      .padding(16)
+    }
+    .height('100%')
+  }
+}

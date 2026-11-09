@@ -1,0 +1,309 @@
+/**
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@Entry
+@Component
+struct ImageReset16 {
+  @State info1:string = 'loading~~';
+  @State info2:string = 'loading~~';
+  @State info3:string = 'loading~~';
+  @State info4:string = 'loading~~';
+  @State info5:string = 'loading~~';
+  @State info6:string = 'loading~~';
+  @State testArg1:ImageFit = ImageFit.Cover;
+  @State testArg2:ImageFit = ImageFit.Contain;
+  @State testArg3:ImageFit = ImageFit.Auto;
+  @State testArg4:ImageFit = ImageFit.Fill;
+  @State testArg5:ImageFit = ImageFit.ScaleDown;
+  @State testArg6:ImageFit = ImageFit.None;
+  @State imageSrcIndex: number = 0;
+  @State imageSrcList: (ResourceStr | ImageContent)[] = [$r('app.media.icon'), ImageContent.EMPTY];
+
+  build() {
+    Column() {
+      Button('Empty')
+      .id('ImageReset16')
+      .height(40)
+      .fontSize(18)
+      .fontColor(Color.Black)
+      .width('70%')
+      .border({ width: 1 })
+      .fontWeight(300)
+      .margin(10)
+      .onClick(() => {
+        this.imageSrcIndex = 1
+      })
+
+      Flex({ direction: FlexDirection.Column, alignItems: ItemAlign.Center }) {
+        Text('image test ImageFit')
+          .height(40)
+          .fontSize(15)
+          .textAlign(TextAlign.Center)
+          .fontColor(Color.Black)
+          .width('70%')
+          .border({ width: 1 })
+          .lineHeight(20)
+          .fontWeight(300)
+          .margin(10)
+
+        Row(){
+          Column(){
+            Text('objectFit: ' + this.testArg1)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info1)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg1)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info1 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+          .margin({right:20})
+
+          Column(){
+            Text('objectFit: ' + this.testArg2)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info2)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg2)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info2 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+        }
+        .width('100%')
+        .height('25%')
+
+        Row(){
+          Column(){
+            Text('objectFit: ' + this.testArg3)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info3)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg3)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info3 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+          .margin({right:20})
+
+          Column(){
+            Text('objectFit: ' + this.testArg4)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info4)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg4)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info4 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+        }
+        .width('100%')
+        .height('32%')
+
+        Row(){
+          Column(){
+            Text('objectFit: ' + this.testArg5)
+              .height(45)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info3)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg5)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info3 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+          .margin({right:20})
+
+          Column(){
+            Text('objectFit: ' + this.testArg6)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Text(this.info4)
+              .height(30)
+              .fontSize(15)
+              .textAlign(TextAlign.Center)
+              .fontColor(Color.Black)
+              .width('80%')
+              .border({ width: 1 })
+              .lineHeight(20)
+              .fontWeight(300)
+              .margin(6)
+
+            Image(this.imageSrcList[this.imageSrcIndex])
+              .width(80)
+              .height(80)
+              .borderRadius(20)
+              .margin(15)
+              .objectFit(this.testArg6)
+              .onComplete((event)=>{
+                if(event) {
+                  this.info4 = 'loading success'
+                }
+              })
+          }
+          .width('45%')
+          .height('100%')
+        }
+        .width('100%')
+        .height('32%')
+      }.width('100%')
+      .height('80%')
+    }
+    .height('100%')
+    .width('98%')
+  }
+}

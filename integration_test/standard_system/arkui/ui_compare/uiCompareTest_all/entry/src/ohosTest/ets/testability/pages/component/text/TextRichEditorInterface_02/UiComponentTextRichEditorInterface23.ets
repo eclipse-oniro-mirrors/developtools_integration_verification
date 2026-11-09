@@ -1,0 +1,185 @@
+/*
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { uiAppearance } from '@kit.ArkUI';
+import { BusinessError } from '@kit.BasicServicesKit';
+
+@Entry
+@Component
+struct UiComponentTextRichEditorInterface23  {
+  controller: RichEditorController = new RichEditorController();
+  options: RichEditorOptions = { controller: this.controller };
+  private start: number = -1;
+  private end: number = -1;
+  @State message: string = '[-1, -1]';
+  @State content: string = '';
+  @State paddingVal: number = 5;
+  @State borderRad: number = 4;
+  @State num: number = 0;
+  @State spanParagraphs: (RichEditorTextSpanResult | RichEditorImageSpanResult)[] = [];
+
+  build() {
+    Column() {
+      Column() {
+        Text('getTypingStyle is:'+JSON.stringify(this.spanParagraphs))
+          .width('100%')
+          .fontSize(18)
+          .maxLines(3)
+          .textAlign(TextAlign.Start)
+          .fontColor(Color.Red)
+          .fontWeight(FontWeight.Bolder)
+          .border({ width: 1, color: 0xEEEEEE })
+          .margin({
+            left: 6,
+            right: 6,
+            bottom:30,
+            top:60
+          })
+      }
+      .borderWidth(1)
+      .borderColor(Color.Red)
+      .width('100%')
+      .height('30%')
+
+      Row() {
+        Button('addtextspan')
+          .fontSize(12)
+          .id('UiComponentTextRichEditorInterface23_02')
+          .onClick(() => {
+            this.controller.addTextSpan('hello😊', {
+              style:
+              {
+                fontColor: Color.Orange,
+                fontSize: 50,
+              }
+            })
+          })
+
+        Button('deletetextspan')
+          .fontSize(12)
+          .id('UiComponentTextRichEditorInterface23_03')
+          .onClick(() => {
+            this.controller.deleteSpans()
+          })
+        Button('getTypingStyle')
+          .id('UiComponentTextRichEditorInterface22_04')
+          .onClick(() => {
+            this.spanParagraphs = this.controller.getSpans();
+            console.info('RichEditor getTypingStyle:' + JSON.stringify(this.spanParagraphs));
+          })
+      }
+      .borderWidth(1)
+      .borderColor(Color.Red)
+      .width('100%')
+      .height('10%')
+
+      Column() {
+        RichEditor(this.options)
+          .id('UiComponentTextRichEditorInterface23_01')
+          .onSelectionChange((value: RichEditorRange) => {
+            console.info('onSelectionChange success');
+          })
+          .onWillChange((value: RichEditorChangeValue) => {
+            this.spanParagraphs = this.controller.getSpans();
+            console.info('测试log: onWillChange');
+            console.info('rangeBefore: ' + JSON.stringify(value.rangeBefore));
+            console.info('print replacedSpans');
+            value.replacedSpans.forEach((item: RichEditorTextSpanResult) => {
+              console.info('spanPosition:' + JSON.stringify(item.spanPosition));
+              console.info('value:' + item.value);
+              console.info('textStyle:' + JSON.stringify(item.textStyle));
+              console.info('offsetInSpan:' + item.offsetInSpan);
+              console.info('valueResource:' + item.valueResource);
+              console.info('paragraphStyle:' + JSON.stringify(item.paragraphStyle));
+            })
+            return true;
+          })
+          .onSelect((value: RichEditorSelection) => {
+            this.content = '';
+            let select = this.controller.getSelection();
+            this.start = select.selection[0];
+            this.end = select.selection[1];
+            this.message = '[' + this.start + ', ' + this.end + ']';
+            console.info('selection start ' + select.selection[0] + ' end ' + select.selection[1]);
+            select.spans.forEach(item => {
+              if (typeof (item as RichEditorImageSpanResult)['imageStyle'] != 'undefined') {
+                if ((item as RichEditorImageSpanResult).valueResourceStr == '') {
+                  console.info('builder span index ' + (item as RichEditorImageSpanResult).spanPosition.spanIndex +
+                    ', range : ' + (item as RichEditorImageSpanResult).offsetInSpan[0] + ', ' +
+                  (item as RichEditorImageSpanResult).offsetInSpan[1] + ', size : ' +
+                  (item as RichEditorImageSpanResult).imageStyle[0] + ', ' +
+                  (item as RichEditorImageSpanResult).imageStyle[1])
+                } else {
+                  console.info('image span ' + (item as RichEditorImageSpanResult).valueResourceStr + ', index : ' +
+                  (item as RichEditorImageSpanResult).spanPosition.spanIndex + ', range: ' +
+                  (item as RichEditorImageSpanResult).offsetInSpan[0] + ', ' +
+                  (item as RichEditorImageSpanResult).offsetInSpan[1] + ', size : ' +
+                  (item as RichEditorImageSpanResult).imageStyle.size[0] + ', ' +
+                  (item as RichEditorImageSpanResult).imageStyle.size[1])
+                }
+              } else {
+                this.content += (item as RichEditorTextSpanResult).value;
+                this.content += '\n';
+                console.info('text span: ' + (item as RichEditorTextSpanResult).value);
+              }
+            })
+            console.info('---------------------- onSelect ----------------------');
+          })
+          .aboutToIMEInput((value: RichEditorInsertValue) => {
+            console.info('---------------------- aboutToIMEInput ----------------------');
+            console.info('insertOffset:' + value.insertOffset);
+            console.info('insertValue:' + value.insertValue);
+            return true;
+          })
+          .onIMEInputComplete((value: RichEditorTextSpanResult) => {
+            console.info('---------------------- onIMEInputComplete ---------------------');
+            console.info('spanIndex:' + value.spanPosition.spanIndex);
+            console.info('spanRange:[' + value.spanPosition.spanRange[0] + ',' + value.spanPosition.spanRange[1] + ']');
+            console.info('offsetInSpan:[' + value.offsetInSpan[0] + ',' + value.offsetInSpan[1] + ']');
+            console.info('value:' + value.value);
+          })
+          .aboutToDelete((value: RichEditorDeleteValue) => {
+            console.info('---------------------- aboutToDelete --------------------------');
+            console.info('offset:' + value.offset);
+            console.info('direction:' + value.direction);
+            console.info('length:' + value.length);
+            value.richEditorDeleteSpans.forEach(item => {
+              console.info('---------------------- item --------------------------');
+              console.info('spanIndex:' + item.spanPosition.spanIndex);
+              console.info('spanRange:[' + item.spanPosition.spanRange[0] + ',' + item.spanPosition.spanRange[1] + ']');
+              console.info('offsetInSpan:[' + item.offsetInSpan[0] + ',' + item.offsetInSpan[1] + ']');
+              if (typeof (item as RichEditorImageSpanResult)['imageStyle'] != 'undefined') {
+                console.info('image:' + (item as RichEditorImageSpanResult).valueResourceStr);
+              } else {
+                console.info('text:' + (item as RichEditorTextSpanResult).value);
+              }
+            })
+            return true;
+          })
+          .onDeleteComplete(() => {
+            console.info('---------------------- onDeleteComplete ------------------------');
+          })
+          .borderWidth(1)
+          .borderColor(Color.Green)
+          .width('100%')
+          .height('20%')
+      }
+      .borderWidth(1)
+      .borderColor(Color.Red)
+      .width('100%')
+      .height('70%')
+    }
+  }
+}

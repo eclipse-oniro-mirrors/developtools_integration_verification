@@ -1,0 +1,108 @@
+/*
+ * Copyright (c) 2025 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * @tc.name: SUB_ACE_UI_COMPONENT_BUTTON_SELECT_UPDOWN_0020
+ * @tc.desc: 系统预置的电话或联系人应用使用上下方向键走焦
+ * @tc.level: Level 3
+ */
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+@Entry
+@ComponentV2
+struct SelectUpdown0020 {
+  @Local testLog: string = '';
+  @Local selectedIndex: number = 0;
+
+  private addLog(message: string): void {
+    this.testLog += message + '\n';
+    hilog.info(0x0000, 'SelectUpdown0020', message);
+  }
+
+  aboutToAppear(): void {
+    this.addLog('Page loaded');
+  }
+
+  build() {
+    Column() {
+      Text('SUB_ACE_UI_COMPONENT_BUTTON_SELECT_UPDOWN_0020')
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
+        .margin({ bottom: 10 })
+
+      Text('模拟电话应用下拉菜单')
+        .fontSize(12)
+        .margin({ bottom: 10 })
+
+      // 模拟电话应用场景
+      Row() {
+        Text('电话号码: 138****8888')
+          .fontSize(14)
+        Select([
+          { value: '手机' },
+          { value: '家庭' },
+          { value: '公司' }
+        ])
+          .selected(this.selectedIndex)
+          .value('手机')
+          .id('select_phone_type')
+          .focusable(true)
+          .onSelect((index: number) => {
+            this.selectedIndex = index;
+            this.addLog('Selected: ' + ['手机', '家庭', '公司'][index]);
+          })
+      }
+      .width('100%')
+      .justifyContent(FlexAlign.SpaceBetween)
+      .padding(10)
+      .backgroundColor('#F0F0F0')
+      .borderRadius(8)
+
+      Text('当前类型: ' + ['手机', '家庭', '公司'][this.selectedIndex])
+        .fontSize(12)
+        .margin({ top: 15 })
+        .id('selected_type')
+
+      Text('测试说明：')
+        .fontSize(12)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 20 })
+
+      Text('1. 点击"手机"弹出下拉菜单\n2. 使用上下方向键走焦\n3. 菜单弹出和关闭正常')
+        .fontSize(11)
+        .fontColor('#666666')
+
+      Text('日志:')
+        .fontSize(12)
+        .fontWeight(FontWeight.Bold)
+        .margin({ top: 10 })
+
+      Scroll() {
+        Text(this.testLog)
+          .fontSize(10)
+          .fontColor('#333333')
+          .id('log_text')
+      }
+      .height('8.2%')
+      .width('100%')
+      .backgroundColor('#F5F5F5')
+      .padding(5)
+    }
+    .width('100%')
+    .height('100%')
+    .padding(10)
+  }
+}
+

@@ -1,0 +1,203 @@
+/**
+ * Copyright (c) 2026 Shenzhen Kaihong Digital Industry Development Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+{
+  "description": "Config for XtsTestCase devicetest test cases",
+  "environment": [
+    {
+      "type": "device"
+    }
+  ],
+  "driver": {
+    "type": "DeviceTest",
+    "bundle-name": "com.example.uicompare",
+    "py_file": "ace/testcases/UI_Compare_Tools_Common.py"
+  },
+  "kits": [
+    {
+      "test-file-name": [
+        "ace/resource/common/hap/uiCompareTest_06.hap"
+      ],
+      "type": "AppInstallKit",
+      "cleanup-apps": true
+    },
+    {
+      "type": "ShellKit",
+      "run-command": [
+        "power-shell wakeup",
+        "power-shell setmode 602",
+        "power-shell display -s 0"
+      ]
+    }
+  ],
+  "extra": {
+    "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0070": [
+      [
+        "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0070.webp",
+        "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0070.webp"
+      ]
+    ],
+    "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0120": [
+      [
+        "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0120.webp",
+        "SUB_ACE_ACTION_GESTURE_ATTRIBUTEMODIFIER_0120.webp"
+      ]
+    ],
+    "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0110": [
+      [
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0110.webp",
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0110.webp"
+      ]
+    ],
+    "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0170": [
+      [
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0170.webp",
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0170.webp"
+      ]
+    ],
+    "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0280": [
+      [
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0280.webp",
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0280.webp"
+      ]
+    ],
+    "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0330": [
+      [
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0330.webp",
+        "SUB_ACE_UI_ATTRIBUTES_GRAPHICTRANSFORMATION_INTERFACE_0330.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0160": [
+      [
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0160.webp",
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0160.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_1": [
+      [
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_1.webp",
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_1.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_2": [
+      [
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_2.webp",
+        "SUB_ACE_UI_COMPONENT_GRAPHIC_NODECONTAINER_NODECONTAINER_0240_2.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_100": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_100.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_100.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1000": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1000.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1000.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1100": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1100.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1100.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1200": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1200.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1200.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1300": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1300.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1300.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1400": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1400.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1400.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1500": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1500.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1500.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1600": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1600.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1600.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1700": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1700.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_1700.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_200": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_200.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_200.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_300": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_300.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_300.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_400": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_400.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_400.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_500": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_500.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_500.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_600": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_600.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_600.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_700": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_700.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_700.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_800": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_800.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_800.webp"
+      ]
+    ],
+    "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_900": [
+      [
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_900.webp",
+        "SUB_ACE_UI_COMPONENT_MATRIX_SETPOLY_900.webp"
+      ]
+    ]
+  }
+}

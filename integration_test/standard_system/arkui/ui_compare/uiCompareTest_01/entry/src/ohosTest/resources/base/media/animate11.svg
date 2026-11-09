@@ -1,0 +1,13 @@
+<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="50" style="fill:white;" stroke="red" >
+        <animate
+                attributeName="stroke-opacity"
+                begin="0s"
+                dur="10s"
+                from="0"
+                to="1"
+                repeatCount="2"
+                fill = "remove"
+        />
+    </circle>
+</svg>
