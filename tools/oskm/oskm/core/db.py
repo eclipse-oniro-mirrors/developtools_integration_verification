@@ -31,7 +31,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .io import canonical
-from .schema import SCAN_COLUMN, SCANS, FRAMEWORK_TABLES
+from .models import resolve_cpu_arch
+from oskm_schema import SCAN_COLUMN, SCANS, FRAMEWORK_TABLES
 
 
 class StoreError(Exception):
@@ -119,10 +120,13 @@ def insert(connection, table, rows, *, scan_id=None):
     return len(rows)
 
 
-def begin_scan(connection, product, workspace_root, *, started_at=None):
+def begin_scan(connection, product, workspace_root, *, zone='blue', cpu_arch=None,
+               started_at=None):
+    cpu_arch = resolve_cpu_arch(zone, cpu_arch)
     cursor = connection.execute(
-        f'INSERT INTO {SCANS.name} (product, workspace_root, started_at) VALUES (?, ?, ?)',
-        (product, str(workspace_root), started_at or now()))
+        f'INSERT INTO {SCANS.name} '
+        '(product, zone, cpu_arch, workspace_root, started_at) VALUES (?, ?, ?, ?, ?)',
+        (product, zone, cpu_arch, str(workspace_root), started_at or now()))
     return cursor.lastrowid
 
 

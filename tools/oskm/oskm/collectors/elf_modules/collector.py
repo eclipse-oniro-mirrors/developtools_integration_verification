@@ -32,54 +32,7 @@ from ...core.export import rejoin_component, rejoin_install
 from ...core.framework import BaseCollector, ScanContext, register
 from ...core.io import parse_json
 from ...core.models import ScanFatalError
-from ...core.schema import Column, Index, Table
-
-
-ELF_MODULES = Table(
-    'elf_modules',
-    columns=(
-        Column('position', 'INTEGER', nullable=False),
-        Column('install_target_id', 'INTEGER', nullable=False,
-               references='install_targets(id)'),
-        Column('install_module_id', 'INTEGER', nullable=False,
-               references='install_modules(id)'),
-        Column('component_id', 'INTEGER', references='components(id)'),
-        Column('partition', nullable=False),
-        Column('file_name', nullable=False),
-        Column('soname'),
-        Column('format'),
-        Column('api_type', nullable=False,
-               check="api_type IN ('public_api', 'inner_api', 'internal_api')"),
-        Column('category', 'JSON', nullable=False,
-               check="json_valid(category) AND json_type(category) = 'array'"),
-        Column('type'),
-        Column('machine', 'INTEGER'),
-        Column('dynamic', 'INTEGER', nullable=False),
-        Column('needed', 'JSON', nullable=False),
-    ),
-    primary_key=('position',),
-    surrogate=True,
-    indexes=(Index('idx_elf_modules_target', ('scan_id', 'install_target_id'),
-                   unique=True),
-             Index('idx_elf_modules_name', ('scan_id', 'file_name')),
-             Index('idx_elf_modules_install', ('scan_id', 'install_module_id')),
-             Index('idx_elf_modules_component', ('scan_id', 'component_id')),
-             Index('idx_elf_modules_api_type', ('scan_id', 'api_type'))),
-)
-
-ELF_MODULE_DEPENDENCIES = Table(
-    'elf_module_dependencies',
-    columns=(
-        Column('caller_id', 'INTEGER', nullable=False, references='elf_modules(id)'),
-        Column('needed_ordinal', 'INTEGER', nullable=False),
-        Column('needed_name', nullable=False),
-        Column('callee_id', 'INTEGER', references='elf_modules(id)'),
-    ),
-    primary_key=('caller_id', 'needed_ordinal'),
-    surrogate=True,
-    indexes=(Index('idx_elf_module_dependencies_callee', ('scan_id', 'callee_id')),
-             Index('idx_elf_module_dependencies_name', ('scan_id', 'needed_name'))),
-)
+from oskm_schema.elf_modules import ELF_MODULES, ELF_MODULE_DEPENDENCIES
 
 
 class ElfModulesContext(ScanContext):
@@ -305,6 +258,13 @@ class ElfModulesCollector(BaseCollector):
         for dependency in ('component_links', 'services', 'hdi', 'sas'):
             status = ctx.upstream.status(dependency)
             if status is None:
+                if dependency == 'hdi':
+                    # HDI records only feed the optional `hdi` classification
+                    # category. The yellow zone ships no HCB files, so a missing
+                    # hdi must not block ELF discovery -- it only loses the tag.
+                    ctx.issue(manifest, 'HDI_INDEX_UNAVAILABLE',
+                              severity='warning', advisory=True)
+                    continue
                 ctx.issue(manifest, f'{dependency.upper()}_NOT_SELECTED')
                 return False
             if status == 'failed' or not ctx.upstream.inventory_complete(

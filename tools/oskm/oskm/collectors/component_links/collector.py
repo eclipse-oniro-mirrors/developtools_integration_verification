@@ -28,18 +28,7 @@ written via post_insert() within the runner's transaction -- the same mechanism
 install_modules uses for install_targets.link_target_id.
 """
 from ...core.framework import BaseCollector, ScanContext, register
-from ...core.schema import Column, Index, Table
-
-COMPONENT_LINKS_RUN = Table(
-    'component_links_run',
-    columns=(
-        Column('linked_features', 'INTEGER', nullable=False),
-        Column('unresolved_features', 'INTEGER', nullable=False),
-        Column('linked_innerapis', 'INTEGER', nullable=False),
-        Column('unresolved_innerapis', 'INTEGER', nullable=False),
-    ),
-    surrogate=True,
-)
+from oskm_schema.links import ARKTS_LINKS_RUN, COMPONENT_LINKS_RUN
 
 
 class ComponentLinksContext(ScanContext):

@@ -26,7 +26,7 @@ Absent and present-null round-trip correctly: a NULL column means the key was no
 in the record, the JSON text 'null' means it was present and null.
 """
 from .io import parse_json
-from .schema import SCAN_COLUMN
+from oskm_schema import SCAN_COLUMN
 
 
 def _value(row, column):
@@ -141,9 +141,10 @@ def snapshot(connection, scan_id, collector):
         (scan_id, collector.NAME)).fetchone()
     if run is None:
         raise LookupError(f'NO_RUN: {collector.NAME}@{scan_id}')
-    product = connection.execute(
-        'SELECT product FROM scans WHERE id = ?', (scan_id,)).fetchone()['product']
-    document = dict(schema_version=run['schema_version'], product=product,
+    scan = connection.execute(
+        'SELECT product, zone, cpu_arch FROM scans WHERE id = ?', (scan_id,)).fetchone()
+    document = dict(schema_version=run['schema_version'], product=scan['product'],
+                    zone=scan['zone'], cpu_arch=scan['cpu_arch'],
                     scope=parse_json(run['scope'].encode())[0], status=run['status'])
     published = issues(connection, scan_id, collector)
     if published:

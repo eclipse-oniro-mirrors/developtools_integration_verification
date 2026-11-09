@@ -34,28 +34,7 @@ from .query import RepoQuery
 from ...core.framework import BaseCollector, ScanContext, register
 from ...core.io import canonical
 from ...core.models import RequestError, ScanResult, ScanRequest
-from ...core.schema import Column, Index, Table
-
-REPOS = Table(
-    'repos',
-    columns=(
-        Column('name', nullable=False),
-        Column('path', nullable=False),
-        Column('remote'),
-        Column('remote_url'),
-        Column('revision'),
-        Column('groups'),
-        Column('clone_depth', 'INTEGER'),
-        Column('head_commit'),
-    ),
-    primary_key=('name',),
-    surrogate=True,
-    indexes=(
-        Index('idx_repos_path', ('scan_id', 'path')),
-        Index('idx_repos_remote', ('scan_id', 'remote')),
-        Index('idx_repos_revision', ('scan_id', 'revision')),
-    ),
-)
+from oskm_schema.repos import REPOS
 
 
 class ReposContext(ScanContext):

@@ -35,7 +35,7 @@ from . import db
 from .io import InputFailure, parse_json, read_bytes, valid_product
 from .models import (RequestError, ScanCancelled, ScanFatalError, ScanLimits,
                      ScanProgress, freeze)
-from .schema import Table
+from oskm_schema import Table
 
 # Errors a bounded read can raise; shared by every domain's parse loop.
 READ_ERRORS = (InputFailure, ValueError, UnicodeError, RecursionError)
@@ -175,14 +175,27 @@ def resolve_order(selected=None):
     return tuple(order)
 
 
+_DISCOVERED = False
+
+
 def discover(package=None):
     """Import every collector package so its @register decorator runs.
 
     This is the only place the framework touches the collectors tree, and it
     enumerates no domain names: dropping a package in is enough to register it.
+
+    **默认路径带记忆化。** 调用点从"会话初始化一次"改成"按需"之后，
+    查一次 `component_dependents` 会调它 5,958 次——`sys.modules` 只省掉
+    重复 import，`pkgutil.iter_modules` 每次仍要扫一遍目录，实测 0.63 ms 一次，
+    合计 3.7 秒（整条查询 1.15 s → 5.4 s）。显式传 package 的调用不走缓存，
+    测试里要换一棵采集器树时仍然有效。
     """
+    global _DISCOVERED
     if package is None:
+        if _DISCOVERED:
+            return names()
         from .. import collectors as package
+        _DISCOVERED = True
     for info in pkgutil.iter_modules(package.__path__):
         if not info.ispkg:
             continue
@@ -285,7 +298,7 @@ class ScanContext:
     def __init__(self, *, scan_id, connection, request, collector,
                  issue_fields=('path', 'pointer', 'code'),
                  on_progress=None, on_diagnostic=None, cancelled=None):
-        if not valid_product(request.product):
+        if not valid_product(request.product, request.zone):
             raise RequestError('INVALID_PRODUCT')
         if not isinstance(request.limits, ScanLimits) or any(
                 type(getattr(request.limits, item.name)) is not int
@@ -304,7 +317,7 @@ class ScanContext:
         self.collector = collector
         self.issue_fields = issue_fields
         self.on_progress, self.on_diagnostic, self.cancelled = on_progress, on_diagnostic, cancelled
-        self.build = self.workspace / 'out' / request.product
+        self.build = (self.workspace / request.build_root).resolve()
         package = request.package_root if request.package_root is not None else self.build / 'packages/phone'
         self.package = (self.workspace / package).resolve()
         if not self.package.is_relative_to(self.workspace):

@@ -4,7 +4,7 @@ schema 1.0.0 | 依赖：components
 
 ## 输入
 
-`out/{product}/packages/phone/system_module_info.json` 是构建系统产出的安装清单。每条声明包含 GN label、dest 安装路径列表、part_name、subsystem_name、type 等字段。一行可多 dest（一对多）。
+`{build_root}/packages/phone/system_module_info.json` 是构建系统产出的安装清单。每条声明包含 GN label、dest 安装路径列表、part_name、subsystem_name、type 等字段。一行可多 dest（一对多）。
 
 本域只负责声明清单与归属，不读取物理 ELF 文件；实际 ELF 元信息和 `DT_NEEDED` 依赖边由下游 `elf_modules` 基于 `install_targets.dest` 采集。
 

@@ -61,7 +61,7 @@ python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PW
 
 | 格式 | 大小（字节） | 文件 |
 | --- | ---: | --- |
-| JSON，两空格缩进 | 121692 | [sas.json](../../../../../artifacts/system-abilities/rk3568/sas.json) |
+| JSON，两空格缩进 | 121692 | [sas.json](../../../../../../../../KnowledgeBase/artifacts/system-abilities/rk3568/sas.json) |
 
 JSON 文件与 API均验证默认覆盖；CLI 再次扫描并覆盖 JSON 后校验有效。目录只有上述两个文件，无必要旁车或 journal。本地产品产物被 Git 忽略，测试可在原路径重复运行。
 

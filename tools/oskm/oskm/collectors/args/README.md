@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 输入 | `prebuilts/build-tools/*/bin/gn` + `out/{product}/` 构建产物 |
+| 输入 | `prebuilts/build-tools/*/bin/gn` + `{build_root}/` 构建产物 |
 | 依赖 | components（component_id 关联） |
 | schema | 1.0.0 |
 | 设计 | [design.md](./design.md) |

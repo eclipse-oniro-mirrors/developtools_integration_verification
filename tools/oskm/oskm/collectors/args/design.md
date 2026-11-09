@@ -9,7 +9,7 @@ schema 1.0.0 | 依赖：components
 输入：
 
 - `prebuilts/build-tools/{linux-x86|linux-aarch64}/bin/gn`（依赖构建环境）
-- `out/{product}/args.gn`（需要已有构建产物）
+- `{build_root}/args.gn`（需要已有构建产物）
 - components 表（component_id 关联）
 
 ## 数据源
@@ -17,7 +17,7 @@ schema 1.0.0 | 依赖：components
 ### 命令
 
 ```bash
-prebuilts/build-tools/linux-x86/bin/gn args out/{product} --list --json
+prebuilts/build-tools/linux-x86/bin/gn args {build_root} --list --json
 ```
 
 输出前半部分是 GN `print()` 噪音，后半部分是 JSON 数组。`extract_json()` 用 `re.finditer(r'\[\s*\{\s*"', output)` 定位最后一个匹配作为 JSON 起点，`output.rfind(']')` 定位终点。
@@ -105,7 +105,7 @@ class ArgsCollector(BaseCollector):
 `collect()` 流程：
 
 1. `find_gn(workspace)` 检测平台并返回 gn 路径，找不到发 `GN_TOOL_NOT_FOUND` advisory 后返回
-2. 检查 `out/{product}/args.gn` 存在性，缺失发 `GN_BUILD_DIR_MISSING` advisory 后返回
+2. 检查 `{build_root}/args.gn` 存在性，缺失发 `GN_BUILD_DIR_MISSING` advisory 后返回
 3. `run_gn_args()` 调用 `gn args --list --json`（超时 120s），超时发 `GN_ARGS_TIMEOUT` advisory
 4. `extract_json()` 提取 JSON 数组，解析失败发 `GN_ARGS_PARSE_FAILED` advisory
 5. 加载 components 索引并构建 `manifest_directories()`
@@ -118,7 +118,7 @@ class ArgsCollector(BaseCollector):
 | 条件 | issue | 级别 |
 |------|-------|------|
 | `gn` 可执行文件不存在 | `GN_TOOL_NOT_FOUND` | advisory |
-| `out/{product}/args.gn` 不存在 | `GN_BUILD_DIR_MISSING` | advisory |
+| `{build_root}/args.gn` 不存在 | `GN_BUILD_DIR_MISSING` | advisory |
 | `gn args` 超时（120s） | `GN_ARGS_TIMEOUT` | advisory |
 | JSON 解析失败 | `GN_ARGS_PARSE_FAILED` | advisory |
 | arg 无法关联到 component | 不发 issue（null component_id 合法） |
@@ -130,7 +130,7 @@ class ArgsCollector(BaseCollector):
 | 场景 | 处理 |
 |------|------|
 | 非 repo 工作区（无 prebuilts/） | gn_args 表为空，发 `GN_TOOL_NOT_FOUND` |
-| 未构建（无 out/{product}/） | gn_args 表为空，发 `GN_BUILD_DIR_MISSING` |
+| 未构建（无 `{build_root}/`） | gn_args 表为空，发 `GN_BUILD_DIR_MISSING` |
 | gn 超时 | gn_args 表为空，发 `GN_ARGS_TIMEOUT` |
 | JSON 中某个 arg 缺字段 | 跳过该 arg，不崩溃 |
 | component 表为空（--without components） | component_id 全为 null |

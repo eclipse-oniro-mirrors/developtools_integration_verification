@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 输入 | `.repo/manifests/default.xml`（含 include 链）+ 每仓 `.git/HEAD`、`.git/config` |
+| 输入 | `.repo/manifests/default.xml`（含 include 链；缺失时回退 `.repo/manifest.xml` symlink 目标）+ 每仓 `.git/HEAD`、`.git/config` |
 | 依赖 | 无（根级采集器） |
 | 查询 | 按 name/path/remote/revision/groups 过滤；label/path 最长前缀匹配 |
 | 设计 | [repos-scanner-design.md](repos-scanner-design.md) |

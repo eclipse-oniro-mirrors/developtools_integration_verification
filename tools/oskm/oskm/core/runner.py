@@ -26,7 +26,7 @@ from dataclasses import dataclass
 
 from . import db, framework
 from .models import RequestError, ScanFatalError, ScanProgress
-from .schema import COLLECTOR_RUNS, ISSUES
+from oskm_schema import COLLECTOR_RUNS, COLLECTOR_TABLES, ISSUES
 
 
 @dataclass(frozen=True)
@@ -68,7 +68,7 @@ def _persist(connection, collector, ctx, scan_id):
     with db.transaction(connection):
         # Idempotent rewrite: drop whatever this collector wrote for this scan.
         db.delete_scan(connection, collector.TABLES, scan_id)
-        for table in (ISSUES, COLLECTOR_RUNS):
+        for table in (ISSUES, COLLECTOR_RUNS, COLLECTOR_TABLES):
             connection.execute(
                 f'DELETE FROM {table.name} WHERE scan_id = ? AND collector = ?',
                 (scan_id, collector.NAME))
@@ -80,7 +80,7 @@ def _persist(connection, collector, ctx, scan_id):
             written = db.insert(connection, table, rows, scan_id=scan_id)
             # Only the primary table holds published records; auxiliary tables
             # (e.g. an expanded child relation) must not inflate the count.
-            if table is collector.TABLES[0]:
+            if table.name == collector.TABLES[0].name:   # 按名字，不按对象身份
                 count = written
             if table.surrogate and table.primary_key:
                 business = table.primary_key[0]
@@ -97,8 +97,26 @@ def _persist(connection, collector, ctx, scan_id):
             collector=collector.NAME, schema_version=collector.SCHEMA_VERSION,
             status=status, scope=collector().scope(ctx),
             record_count=count)], scan_id=scan_id)
+        db.insert(connection, COLLECTOR_TABLES, _table_catalog(collector), scan_id=scan_id)
     return CollectorRun(collector.NAME, status, count, len(ctx.issues),
                         tuple(sorted(ctx.inputs)), tuple(sorted(ctx.scan_directories)))
+
+
+def _table_catalog(collector):
+    """这个采集器声明了哪些表，供只读查询层使用。
+
+    查询层（agentic/）要的只是元数据：表名白名单、以及"哪张表按部件归属"。
+    它原先靠 `framework.discover()` 拿——那会 import 全部 11 个采集器
+    （实测 72 个模块、9,751 行闭包），只为读几个类属性。
+    把元数据写进库之后，查询层对采集器的 Python 依赖降到零，
+    而且元数据与数据同快照，**结构上不可能漂**。
+    """
+    return [dict(collector=collector.NAME, table_name=table.name,
+                 is_primary=1 if index == 0 else 0,
+                 component_column=collector.COMPONENT_COLUMN if index == 0 else None,
+                 service_column=collector.SERVICE_COLUMN if index == 0 else None,
+                 schema_version=collector.SCHEMA_VERSION)
+            for index, table in enumerate(collector.TABLES)]
 
 
 def _record_failure(connection, collector, scan_id, error):
@@ -137,7 +155,9 @@ def run(database, request, *, only=None, without=(), scan_id=None, reuse_upstrea
         own_scan = scan_id is None
         if own_scan:
             with db.transaction(connection):
-                scan_id = db.begin_scan(connection, request.product, request.workspace_root)
+                scan_id = db.begin_scan(
+                    connection, request.product, request.workspace_root,
+                    zone=request.zone, cpu_arch=request.cpu_arch)
         runs = []
         for name in order:
             run = _execute_collector(

@@ -42,7 +42,7 @@ class BaseContext:
     def __init__(self, request, progress, diagnostic, cancelled):
         if not isinstance(request, self.REQUEST_TYPE):
             raise RequestError(self.REQUEST_TYPE_ERROR)
-        if not valid_product(request.product):
+        if not valid_product(request.product, getattr(request, 'zone', 'blue')):
             raise RequestError('INVALID_PRODUCT')
         if not isinstance(request.limits, self.LIMITS_TYPE) or any(
                 type(getattr(request.limits, f.name)) is not int or getattr(request.limits, f.name) <= 0

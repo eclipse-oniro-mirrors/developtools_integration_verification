@@ -65,7 +65,9 @@ class Fixture(unittest.TestCase):
         (self.package / 'system/profile').mkdir(parents=True, exist_ok=True)
         self.write(self.package / 'vendor/etc/hdfconfig/hdf_default.hcb', self.hcb())
         self.write(self.package / 'vendor/lib/libexample.so', b'\x7fELFfixture')
-        self.scan_id = run(self.database, ScanRequest(self.root, 'test')).scan_id
+        # This product-only fixture intentionally has no SDK or Node backend.
+        self.scan_id = run(self.database, ScanRequest(self.root, 'test'),
+                           without=('arkts',)).scan_id
 
     def write(self, path, obj):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,8 +101,9 @@ class SessionTest(Fixture):
         session = self.session()
         self.assertEqual(session.scan_id, self.scan_id)
         self.assertEqual(session.collectors,
-                         ('args', 'component_links', 'components', 'elf_modules', 'hdi',
-                          'install_modules', 'repos', 'sas', 'services'))
+                         ('args', 'arkts_links', 'component_links', 'components', 'elf_modules',
+                          'hdi', 'install_modules', 'ndk_headers', 'repos', 'sas',
+                          'services'))
         self.assertIn(session.status, ('complete', 'degraded'))
 
     def test_subsystem_to_component_navigation(self):
@@ -140,7 +143,7 @@ class SessionTest(Fixture):
         self.write(self.package / 'system/etc/init/host.cfg', {'services': [
             {'name': 'host', 'path': ['/bin/hdf_devhost', '-n', 'host']},
             {'name': 'sibling', 'path': ['/bin/other']}]})
-        run(self.database, ScanRequest(self.root, 'test'))
+        run(self.database, ScanRequest(self.root, 'test'), without=('arkts',))
         with ScanSession.open(self.database) as session:
             host, sibling = session.services()
             self.assertEqual((host.name, sibling.name), ('host', 'sibling'))
@@ -166,6 +169,8 @@ class SessionTest(Fixture):
         document = session.document('services')
         self.assertEqual(set(document), {'snapshot', 'services'})
         self.assertEqual(document['snapshot']['schema_version'], '4.1.0')
+        self.assertEqual(document['snapshot']['zone'], 'blue')
+        self.assertEqual(document['snapshot']['cpu_arch'], 'arm')
         # The nested component object is rebuilt by joining, not stored per record.
         self.assertEqual(document['services'][0]['component'],
                          {'name': 'driver', 'subsystem': 'hdf',
@@ -237,20 +242,25 @@ class CommandLineTest(Fixture):
         code, report = self.invoke('list')
         self.assertEqual(code, 0)
         self.assertEqual(report['order'],
-                         ['repos', 'components', 'args', 'install_modules',
-                          'component_links', 'services', 'hdi', 'sas', 'elf_modules'])
+                         ['repos', 'arkts', 'components', 'args', 'install_modules',
+                          'component_links', 'services', 'hdi', 'sas', 'elf_modules',
+                          'arkts_links', 'ndk_headers'])
         self.assertEqual(report['collectors']['hdi']['depends_on'],
                          ['services', 'components', 'install_modules'])
 
-    def test_scan_runs_every_collector_and_reports_each(self):
+    def test_scan_runs_product_collectors_without_optional_sdk_backend(self):
         target = self.root / 'fresh.db'
         code, report = self.invoke('scan', '--workspace-root', str(self.root),
-                                   '--product', 'test', '--db', str(target))
+                                   '--product', 'test', '--db', str(target), '--without', 'arkts')
         self.assertEqual(code, 0)
         self.assertEqual(sorted(report['collectors']),
-                         ['args', 'component_links', 'components', 'elf_modules', 'hdi',
-                          'install_modules', 'repos', 'sas', 'services'])
+                         ['args', 'arkts_links', 'component_links', 'components', 'elf_modules',
+                          'hdi', 'install_modules', 'ndk_headers', 'repos', 'sas',
+                          'services'])
         self.assertTrue(target.exists())
+        _, scans = self.invoke('scans', '--db', str(target))
+        self.assertEqual((scans['scans'][0]['zone'], scans['scans'][0]['cpu_arch']),
+                         ('blue', 'arm'))
 
     def test_only_pulls_dependencies_and_without_drops_them(self):
         target = self.root / 'partial.db'
@@ -279,6 +289,8 @@ class CommandLineTest(Fixture):
         self.assertEqual(report['scan_id'], self.scan_id)
         _, scans = self.invoke('scans', '--db', str(self.database.path))
         self.assertEqual(len(scans['scans']), 1)
+        self.assertEqual((scans['scans'][0]['zone'], scans['scans'][0]['cpu_arch']),
+                         ('blue', 'arm'))
 
     def test_session_reports_a_missing_store_cleanly(self):
         with self.assertRaises(QueryError):

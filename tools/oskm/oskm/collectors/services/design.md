@@ -4,7 +4,7 @@ schema 3.0.0 | 依赖：components, install_modules
 
 ## 输入与范围
 
-扫描 `out/{product}/packages/phone/*/etc/init/**/*.cfg` 中的 `services[]` 数组。每条声明提取 name、path（拆为 executable/args）、uid、gid、start-mode、ondemand 等提升字段，其余保留在 record 中。
+扫描 `{build_root}/packages/phone/*/etc/init/**/*.cfg` 中的 `services[]` 数组。每条声明提取 name、path（拆为 executable/args）、uid、gid、start-mode、ondemand 等提升字段，其余保留在 record 中。
 
 服务类型由 `path[0]` 判定：`sa_main` → `sa`，`hdf_devhost` → `hdf`，其余 → `default`。
 

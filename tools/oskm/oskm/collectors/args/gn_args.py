@@ -36,12 +36,22 @@ def find_gn(workspace):
     return path if os.path.isfile(path) else None
 
 
-def run_gn_args(gn_path, out_dir):
-    """Run gn args --list --json, return raw stdout (mixed noise + JSON)."""
+def run_gn_args(gn_path, out_dir, source_root=None):
+    """Run gn args --list --json, return raw stdout (mixed noise + JSON).
+
+    `cwd` must be the source root. gn locates it by walking up from the working
+    directory looking for `.gn`, and the OpenHarmony build files resolve paths
+    against it — run from anywhere else and gn bails out with
+    `BUILDCONFIG.gn: Not allow import other gni` after 0.3 s instead of
+    producing the 2,958 args it takes 28 s to compute. Before this, the
+    collector silently reported GN_ARGS_PARSE_FAILED whenever the CLI was
+    invoked from outside the workspace, which is the normal case.
+    """
     try:
         result = subprocess.run(
             [gn_path, 'args', str(out_dir), '--list', '--json'],
             capture_output=True, text=True, timeout=_TIMEOUT,
+            cwd=str(source_root) if source_root else None,
         )
         return result.stdout
     except (subprocess.TimeoutExpired, OSError):

@@ -170,7 +170,10 @@ class InstallModulesTest(unittest.TestCase):
         for value, expected in [('system/lib/a.so', ('system/lib/a.so', False)),
                                 ('system/app/Demo/', ('system/app/Demo', True)),
                                 ('./system//lib/a.so', ('system/lib/a.so', False)),
-                                ('/absolute', None), ('../escape', None), ('', None),
+                                # a single leading slash is tolerated (Huawei build quirk)
+                                ('/absolute', ('absolute', False)),
+                                ('/system/etc/a.cfg', ('system/etc/a.cfg', False)),
+                                ('../escape', None), ('', None),
                                 ('a\\b', None), ('a\x00b', None), (None, None), (7, None)]:
             with self.subTest(value=value):
                 self.assertEqual(normalize_dest(value), expected)
@@ -189,7 +192,7 @@ class InstallModulesTest(unittest.TestCase):
     def test_dest_expansion_directory_installs_and_unusable_paths(self):
         self.manifest([self.row(dest=['system/lib/a.so', 'vendor/lib/a.so']),
                        self.row(label='//component/h:hap', dest=['system/app/Demo/'], type='app'),
-                       self.row(label='//component/b:b', dest=['/absolute', '../escape', ''])])
+                       self.row(label='//component/b:b', dest=['a\\b', '../escape', ''])])
         self.components()
         db = str(self.root / 'k.db')
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):

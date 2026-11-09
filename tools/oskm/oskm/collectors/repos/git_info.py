@@ -62,16 +62,29 @@ def _read_head(git_dir):
     return content
 
 
-def _read_remote_url(git_dir, remote='gitcode'):
-    """Remote fetch URL from ``.git/config``."""
+def _read_remote_url(git_dir, remote=None):
+    """Remote fetch URL from ``.git/config``.
+
+    Blue-zone workspaces name the remote ``gitcode``; yellow-zone workspaces use
+    the manifest's remote name (e.g. ``OH``/``TC``/``kirin_CR``).  When `remote`
+    is given only that section is read; otherwise the first ``[remote "..."]``
+    section wins, so the caller does not need to know the remote name.
+    """
     config = git_dir / 'config'
     if not config.is_file():
         return None
     in_section = False
+    seen_remote = False
     for line in config.read_text().splitlines():
         stripped = line.strip()
         if stripped.startswith('[') and stripped.endswith(']'):
-            in_section = f'remote "{remote}"' in stripped
+            if remote is not None:
+                in_section = f'remote "{remote}"' in stripped
+            elif 'remote "' in stripped and not seen_remote:
+                seen_remote = True
+                in_section = True
+            else:
+                in_section = False
         elif in_section and 'url' in stripped and '=' in stripped:
             return stripped.split('=', 1)[1].strip()
     return None

@@ -4,7 +4,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 输入 | `out/{product}/packages/phone/*/etc/init/**/*.cfg` |
+| 输入 | `{build_root}/packages/phone/*/etc/init/**/*.cfg` |
 | 依赖 | components, install_modules |
 | 查询 | 按 cfg/name/type/partition/component 过滤与聚合 |
 | 设计 | [services-scanner-design.md](services-scanner-design.md) |

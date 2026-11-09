@@ -76,9 +76,11 @@ def scan(collector, request, *, without=(), on_progress=None, on_diagnostic=None
     try:
         unified = ScanRequest(
             workspace_root=request.workspace_root, product=request.product,
+            zone=getattr(request, 'zone', 'blue'),
             package_root=getattr(request, 'package_root', None),
             limits=getattr(request, 'limits', None) or ScanLimits(),
-            options=getattr(request, 'options', None) or {})
+            options=getattr(request, 'options', None) or {},
+            cpu_arch=getattr(request, 'cpu_arch', None))
         result = runner.run(store, unified, only=[collector.NAME], without=without,
                             on_progress=on_progress, on_diagnostic=on_diagnostic,
                             cancelled=cancelled)

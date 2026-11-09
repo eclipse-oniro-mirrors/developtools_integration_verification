@@ -60,7 +60,16 @@ def parser():
     scan = sub.add_parser('scan', allow_abbrev=False,
                           help='scan the source tree into the store (all collectors by default)')
     scan.add_argument('--workspace-root', type=Path, required=True)
-    scan.add_argument('--product', required=True)
+    scan.add_argument('--product', required=True,
+                      help="product name; yellow zone: '{abi}/{device}' e.g. "
+                           'generic_generic_arm_64only/general_all_phone_standard')
+    scan.add_argument('--zone', choices=('blue', 'yellow'), default='blue',
+                      help="build layout: 'blue' (default, OpenHarmony out/{product}/) "
+                           "or 'yellow' (HarmonyOS out/{abi}/{device}/)")
+    scan.add_argument('--cpu-arch',
+                      help='target CPU architecture, e.g. arm (32-bit) or arm64; '
+                           'stored in scans.cpu_arch; defaults by zone: blue=arm, '
+                           'yellow=arm64')
     scan.add_argument('--db', type=Path, default=Path(DEFAULT_DB))
     scan.add_argument('--only', type=_collector_list,
                       help='comma-separated collectors; dependencies are added automatically')
@@ -112,7 +121,8 @@ def _gate(database, scan_id, collectors, level):
 
 
 def _scan(args):
-    request = ScanRequest(args.workspace_root, args.product, limits=ScanLimits())
+    request = ScanRequest(args.workspace_root, args.product, zone=args.zone,
+                          limits=ScanLimits(), cpu_arch=args.cpu_arch)
     result = run(Database(args.db), request, only=args.only, without=args.without,
                  scan_id=args.scan_id, reuse_upstream=args.reuse_upstream,
                  on_diagnostic=lambda issue: print(json.dumps(thaw(issue), ensure_ascii=False),
@@ -150,7 +160,8 @@ def main(argv=None):
         elif args.command == 'scans':
             with Database(args.db).connect() as connection:
                 rows = connection.execute(
-                    'SELECT id, product, started_at, finished_at FROM scans ORDER BY id').fetchall()
+                    'SELECT id, product, zone, cpu_arch, started_at, finished_at '
+                    'FROM scans ORDER BY id').fetchall()
             response = dict(scans=[dict(r) for r in rows], exit_code=0)
         else:
             with Database(args.db).connect() as connection:

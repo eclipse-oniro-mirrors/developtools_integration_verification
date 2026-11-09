@@ -28,7 +28,7 @@ from . import quality
 from .models import SAScanRequest, SAResult
 from ...core.framework import ElementCollector, ScanContext, register
 from ...core.models import RequestError
-from ...core.schema import Column, Index, Table
+from oskm_schema.sas import SAS
 
 # column, declared key, how the column holds it. Keys resolve against the
 # record first and its config bucket second, so one table covers both levels.
@@ -37,38 +37,6 @@ FIELDS = (('profile', 'profile', 'text'), ('sa_id', 'name', 'int'),
           ('run_on_create', 'run-on-create', 'bool'),
           ('distributed', 'distributed', 'bool'),
           ('dump_level', 'dump_level', 'int'), ('auto_restart', 'auto-restart', 'bool'))
-
-SAS = Table(
-    'sas',
-    columns=(
-        Column('position', 'INTEGER', nullable=False),
-        # Projections of the verbatim record: they make filtering and joining
-        # cheap, but `record` stays authoritative (see core.framework.projection).
-        Column('profile', nullable=False),
-        Column('sa_id', 'INTEGER'),
-        Column('libpath'),
-        Column('run_on_create', 'INTEGER'),
-        Column('distributed', 'INTEGER'),
-        Column('dump_level', 'INTEGER'),
-        Column('auto_restart', 'INTEGER'),
-        Column('service_id', 'INTEGER', references='services(id)'),
-        Column('component_id', 'INTEGER', references='components(id)'),
-        # Which build target installed `libpath`, the SA's implementation
-        # library. Not the profile's installer: that is a label-less sa_info
-        # aggregate, so it could never be reached by label (see ownership.py).
-        Column('install_module_id', 'INTEGER', references='install_modules(id)'),
-        # The systemability element's own fields, exactly as declared. The
-        # columns above only project it; the profile's file-level process
-        # is resolved from the linked service via service_id.
-        Column('record', 'JSON', nullable=False),
-    ),
-    primary_key=('position',),
-    surrogate=True,
-    indexes=(Index('idx_sas_component', ('scan_id', 'component_id')),
-             Index('idx_sas_install', ('scan_id', 'install_module_id')),
-             Index('idx_sas_host', ('scan_id', 'service_id')),
-             Index('idx_sas_identity', ('scan_id', 'sa_id'))),
-)
 
 
 class SAContext(ScanContext):

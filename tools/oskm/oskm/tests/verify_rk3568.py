@@ -35,6 +35,12 @@ promises:
 Usage:
     python tests/verify_rk3568.py --workspace-root /path/to/code
 """
+import sys
+from pathlib import Path
+
+PACKAGE = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PACKAGE))
+
 from oskm.core.session import ScanSession
 from oskm.core.provenance import strip_label
 from oskm.core.models import ScanRequest
@@ -48,14 +54,9 @@ import argparse
 import json
 import re
 import subprocess
-import sys
 import tempfile
 from collections import Counter
 from decimal import Decimal
-from pathlib import Path
-
-PACKAGE = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PACKAGE))
 
 
 class Pairs(list):
@@ -752,7 +753,7 @@ def verify_navigation(session):
     assert set(session.collectors) == {'components', 'install_modules',
                                        'elf_modules', 'services',
                                        'hdi', 'sas', 'repos', 'args',
-                                       'component_links'}
+                                       'component_links', 'arkts'}
     assert session.status == 'degraded'
     graphic = session.component('graphic_2d')
     assert graphic is not None
@@ -807,11 +808,13 @@ def main():
         result = runner.run(database, request)
         assert result.status == 'degraded'
         assert {r.collector for r in result.runs} == {
-            'repos', 'components', 'args', 'install_modules',
-            'component_links', 'elf_modules', 'services', 'hdi', 'sas'}
+            'repos', 'components', 'args', 'install_modules', 'component_links',
+            'elf_modules', 'services', 'hdi', 'sas', 'arkts', 'arkts_links'}
 
         with ScanSession.open(database, scan_id=result.scan_id) as session:
+            from verify_arkts import verify_domain
             report = dict(
+                arkts=verify_domain(session, workspace),
                 components=verify_components(session, workspace, index_path),
                 install_modules=verify_install_modules(session, workspace, package),
                 elf_modules=verify_elf_modules(session, package),

@@ -4,14 +4,14 @@ schema 1.0.0 | 依赖：无
 
 ## 输入
 
-`.repo/manifests/default.xml` 通过 `<include>` 递归组合子清单。每个 `<project>` 声明一个仓：
+`.repo/manifests/default.xml` 通过 `<include>` 递归组合子清单；黄区工作空间可能没有该文件，此时若 `.repo/manifest.xml` symlink 指向 `.repo/manifests/` 内的清单，则从该目标清单开始解析。每个 `<project>` 声明一个仓：
 
 ```xml
 <project groups="default,ohos:standard" name="ability_ability_base"
          path="foundation/ability/ability_base" remote="gitcode" revision="master"/>
 ```
 
-`<default>` 的 `remote`/`revision` 跨 include 继承。每仓的 HEAD commit 和 remote URL 通过直接读 `.git/HEAD` 和 `.git/config` 文件获取（跟随 gitdir 指针到 `.repo/projects/`），无子进程。
+`<default>` 的 `remote`/`revision` 跨 include 继承。每仓的 HEAD commit 通过直接读 `.git/HEAD` 获取（跟随 gitdir 指针到 `.repo/projects/`），无子进程。remote URL 读取 `.git/config` 的第一个 `[remote "..."]` 段，因此蓝区的 `gitcode` 与黄区的 `OH`、`TC`、`kirin_CR` 等命名都可采集。
 
 无 `.repo/` 目录时静默产出零行，不降级。
 

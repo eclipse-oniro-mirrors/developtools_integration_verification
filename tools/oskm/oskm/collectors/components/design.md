@@ -4,7 +4,7 @@ schema 2.1.0 | 依赖：repos
 
 ## 输入与范围
 
-读取 `out/{product}/build_configs/parts_info/components.json`（构建系统生成的部件索引），按每个索引条目的 `path` 定位源码 `bundle.json` 或 `ohos.build`，提取 subsystem、deps、build（含 inner_kits/conditions）、features、syscap 等声明。
+读取 `{build_root}/build_configs/parts_info/components.json`（构建系统生成的部件索引），按每个索引条目的 `path` 定位源码 `bundle.json` 或 `ohos.build`，提取 subsystem、deps、build（含 inner_kits/conditions）、features、syscap 等声明。
 
 ## 表结构
 

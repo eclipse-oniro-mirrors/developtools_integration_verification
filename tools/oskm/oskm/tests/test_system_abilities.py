@@ -472,7 +472,8 @@ class SATest(unittest.TestCase):
         self.assertEqual(run(['--fail-on', 'error'])[0], 4)
         scan_parser = parser()._subparsers._group_actions[0].choices['scan']
         self.assertEqual({a.dest for a in scan_parser._actions} - {'help'}, {'workspace_root',
-                         'product', 'db', 'only', 'without', 'scan_id', 'reuse_upstream', 'fail_on'})
+                         'product', 'zone', 'cpu_arch', 'db', 'only', 'without', 'scan_id',
+                         'reuse_upstream', 'fail_on'})
 
     def test_install_link_is_the_library_not_the_profile(self):
         # An SA has two installed artifacts. The profile is installed by a

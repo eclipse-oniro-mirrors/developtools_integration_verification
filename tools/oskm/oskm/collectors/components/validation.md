@@ -41,7 +41,7 @@ python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PW
 
 ## 4. 唯一降级原因：重复的 features 字段
 
-部件 `drivers_interface_display` 的 [bundle.json](../../../../../../drivers/interface/display/bundle.json) 在 component 内两次声明 features：第一处为空数组，第二处为非空特性列表。普通 JSON 解码通常保留后值；扫描器按详细设计拒绝静默覆盖，无法唯一解释该清单详情。
+部件 `drivers_interface_display` 的 [bundle.json](../../../../../../../drivers/interface/display/bundle.json) 在 component 内两次声明 features：第一处为空数组，第二处为非空特性列表。普通 JSON 解码通常保留后值；扫描器按详细设计拒绝静默覆盖，无法唯一解释该清单详情。
 
 诊断为：
 

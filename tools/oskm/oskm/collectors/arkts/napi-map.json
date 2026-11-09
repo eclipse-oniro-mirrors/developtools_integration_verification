@@ -1,0 +1,3876 @@
+{
+  "module_to_so": {
+    "ability.errorCode": "system/lib64/module/ability/liberrorcode_napi.z.so",
+    "ability.featureAbility": "system/lib64/module/ability/libfeatureability.z.so",
+    "ability.particleAbility": "system/lib64/module/ability/libparticleability.z.so",
+    "ability.screenLockFileManager": "system/lib64/module/ability/libscreenlockfilemanager.z.so",
+    "ability.wantConstant": "system/lib64/module/ability/libwantconstant.z.so",
+    "accessibility.config": "system/lib64/module/accessibility/libconfig_napi.z.so",
+    "accessibility.GesturePath": "system/lib64/module/accessibility/libgesturepath_napi.z.so",
+    "accessibility.GesturePoint": "system/lib64/module/accessibility/libgesturepoint_napi.z.so",
+    "account.appAccount": "system/lib64/module/account/libappaccount.z.so",
+    "account.distributedAccount": "system/lib64/module/account/libdistributedaccount.z.so",
+    "account.osAccount": "system/lib64/module/account/libosaccount.z.so",
+    "account.osAccount.authorization": "system/lib64/module/account/osaccount/libauthorization.z.so",
+    "advertising.AdComponent": "system/lib64/module/advertising/libadcomponent.z.so",
+    "advertising.AdsServiceExtensionAbility": "system/lib64/module/advertising/libadsserviceextensionability_napi.z.so",
+    "advertising.AdsServiceExtensionContext": "system/lib64/module/advertising/libadsserviceextensioncontext_napi.z.so",
+    "advertising.AutoAdComponent": "system/lib64/module/advertising/libautoadcomponent.z.so",
+    "ai.intelligentVoice": "system/lib64/module/ai/libintelligentvoice.z.so",
+    "ai.mindSporeLite": "system/lib64/module/ai/libmindsporelite_napi.z.so",
+    "animation.windowAnimationManager": "system/lib64/module/animation/libwindowanimationmanager_napi.z.so",
+    "app.ability.AbilityConstant": "system/lib64/module/app/ability/libabilityconstant.z.so",
+    "app.ability.abilityDelegatorRegistry": "system/lib64/module/app/ability/libabilitydelegatorregistry.z.so",
+    "app.ability.AbilityLifecycleCallback": "system/lib64/module/app/ability/libabilitylifecyclecallback.z.so",
+    "app.ability.abilityManager": "system/lib64/module/app/ability/libabilitymanager.z.so",
+    "app.ability.AbilityStage": "system/lib64/module/app/ability/libabilitystage.z.so",
+    "app.ability.ActionExtensionAbility": "system/lib64/module/app/ability/libactionextensionability_napi.z.so",
+    "app.ability.application": "system/lib64/module/app/ability/libapplication_napi.z.so",
+    "app.ability.ApplicationStateChangeCallback": "system/lib64/module/app/ability/libapplicationstatechangecallback.z.so",
+    "app.ability.appManager": "system/lib64/module/app/ability/libappmanager.z.so",
+    "app.ability.appMemoryOptimizer": "system/lib64/module/app/ability/libappmemoryoptimizer_napi.z.so",
+    "app.ability.appRecovery": "system/lib64/module/app/ability/libapprecovery_napi.z.so",
+    "app.ability.AppServiceExtensionAbility": "system/lib64/module/app/ability/libappserviceextensionability.z.so",
+    "app.ability.AutoFillExtensionAbility": "system/lib64/module/app/ability/libautofillextensionability_napi.z.so",
+    "app.ability.autoFillManager": "system/lib64/module/app/ability/libautofillmanager_napi.z.so",
+    "app.ability.autoStartupManager": "system/lib64/module/app/ability/libautostartupmanager.z.so",
+    "app.ability.childProcessManager": "system/lib64/module/app/ability/libchildprocessmanager_napi.z.so",
+    "app.ability.CompletionHandlerForAbilityStartCallback": "system/lib64/module/app/ability/libcompletionhandlerforabilitystartcallback.z.so",
+    "app.ability.CompletionHandlerForAtomicService": "system/lib64/module/app/ability/libcompletionhandlerforatomicservice.z.so",
+    "app.ability.ConfigurationConstant": "system/lib64/module/app/ability/libconfigurationconstant.z.so",
+    "app.ability.contextConstant": "system/lib64/module/app/ability/libcontextconstant_napi.z.so",
+    "app.ability.continueManager": "system/lib64/module/app/ability/libcontinuemanager_napi.z.so",
+    "app.ability.dataUriUtils": "system/lib64/module/app/ability/libdatauriutils.z.so",
+    "app.ability.dialogRequest": "system/lib64/module/app/ability/libdialogrequest_napi.z.so",
+    "app.ability.dialogSession": "system/lib64/module/app/ability/libdialogsession_napi.z.so",
+    "app.ability.EmbeddableUIAbility": "system/lib64/module/app/ability/libembeddableuiability_napi.z.so",
+    "app.ability.EmbeddedUIExtensionAbility": "system/lib64/module/app/ability/libembeddeduiextensionability_napi.z.so",
+    "app.ability.EnvironmentCallback": "system/lib64/module/app/ability/libenvironmentcallback.z.so",
+    "app.ability.errorManager": "system/lib64/module/app/ability/liberrormanager.z.so",
+    "app.ability.ExtensionAbility": "system/lib64/module/app/ability/libextensionability_napi.z.so",
+    "app.ability.FenceExtensionAbility": "system/lib64/module/app/ability/libfenceextensionability_napi.z.so",
+    "app.ability.FenceExtensionContext": "system/lib64/module/app/ability/libfenceextensioncontext_napi.z.so",
+    "app.ability.hyperSnapManager": "system/lib64/module/app/ability/libhypersnapmanager_napi.z.so",
+    "app.ability.insightIntent": "system/lib64/module/app/ability/libinsightintent_napi.z.so",
+    "app.ability.InsightIntentContext": "system/lib64/module/app/ability/libinsightintentcontext_napi.z.so",
+    "app.ability.insightIntentDecorator": "system/lib64/module/app/ability/libinsightintentdecorator_napi.z.so",
+    "app.ability.insightIntentDriver": "system/lib64/module/app/ability/libinsightintentdriver_napi.z.so",
+    "app.ability.InsightIntentEntryExecutor": "system/lib64/module/app/ability/libinsightintententryexecutor_napi.z.so",
+    "app.ability.InsightIntentExecutor": "system/lib64/module/app/ability/libinsightintentexecutor_napi.z.so",
+    "app.ability.insightIntentProvider": "system/lib64/module/app/ability/libinsightintentprovider_napi.z.so",
+    "app.ability.kioskManager": "system/lib64/module/application/libkioskmanager_napi.z.so",
+    "app.ability.missionManager": "system/lib64/module/app/ability/libmissionmanager.z.so",
+    "app.ability.PhotoEditorExtensionAbility": "system/lib64/module/app/ability/libphotoeditorextensionability_napi.z.so",
+    "app.ability.quickFixManager": "system/lib64/module/app/ability/libquickfixmanager_napi.z.so",
+    "app.ability.scriptManager": "system/lib64/module/app/ability/libscriptmanager_napi.z.so",
+    "app.ability.sendableContextManager": "system/lib64/module/app/ability/libsendablecontextmanager_napi.z.so",
+    "app.ability.ServiceExtensionAbility": "system/lib64/module/app/ability/libserviceextensionability.z.so",
+    "app.ability.ShareExtensionAbility": "system/lib64/module/app/ability/libshareextensionability_napi.z.so",
+    "app.ability.UIAbility": "system/lib64/module/app/ability/libuiability.z.so",
+    "app.ability.UIExtensionAbility": "system/lib64/module/app/ability/libuiextensionability_napi.z.so",
+    "app.ability.UIServiceExtensionAbility": "system/lib64/module/application/libuiserviceextensionability_napi.z.so",
+    "app.ability.UserAuthExtensionAbility": "system/lib64/module/app/ability/libuserauthextensionability_napi.z.so",
+    "app.ability.VerticalPanelManager": "system/lib64/module/app/ability/libverticalpanelmanager_napi.z.so",
+    "app.ability.VpnExtensionAbility": "system/lib64/module/app/ability/libvpnextensionability.z.so",
+    "app.ability.wantAgent": "system/lib64/module/app/ability/libwantagent_napi.z.so",
+    "app.ability.wantConstant": "system/lib64/module/app/ability/libwantconstant_napi.z.so",
+    "app.agent.agentConstant": "system/lib64/module/app/agent/libagentconstant_napi.z.so",
+    "app.agent.AgentExtensionAbility": "system/lib64/module/app/agent/libagentextensionability.z.so",
+    "app.agent.agentManager": "system/lib64/module/app/agent/libagentmanager_napi.z.so",
+    "app.agent.AgentUIExtensionAbility": "system/lib64/module/app/agent/libagentuiextensionability_napi.z.so",
+    "app.appstartup.AsyncTaskCallback": "system/lib64/module/app/appstartup/libasynctaskcallback_napi.z.so",
+    "app.appstartup.AsyncTaskExcutor": "system/lib64/module/app/appstartup/libasynctaskexcutor_napi.z.so",
+    "app.appstartup.StartupConfigEntry": "system/lib64/module/app/appstartup/libstartupconfigentry_napi.z.so",
+    "app.appstartup.StartupListener": "system/lib64/module/app/appstartup/libstartuplistener_napi.z.so",
+    "app.appstartup.startupManager": "system/lib64/module/app/appstartup/libstartupmanager_napi.z.so",
+    "app.appstartup.StartupTask": "system/lib64/module/app/appstartup/libstartuptask_napi.z.so",
+    "app.cli.cliManager": "system/lib64/module/app/cli/libclimanager_napi.z.so",
+    "app.form.formAgent": "system/lib64/module/app/form/libformagent.z.so",
+    "app.form.formBindingData": "system/lib64/module/app/form/libformbindingdata.z.so",
+    "app.form.FormEditExtensionAbility": "system/lib64/module/app/form/libformeditextensionability_napi.z.so",
+    "app.form.FormExtensionAbility": "system/lib64/module/app/form/libformextensionability.z.so",
+    "app.form.formHost": "system/lib64/module/app/form/libformhost.z.so",
+    "app.form.formInfo": "system/lib64/module/app/form/libforminfo.z.so",
+    "app.form.formObserver": "system/lib64/module/app/form/libformobserver.z.so",
+    "app.form.formProvider": "system/lib64/module/app/form/libformprovider.z.so",
+    "app.form.LiveFormExtensionAbility": "system/lib64/module/app/form/libliveformextensionability_napi.z.so",
+    "app.function.functionManager": "system/lib64/module/app/function/libfunctionmanager_napi.z.so",
+    "businessAbilityRouter": "system/lib64/module/app/libbusinessabilityrouter.z.so",
+    "application.Ability": "system/lib64/module/application/libability_napi.z.so",
+    "application.AbilityConstant": "system/lib64/module/application/libabilityconstant_napi.z.so",
+    "application.AbilityContext": "system/lib64/module/application/libabilitycontext_napi.z.so",
+    "application.abilityDelegatorRegistry": "system/lib64/module/application/libabilitydelegatorregistry_napi.z.so",
+    "application.abilityManager": "system/lib64/module/application/libabilitymanager_napi.z.so",
+    "application.AbilityStage": "system/lib64/module/application/libabilitystage_napi.z.so",
+    "application.AbilityStageContext": "system/lib64/module/application/libabilitystagecontext_napi.z.so",
+    "application.AgentExtensionContext": "system/lib64/module/application/libagentextensioncontext_napi.z.so",
+    "application.ApplicationContext": "system/lib64/module/application/libapplicationcontext_napi.z.so",
+    "application.appManager": "system/lib64/module/application/libappmanager_napi.z.so",
+    "application.AppServiceExtensionContext": "system/lib64/module/application/libappserviceextensioncontext_napi.z.so",
+    "application.AutoFillExtensionContext": "system/lib64/module/application/libautofillextensioncontext_napi.z.so",
+    "application.BackupExtensionAbility": "system/lib64/module/application/libbackupextensionability_napi.z.so",
+    "application.BackupExtensionContext": "system/lib64/module/application/libbackupextensioncontext_napi.z.so",
+    "application.Callee": "system/lib64/module/application/libcallee_napi.z.so",
+    "application.Caller": "system/lib64/module/application/libcaller_napi.z.so",
+    "application.ConfigurationConstant": "system/lib64/module/application/libconfigurationconstant_napi.z.so",
+    "application.Context": "system/lib64/module/application/libcontext_napi.z.so",
+    "application.DataShareExtensionAbility": "system/lib64/module/application/libdatashareextensionability_napi.z.so",
+    "application.DataShareExtensionAbilityContext": "system/lib64/module/application/libdatashareextensionabilitycontext_napi.z.so",
+    "application.DistributedExtensionAbility": "system/lib64/module/application/libdistributedextensionability.z.so",
+    "application.DistributedExtensionContext": "system/lib64/module/application/libdistributedextensioncontext.z.so",
+    "application.EmbeddableUIAbilityContext": "system/lib64/module/application/libembeddableuiabilitycontext_napi.z.so",
+    "application.embeddablewindowstage": "system/lib64/module/application/libembeddablewindowstage.z.so",
+    "application.errorManager": "system/lib64/module/application/liberrormanager_napi.z.so",
+    "application.ExtensionContext": "system/lib64/module/application/libextensioncontext_napi.z.so",
+    "application.extensionwindow": "system/lib64/module/application/libextensionwindow.z.so",
+    "application.formBindingData": "system/lib64/module/application/libformbindingdata_napi.z.so",
+    "application.FormEditExtensionContext": "system/lib64/module/application/libformeditextensioncontext_napi.z.so",
+    "application.formError": "system/lib64/module/application/libformerror_napi.z.so",
+    "application.FormExtension": "system/lib64/module/application/libformextension_napi.z.so",
+    "application.FormExtensionContext": "system/lib64/module/application/libformextensioncontext_napi.z.so",
+    "application.formHost": "system/lib64/module/application/libformhost_napi.z.so",
+    "application.formInfo": "system/lib64/module/application/libforminfo_napi.z.so",
+    "application.formProvider": "system/lib64/module/application/libformprovider_napi.z.so",
+    "application.LiveFormExtensionContext": "system/lib64/module/application/libliveformextensioncontext_napi.z.so",
+    "application.missionManager": "system/lib64/module/application/libmissionmanager_napi.z.so",
+    "application.PhotoEditorExtensionContext": "system/lib64/module/application/libphotoeditorextensioncontext_napi.z.so",
+    "application.ServiceExtensionAbility": "system/lib64/module/application/libserviceextensionability_napi.z.so",
+    "application.ServiceExtensionContext": "system/lib64/module/application/libserviceextensioncontext_napi.z.so",
+    "application.testRunner": "system/lib64/module/application/libtestrunner_napi.z.so",
+    "application.UIExtensionContext": "system/lib64/module/application/libuiextensioncontext_napi.z.so",
+    "application.UIServiceExtensionContext": "system/lib64/module/application/libuiserviceextensioncontext_napi.z.so",
+    "application.uriPermissionManager": "system/lib64/module/application/liburipermissionmanager_napi.z.so",
+    "application.VpnExtensionAbility": "system/lib64/module/application/libvpnextensionability_napi.z.so",
+    "application.VpnExtensionContext": "system/lib64/module/application/libvpnextensioncontext_napi.z.so",
+    "application.WindowExtensionAbility": "system/lib64/module/application/libwindowextensionability_napi.z.so",
+    "application.WindowExtensionContext": "system/lib64/module/application/libwindowextensioncontext_napi.z.so",
+    "application.WindowStage": "system/lib64/module/application/libwindowstage.z.so",
+    "arkts.collections": "system/lib64/module/arkts/libcollections.z.so",
+    "arkts.utils": "system/lib64/module/arkts/libutils.z.so",
+    "arkts.math.Decimal": "system/lib64/module/arkts/math/libdecimal.z.so",
+    "arkui.advanced.ArcButton": "system/lib64/module/arkui/advanced/libarcbutton.z.so",
+    "arkui.advanced.ArcSlider": "system/lib64/module/arkui/advanced/libarcslider.z.so",
+    "arkui.advanced.Chip": "system/lib64/module/arkui/advanced/libchip.z.so",
+    "arkui.advanced.ChipGroup": "system/lib64/module/arkui/advanced/libchipgroup.z.so",
+    "arkui.advanced.ComposeListItem": "system/lib64/module/arkui/advanced/libcomposelistitem.z.so",
+    "arkui.advanced.ComposeListItemV2": "system/lib64/module/arkui/advanced/libcomposelistitemv2.z.so",
+    "arkui.advanced.ComposeTitleBar": "system/lib64/module/arkui/advanced/libcomposetitlebar.z.so",
+    "arkui.advanced.ComposeTitleBarV2": "system/lib64/module/arkui/advanced/libcomposetitlebarv2.z.so",
+    "arkui.advanced.Counter": "system/lib64/module/arkui/advanced/libcounter.z.so",
+    "arkui.advanced.DatePickerComponent": "system/lib64/module/arkui/advanced/libdatepickercomponent.z.so",
+    "arkui.advanced.Dialog": "system/lib64/module/arkui/advanced/libdialog.z.so",
+    "arkui.advanced.DialogV2": "system/lib64/module/arkui/advanced/libdialogv2.z.so",
+    "arkui.advanced.DownloadFileButton": "system/lib64/module/arkui/advanced/libdownloadfilebutton.z.so",
+    "arkui.advanced.EditableTitleBar": "system/lib64/module/arkui/advanced/libeditabletitlebar.z.so",
+    "arkui.advanced.EditableTitleBarV2": "system/lib64/module/arkui/advanced/libeditabletitlebarv2.z.so",
+    "arkui.advanced.ExceptionPrompt": "system/lib64/module/arkui/advanced/libexceptionprompt.z.so",
+    "arkui.advanced.ExceptionPromptV2": "system/lib64/module/arkui/advanced/libexceptionpromptv2.z.so",
+    "arkui.advanced.Filter": "system/lib64/module/arkui/advanced/libfilter.z.so",
+    "arkui.advanced.FoldSplitContainer": "system/lib64/module/arkui/advanced/libfoldsplitcontainer.z.so",
+    "arkui.advanced.FormMenu": "system/lib64/module/arkui/advanced/libformmenu.z.so",
+    "arkui.advanced.FullScreenLaunchComponent": "system/lib64/module/arkui/advanced/libfullscreenlaunchcomponent.z.so",
+    "arkui.advanced.gridobjectsortcomponent": "system/lib64/module/arkui/advanced/libgridobjectsortcomponent.z.so",
+    "arkui.advanced.InnerFullScreenLaunchComponent": "system/lib64/module/arkui/advanced/libinnerfullscreenlaunchcomponent.z.so",
+    "arkui.advanced.MultiNavigation": "system/lib64/module/arkui/advanced/libmultinavigation.z.so",
+    "arkui.advanced.Popup": "system/lib64/module/arkui/advanced/libpopup.z.so",
+    "arkui.advanced.PopupV2": "system/lib64/module/arkui/advanced/libpopupv2.z.so",
+    "arkui.advanced.ProgressButton": "system/lib64/module/arkui/advanced/libprogressbutton.z.so",
+    "arkui.advanced.ProgressButtonV2": "system/lib64/module/arkui/advanced/libprogressbuttonv2.z.so",
+    "arkui.advanced.SegmentButton": "system/lib64/module/arkui/advanced/libsegmentbutton.z.so",
+    "arkui.advanced.SegmentButtonV2": "system/lib64/module/arkui/advanced/libsegmentbuttonv2.z.so",
+    "arkui.advanced.SelectionMenu": "system/lib64/module/arkui/advanced/libselectionmenu.z.so",
+    "arkui.advanced.SelectTitleBar": "system/lib64/module/arkui/advanced/libselecttitlebar.z.so",
+    "arkui.advanced.SplitLayout": "system/lib64/module/arkui/advanced/libsplitlayout.z.so",
+    "arkui.advanced.SubHeader": "system/lib64/module/arkui/advanced/libsubheader.z.so",
+    "arkui.advanced.SubHeaderV2": "system/lib64/module/arkui/advanced/libsubheaderv2.z.so",
+    "arkui.advanced.SwipeRefresher": "system/lib64/module/arkui/advanced/libswiperefresher.z.so",
+    "arkui.advanced.SwipeRefresherV2": "system/lib64/module/arkui/advanced/libswiperefresherv2.z.so",
+    "arkui.advanced.TabTitleBar": "system/lib64/module/arkui/advanced/libtabtitlebar.z.so",
+    "arkui.advanced.ToolBar": "system/lib64/module/arkui/advanced/libtoolbar.z.so",
+    "arkui.advanced.ToolBarV2": "system/lib64/module/arkui/advanced/libtoolbarv2.z.so",
+    "arkui.advanced.TreeView": "system/lib64/module/arkui/advanced/libtreeview.z.so",
+    "arkui.advanced.TreeViewV2": "system/lib64/module/arkui/advanced/libtreeviewv2.z.so",
+    "arkui.intelligence.imageGeneration": "system/lib64/module/arkui/intelligence/libimagegeneration.z.so",
+    "arkui.ArcAlphabetIndexer": "system/lib64/module/arkui/libarcalphabetindexer.z.so",
+    "arkui.ArcList": "system/lib64/module/arkui/libarclist.z.so",
+    "arkui.ArcScrollBar": "system/lib64/module/arkui/libarcscrollbar.z.so",
+    "arkui.ArcSwiper": "system/lib64/module/arkui/libarcswiper.z.so",
+    "arkui.colorSampler": "system/lib64/module/arkui/libcolorsampler.z.so",
+    "arkui.componentSnapshot": "system/lib64/module/arkui/libcomponentsnapshot.z.so",
+    "arkui.componentUtils": "system/lib64/module/arkui/libcomponentutils.z.so",
+    "arkui.containerUtils": "system/lib64/module/arkui/libcontainerutils.z.so",
+    "arkui.dialog": "system/lib64/module/arkui/libdialog_napi.z.so",
+    "arkui.dragController": "system/lib64/module/arkui/libdragcontroller.z.so",
+    "arkui.drawableDescriptor": "system/lib64/module/arkui/libdrawabledescriptor.z.so",
+    "arkui.focusController": "system/lib64/module/arkui/libfocuscontroller.z.so",
+    "arkui.inspector": "system/lib64/module/arkui/libinspector.z.so",
+    "telephony.observer": "system/lib64/module/telephony/libobserver.z.so",
+    "arkui.performanceMonitor": "system/lib64/module/arkui/libperformancemonitor.z.so",
+    "arkui.smartGestureController": "system/lib64/module/arkui/libsmartgesturecontroller.z.so",
+    "arkui.textMenuController": "system/lib64/module/arkui/libtextmenucontroller.z.so",
+    "uiExtension": "system/lib64/module/arkui/libuiextension_napi.z.so",
+    "arkui.uiMaterial": "system/lib64/module/arkui/libuimaterial.z.so",
+    "atomicservice.AtomicServiceMenuBar": "system/lib64/module/atomicservice/libatomicservicemenubar.z.so",
+    "atomicservice.AtomicServiceNavigation": "system/lib64/module/atomicservice/libatomicservicenavigation.z.so",
+    "atomicservice.AtomicServiceSearch": "system/lib64/module/atomicservice/libatomicservicesearch.z.so",
+    "atomicservice.AtomicServiceTabs": "system/lib64/module/atomicservice/libatomicservicetabs.z.so",
+    "atomicservice.AtomicServiceWeb": "system/lib64/module/atomicservice/libatomicserviceweb.z.so",
+    "atomicservice.HalfScreenLaunchComponent": "system/lib64/module/atomicservice/libhalfscreenlaunchcomponent.z.so",
+    "atomicservice.InterstitialDialogAction": "system/lib64/module/atomicservice/libinterstitialdialogaction.z.so",
+    "atomicservice.NavPushPathHelper": "system/lib64/module/atomicservice/libnavpushpathhelper.z.so",
+    "bluetooth.a2dp": "system/lib64/module/bluetooth/liba2dp.z.so",
+    "bluetooth.access": "system/lib64/module/bluetooth/libaccess.z.so",
+    "bluetooth.bas": "system/lib64/module/bluetooth/libbas.z.so",
+    "bluetooth.baseProfile": "system/lib64/module/bluetooth/libbaseprofile.z.so",
+    "bluetooth.ble": "system/lib64/module/bluetooth/libble.z.so",
+    "enterprise.common": "system/lib64/module/enterprise/libcommon.z.so",
+    "net.connection": "system/lib64/module/net/libconnection.z.so",
+    "bluetooth.constant": "system/lib64/module/bluetooth/libconstant.z.so",
+    "bluetooth.hfp": "system/lib64/module/bluetooth/libhfp.z.so",
+    "bluetooth.hid": "system/lib64/module/bluetooth/libhid.z.so",
+    "bluetooth.map": "system/lib64/module/bluetooth/libmap.z.so",
+    "bluetooth.opp": "system/lib64/module/bluetooth/libopp.z.so",
+    "bluetooth.pan": "system/lib64/module/bluetooth/libpan.z.so",
+    "bluetooth.pbap": "system/lib64/module/bluetooth/libpbap.z.so",
+    "net.socket": "system/lib64/module/net/libsocket.z.so",
+    "bluetooth.wearDetection": "system/lib64/module/bluetooth/libweardetection.z.so",
+    "bundle.appControl": "system/lib64/module/bundle/libappcontrol.z.so",
+    "bundle.appDomainVerify": "system/lib64/module/bundle/libappdomainverify_napi.z.so",
+    "enterprise.bundleManager": "system/lib64/module/enterprise/libbundlemanager.z.so",
+    "bundle.bundleMonitor": "system/lib64/module/bundle/libbundlemonitor.z.so",
+    "bundle.bundleResourceManager": "system/lib64/module/bundle/libbundleresourcemanager.z.so",
+    "bundle.defaultAppManager": "system/lib64/module/bundle/libdefaultappmanager.z.so",
+    "bundle.distributedBundleManager": "system/lib64/module/bundle/libdistributedbundlemanager.z.so",
+    "bundle.freeInstall": "system/lib64/module/bundle/libfreeinstall.z.so",
+    "bundle.innerBundleManager": "system/lib64/module/bundle/libinnerbundlemanager.z.so",
+    "bundle.installer": "system/lib64/module/bundle/libinstaller.z.so",
+    "bundle.launcherBundleManager": "system/lib64/module/bundle/liblauncherbundlemanager.z.so",
+    "overlay": "system/lib64/module/liboverlay.z.so",
+    "bundle.pluginBundleManager": "system/lib64/module/bundle/libpluginbundlemanager.z.so",
+    "bundle.shortcutManager": "system/lib64/module/bundle/libshortcutmanager.z.so",
+    "bundle.skillManager": "system/lib64/module/bundle/libskillmanager.z.so",
+    "continuation.continuationManager": "system/lib64/module/continuation/libcontinuationmanager_napi.z.so",
+    "customConfig": "system/lib64/module/customization/libcustomconfig.z.so",
+    "data.cloudData": "system/lib64/module/data/libclouddata.z.so",
+    "data.cloudExtension": "system/lib64/module/data/libcloudextension.z.so",
+    "data.commonType": "system/lib64/module/data/libcommontype_napi.z.so",
+    "data.dataAbility": "system/lib64/module/data/libdataability.z.so",
+    "data.dataShare": "system/lib64/module/data/libdatashare.z.so",
+    "data.dataSharePredicates": "system/lib64/module/data/libdatasharepredicates.z.so",
+    "data.distributedData": "system/lib64/module/data/libdistributeddata.z.so",
+    "data.distributedDataObject": "system/lib64/module/data/libdistributeddataobject.z.so",
+    "data.distributedKVStore": "system/lib64/module/data/libdistributedkvstore.z.so",
+    "data.intelligence": "system/lib64/module/data/libintelligence_napi.z.so",
+    "data.preferences": "system/lib64/module/data/libpreferences.z.so",
+    "data.rdb": "system/lib64/module/data/librdb.z.so",
+    "data.relationalStore": "system/lib64/module/data/librelationalstore.z.so",
+    "data.sendablePreferences": "system/lib64/module/data/libsendablepreferences.z.so",
+    "data.sendableRelationalStore": "system/lib64/module/data/libsendablerelationalstore.z.so",
+    "data.storage": "system/lib64/module/data/libstorage.z.so",
+    "data.UdmfComponents": "system/lib64/module/data/libudmfcomponents.z.so",
+    "data.unifiedDataChannel": "system/lib64/module/data/libunifieddatachannel_napi.z.so",
+    "data.uniformTypeDescriptor": "system/lib64/module/data/libuniformtypedescriptor_napi.z.so",
+    "deviceStatus.dragInteraction": "system/lib64/module/devicestatus/libdraginteraction.z.so",
+    "distributedHardware.deviceManager": "system/lib64/module/distributedhardware/libdevicemanager.z.so",
+    "distributedHardware.hardwareManager": "system/lib64/module/distributedhardware/libhardwaremanager.z.so",
+    "distributedHardware.mechanicManager": "system/lib64/module/distributedhardware/libmechanicmanager_napi.z.so",
+    "distributedsched.abilityConnectionManager": "system/lib64/module/distributedsched/libabilityconnectionmanager_napi.z.so",
+    "distributedsched.linkEnhance": "system/lib64/module/distributedsched/liblinkenhance.z.so",
+    "distributedsched.proxyChannelManager": "system/lib64/module/distributedsched/libproxychannelmanager.z.so",
+    "distributedSoftBus.conversation": "system/lib64/module/distributedsoftbus/libconversation.z.so",
+    "driver.deviceManager": "system/lib64/module/driver/libdevicemanager_napi.z.so",
+    "enterprise.accountManager": "system/lib64/module/enterprise/libaccountmanager.z.so",
+    "enterprise.adminManager": "system/lib64/module/enterprise/libadminmanager.z.so",
+    "enterprise.applicationManager": "system/lib64/module/enterprise/libapplicationmanager.z.so",
+    "bluetoothManager": "system/lib64/module/libbluetoothmanager.z.so",
+    "enterprise.browser": "system/lib64/module/enterprise/libbrowser.z.so",
+    "enterprise.dateTimeManager": "system/lib64/module/enterprise/libdatetimemanager.z.so",
+    "enterprise.deviceControl": "system/lib64/module/enterprise/libdevicecontrol.z.so",
+    "deviceInfo": "system/lib64/module/libdeviceinfo.z.so",
+    "enterprise.deviceSettings": "system/lib64/module/enterprise/libdevicesettings.z.so",
+    "enterprise.EnterpriseAdminExtensionContext": "system/lib64/module/enterprise/libenterpriseadminextensioncontext_napi.z.so",
+    "enterprise.locationManager": "system/lib64/module/enterprise/liblocationmanager.z.so",
+    "enterprise.networkManager": "system/lib64/module/enterprise/libnetworkmanager.z.so",
+    "enterprise.restrictions": "system/lib64/module/enterprise/librestrictions.z.so",
+    "enterprise.securityManager": "system/lib64/module/enterprise/libsecuritymanager.z.so",
+    "enterprise.systemManager": "system/lib64/module/enterprise/libsystemmanager.z.so",
+    "enterprise.telephonyManager": "system/lib64/module/enterprise/libtelephonymanager.z.so",
+    "usbManager": "system/lib64/module/libusbmanager.z.so",
+    "wifiManager": "system/lib64/module/libwifimanager.z.so",
+    "events.emitter": "system/lib64/module/events/libemitter.z.so",
+    "file.AlbumPickerComponent": "system/lib64/module/file/libalbumpickercomponent.z.so",
+    "file.backup": "system/lib64/module/file/libbackup.z.so",
+    "file.cloudDiskManager": "system/lib64/module/file/libclouddiskmanager.z.so",
+    "file.cloudSync": "system/lib64/module/file/libcloudsync.z.so",
+    "file.cloudSyncManager": "system/lib64/module/file/libcloudsyncmanager.z.so",
+    "file.environment": "system/lib64/module/file/libenvironment.z.so",
+    "file.fileAccess": "system/lib64/module/file/libfileaccess.z.so",
+    "file.fileExtensionInfo": "system/lib64/module/file/libfileextensioninfo.z.so",
+    "file.fileuri": "system/lib64/module/file/libfileuri.z.so",
+    "file.fs": "system/lib64/module/file/libfs.z.so",
+    "file.hash": "system/lib64/module/file/libhash.z.so",
+    "file.keyManager": "system/lib64/module/file/libkeymanager.z.so",
+    "file.photoAccessHelper": "system/lib64/module/file/libphotoaccesshelpernative.z.so",
+    "file.PhotoPickerComponent": "system/lib64/module/file/libphotopickercomponent.z.so",
+    "file.picker": "system/lib64/module/file/libpicker.z.so",
+    "file.recent": "system/lib64/module/file/librecent.z.so",
+    "file.RecentPhotoComponent": "system/lib64/module/file/librecentphotocomponent.z.so",
+    "file.securityLabel": "system/lib64/module/file/libsecuritylabel.z.so",
+    "file.sendablePhotoAccessHelper": "system/lib64/module/file/libsendablephotoaccesshelper.z.so",
+    "file.statvfs": "system/lib64/module/file/libstatvfs.z.so",
+    "file.storageStatistics": "system/lib64/module/file/libstoragestatistics.z.so",
+    "streamhash": "system/lib64/module/file/libstreamhash.z.so",
+    "streamrw": "system/lib64/module/file/libstreamrw.z.so",
+    "file.trash": "system/lib64/module/file/libtrash.z.so",
+    "file.volumeManager": "system/lib64/module/file/libvolumemanager.z.so",
+    "filemanagement.userFileManager": "system/lib64/module/filemanagement/libuserfilemanager.z.so",
+    "partneragent": "system/lib64/module/fusionconnectivity/libpartneragent.z.so",
+    "ranging": "system/lib64/module/fusionconnectivity/libranging.z.so",
+    "graphics.colorSpaceManager": "system/lib64/module/graphics/libcolorspacemanager_napi.z.so",
+    "graphics.displaySync": "system/lib64/module/graphics/libdisplaysync.z.so",
+    "graphics.drawing": "system/lib64/module/graphics/libdrawing_napi.z.so",
+    "graphics.hdrCapability": "system/lib64/module/graphics/libhdrcapability_napi.z.so",
+    "scene.napi": "system/lib64/module/graphics/libscene.z.so",
+    "graphics.sendableColorSpaceManager": "system/lib64/module/graphics/libsendablecolorspacemanager_napi.z.so",
+    "graphics.text": "system/lib64/module/graphics/libtext_napi.z.so",
+    "uieffect": "system/lib64/module/graphics/libuieffect_napi.z.so",
+    "hiviewdfx.hiAppEvent": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so",
+    "hiRetrieval": "system/lib64/module/hiviewdfx/libhiretrieval_napi.z.so",
+    "hiviewdfx.jsLeakWatcher": "system/lib64/module/hiviewdfx/libjsleakwatcher.z.so",
+    "jsLeakWatcherNative": "system/lib64/module/hiviewdfx/libjsleakwatchernative.z.so",
+    "identifier.oaid": "system/lib64/module/identifier/liboaid.z.so",
+    "inputMethod.Panel": "system/lib64/module/inputmethod/libpanel.z.so",
+    "abilityAccessCtrl": "system/lib64/module/libabilityaccessctrl.z.so",
+    "abilityToolAccessCtrl": "system/lib64/module/libabilitytoolaccessctrl_napi.z.so",
+    "accessibility": "system/lib64/module/libaccessibility_napi.z.so",
+    "advertising": "system/lib64/module/libadvertising.z.so",
+    "animator": "system/lib64/module/libanimator.z.so",
+    "atomicservicebar": "system/lib64/module/libatomicservicebar.z.so",
+    "backgroundTaskManager": "system/lib64/module/libbackgroundtaskmanager.z.so",
+    "battery": "system/lib64/module/libbattery.z.so",
+    "batteryInfo": "system/lib64/module/libbatteryinfo.z.so",
+    "batteryStatistics": "system/lib64/module/libbatterystatistics.z.so",
+    "bluetooth": "system/lib64/module/libbluetooth.z.so",
+    "brightness": "system/lib64/module/libbrightness.z.so",
+    "buffer": "system/lib64/module/libbuffer.z.so",
+    "bundle": "system/lib64/module/libbundle.z.so",
+    "bundleState": "system/lib64/module/libbundlestate.z.so",
+    "bytrace": "system/lib64/module/libbytrace.z.so",
+    "calendarManager": "system/lib64/module/libcalendarmanager.z.so",
+    "cast": "system/lib64/module/libcast.z.so",
+    "charger": "system/lib64/module/libcharger.z.so",
+    "cipher": "system/lib64/module/libcipher_napi.z.so",
+    "commonEvent": "system/lib64/module/libcommonevent.z.so",
+    "commonEventManager": "system/lib64/module/libcommoneventmanager.z.so",
+    "configPolicy": "system/lib64/module/libconfigpolicy.z.so",
+    "configuration": "system/lib64/module/libconfiguration.z.so",
+    "contact": "system/lib64/module/libcontact.z.so",
+    "convertxml": "system/lib64/module/libconvertxml.z.so",
+    "cooperate": "system/lib64/module/libcooperate.z.so",
+    "device": "system/lib64/module/libdevice.z.so",
+    "deviceAttest": "system/lib64/module/libdeviceattest.z.so",
+    "dfx": "system/lib64/module/libdfx.z.so",
+    "display": "system/lib64/module/libdisplay_napi.z.so",
+    "distributedBundle": "system/lib64/module/libdistributedbundle.z.so",
+    "distributedDeviceManager": "system/lib64/module/libdistributeddevicemanager.z.so",
+    "distributedMissionManager": "system/lib64/module/libdistributedmissionmanager.z.so",
+    "dlpPermission": "system/lib64/module/libdlppermission_napi.z.so",
+    "dlpSetDlpFeature": "system/lib64/module/libdlpsetdlpfeature_napi.z.so",
+    "document": "system/lib64/module/libdocument.z.so",
+    "effectKit": "system/lib64/module/libeffectkit.z.so",
+    "ETS_INTEROP_JS_NAPI": "system/lib64/module/libets_interop_js_napi.z.so",
+    "fastbuffer": "system/lib64/module/libfastbuffer.z.so",
+    "faultLogger": "system/lib64/module/libfaultlogger_napi.z.so",
+    "FeatureAbility": "system/lib64/module/libfeatureability_napi.z.so",
+    "fetch": "system/lib64/module/libfetch.z.so",
+    "file": "system/lib64/module/libfile.z.so",
+    "fileio": "system/lib64/module/libfileio.z.so",
+    "fileshare": "system/lib64/module/libfileshare.z.so",
+    "font": "system/lib64/module/libfont.z.so",
+    "fontmanager": "system/lib64/module/libfontmanager.z.so",
+    "geolocation": "system/lib64/module/libgeolocation.z.so",
+    "geoLocationManager": "system/lib64/module/libgeolocationmanager.z.so",
+    "grid": "system/lib64/module/libgrid.z.so",
+    "libhgmnapi": "system/lib64/module/libhgmnapi.z.so",
+    "hiAppEvent": "system/lib64/module/libhiappevent.z.so",
+    "hichecker": "system/lib64/module/libhichecker.z.so",
+    "hidebug": "system/lib64/module/libhidebug.z.so",
+    "hilog": "system/lib64/module/libhilog_napi.z.so",
+    "hiSysEvent": "system/lib64/module/libhisysevent_napi.z.so",
+    "hiTraceChain": "system/lib64/module/libhitracechain_napi.z.so",
+    "hiTraceMeter": "system/lib64/module/libhitracemeter_napi.z.so",
+    "i18n": "system/lib64/module/libi18n.z.so",
+    "inputMethod": "system/lib64/module/libinputmethod.z.so",
+    "inputMethodEngine": "system/lib64/module/libinputmethodengine.z.so",
+    "InputMethodExtensionAbility": "system/lib64/module/libinputmethodextensionability_napi.z.so",
+    "InputMethodExtensionContext": "system/lib64/module/libinputmethodextensioncontext_napi.z.so",
+    "inputMethodList": "system/lib64/module/libinputmethodlist.z.so",
+    "keyboardPanelManager": "system/lib64/module/libinputmethodsystempanelmanager.z.so",
+    "intelligentscene": "system/lib64/module/libintelligentscene.z.so",
+    "intl": "system/lib64/module/libintl.z.so",
+    "logLibrary": "system/lib64/module/libloglibrary_napi.z.so",
+    "luminancesampler": "system/lib64/module/libluminancesampler.z.so",
+    "measure": "system/lib64/module/libmeasure.z.so",
+    "mediaquery": "system/lib64/module/libmediaquery.z.so",
+    "network": "system/lib64/module/libnetwork.z.so",
+    "notification": "system/lib64/module/libnotification.z.so",
+    "notificationExtensionSubscription": "system/lib64/module/libnotificationextensionsubscription.z.so",
+    "notificationManager": "system/lib64/module/libnotificationmanager.z.so",
+    "notificationSubscribe": "system/lib64/module/libnotificationsubscribe.z.so",
+    "package": "system/lib64/module/libpackage.z.so",
+    "pasteboard": "system/lib64/module/libpasteboard_napi.z.so",
+    "pip": "system/lib64/module/libpip_napi.z.so",
+    "PiPWindow": "system/lib64/module/libpipwindow_napi.z.so",
+    "pluginComponent": "system/lib64/module/libplugincomponent.z.so",
+    "power": "system/lib64/module/libpower.z.so",
+    "print": "system/lib64/module/libprint_napi.z.so",
+    "privacyManager": "system/lib64/module/libprivacymanager.z.so",
+    "process": "system/lib64/module/libprocess.z.so",
+    "prompt": "system/lib64/module/libprompt.z.so",
+    "promptAction": "system/lib64/module/libpromptaction.z.so",
+    "reminderAgent": "system/lib64/module/libreminderagent.z.so",
+    "reminderAgentManager": "system/lib64/module/libreminderagentmanager.z.so",
+    "request": "system/lib64/module/librequest.z.so",
+    "resourceManager": "system/lib64/module/libresourcemanager.z.so",
+    "router": "system/lib64/module/librouter.z.so",
+    "rpc": "system/lib64/module/librpc.z.so",
+    "runningLock": "system/lib64/module/librunninglock.z.so",
+    "scan": "system/lib64/module/libscan_napi.z.so",
+    "sceneSessionManager": "system/lib64/module/libscenesessionmanager_napi.z.so",
+    "screen": "system/lib64/module/libscreen_napi.z.so",
+    "screenevent": "system/lib64/module/libscreenevent_napi.z.so",
+    "screenLock": "system/lib64/module/libscreenlock.z.so",
+    "screenSessionManager": "system/lib64/module/libscreensessionmanager_napi.z.so",
+    "screenshot": "system/lib64/module/libscreenshot.z.so",
+    "sendableResourceManager": "system/lib64/module/libsendableresourcemanager.z.so",
+    "sensor": "system/lib64/module/libsensor.z.so",
+    "settings": "system/lib64/module/libsettings.z.so",
+    "statfs": "system/lib64/module/libstatfs.z.so",
+    "stationary": "system/lib64/module/libstationary.z.so",
+    "storage": "system/lib64/module/libstorage_napi.z.so",
+    "systemCapability": "system/lib64/module/libsystemcapability.z.so",
+    "systemDateTime": "system/lib64/module/libsystemdatetime.z.so",
+    "systemparameter": "system/lib64/module/libsystemparameter.z.so",
+    "systemParameterEnhance": "system/lib64/module/libsystemparameterenhance.z.so",
+    "systemParameterV9": "system/lib64/module/libsystemparameterenhance.z.so",
+    "systemTime": "system/lib64/module/libsystemtime.z.so",
+    "systemTimer": "system/lib64/module/libsystemtimer.z.so",
+    "taskpool": "system/lib64/module/libtaskpool.z.so",
+    "thermal": "system/lib64/module/libthermal.z.so",
+    "transactionManager": "system/lib64/module/libtransactionmanager_napi.z.so",
+    "uiAppearance": "system/lib64/module/libuiappearance.z.so",
+    "UiTest": "system/lib64/module/libuitest.z.so",
+    "update": "system/lib64/module/libupdate.z.so",
+    "uri": "system/lib64/module/liburi.z.so",
+    "url": "system/lib64/module/liburl.z.so",
+    "usb": "system/lib64/module/libusb.z.so",
+    "util": "system/lib64/module/libutil.z.so",
+    "vibrator": "system/lib64/module/libvibrator.z.so",
+    "wallpaper": "system/lib64/module/libwallpaper.z.so",
+    "WallpaperExtensionAbility": "system/lib64/module/libwallpaperextensionability_napi.z.so",
+    "WallpaperExtensionContext": "system/lib64/module/libwallpaperextensioncontext_napi.z.so",
+    "wantAgent": "system/lib64/module/libwantagent.z.so",
+    "libwebglnapi": "system/lib64/module/libwebglnapi.z.so",
+    "wifi": "system/lib64/module/libwifi.z.so",
+    "wifiext": "system/lib64/module/libwifiext.z.so",
+    "wifiManagerExt": "system/lib64/module/libwifimanagerext.z.so",
+    "window": "system/lib64/module/libwindow_napi.z.so",
+    "windowenv": "system/lib64/module/libwindowenv_napi.z.so",
+    "worker": "system/lib64/module/libworker.z.so",
+    "xml": "system/lib64/module/libxml.z.so",
+    "zlib": "system/lib64/module/libzlib.z.so",
+    "multimedia.audio": "system/lib64/module/multimedia/libaudio.z.so",
+    "multimedia.audioHaptic": "system/lib64/module/multimedia/libaudiohaptic_napi.z.so",
+    "multimedia.avCastPicker": "system/lib64/module/multimedia/libavcastpicker.z.so",
+    "multimedia.avCastPickerParam": "system/lib64/module/multimedia/libavcastpickerparam.z.so",
+    "multimedia.avInputCastPicker": "system/lib64/module/multimedia/libavinputcastpicker.z.so",
+    "multimedia.avsession": "system/lib64/module/multimedia/libavsession_napi.z.so",
+    "multimedia.avVolumePanel": "system/lib64/module/multimedia/libavvolumepanel.z.so",
+    "multimedia.camera": "system/lib64/module/multimedia/libcamera_napi.z.so",
+    "multimedia.cameraPicker": "system/lib64/module/multimedia/libcamerapicker_napi.z.so",
+    "multimedia.drm": "system/lib64/module/multimedia/libdrm_napi.z.so",
+    "multimedia.image": "system/lib64/module/multimedia/libimage.z.so",
+    "multimedia.media": "system/lib64/module/multimedia/libmedia.z.so",
+    "multimedia.mediaLibrary": "system/lib64/module/multimedia/libmedialibrary.z.so",
+    "multimedia.movingphotoview": "system/lib64/module/multimedia/libmovingphotoview.z.so",
+    "multimedia.resourceManager": "system/lib64/module/multimedia/libresourcemanager_napi.z.so",
+    "multimedia.sendableimage": "system/lib64/module/multimedia/libsendableimage.z.so",
+    "multimedia.systemSoundManager": "system/lib64/module/multimedia/libsystemsoundmanager.z.so",
+    "multimodalAwareness.carAwareness": "system/lib64/module/multimodalawareness/libcarawareness_napi.z.so",
+    "multimodalAwareness.deviceStatus": "system/lib64/module/multimodalawareness/libdevicestatus_napi.z.so",
+    "multimodalAwareness.metadataBinding": "system/lib64/module/multimodalawareness/libmetadatabinding_napi.z.so",
+    "multimodalAwareness.motion": "system/lib64/module/multimodalawareness/libmotion_napi.z.so",
+    "multimodalAwareness.onScreen": "system/lib64/module/multimodalawareness/libonscreen_napi.z.so",
+    "multimodalAwareness.distanceMeasurement": "system/lib64/module/multimodalawareness/libspatialawareness_napi.z.so",
+    "multimodalAwareness.userStatus": "system/lib64/module/multimodalawareness/libuserstatus_napi.z.so",
+    "multimodalInput.gestureEvent": "system/lib64/module/multimodalinput/libgestureevent.z.so",
+    "multimodalInput.infraredEmitter": "system/lib64/module/multimodalinput/libinfraredemitter.z.so",
+    "multimodalInput.inputConsumer": "system/lib64/module/multimodalinput/libinputconsumer.z.so",
+    "multimodalInput.inputDevice": "system/lib64/module/multimodalinput/libinputdevice.z.so",
+    "multimodalInput.inputDeviceCooperate": "system/lib64/module/multimodalinput/libinputdevicecooperate.z.so",
+    "multimodalInput.inputEventClient": "system/lib64/module/multimodalinput/libinputeventclient.z.so",
+    "multimodalInput.inputMonitor": "system/lib64/module/multimodalinput/libinputmonitor.z.so",
+    "multimodalInput.intentionCode": "system/lib64/module/multimodalinput/libintentioncode.z.so",
+    "multimodalInput.joystickEvent": "system/lib64/module/multimodalinput/libjoystickevent.z.so",
+    "multimodalInput.keyCode": "system/lib64/module/multimodalinput/libkeycode.z.so",
+    "multimodalInput.keyEvent": "system/lib64/module/multimodalinput/libkeyevent.z.so",
+    "multimodalInput.mouseEvent": "system/lib64/module/multimodalinput/libmouseevent.z.so",
+    "multimodalInput.pointer": "system/lib64/module/multimodalinput/libpointer.z.so",
+    "multimodalInput.shortKey": "system/lib64/module/multimodalinput/libshortkey.z.so",
+    "multimodalInput.touchEvent": "system/lib64/module/multimodalinput/libtouchevent.z.so",
+    "net.eap": "system/lib64/module/net/libeap.z.so",
+    "net.ethernet": "system/lib64/module/net/libethernet.z.so",
+    "net.http": "system/lib64/module/net/libhttp.z.so",
+    "net.mdns": "system/lib64/module/net/libmdns.z.so",
+    "net.networkSecurity": "system/lib64/module/net/libnetworksecurity_napi.z.so",
+    "net.policy": "system/lib64/module/net/libpolicy.z.so",
+    "net.sharing": "system/lib64/module/net/libsharing.z.so",
+    "net.statistics": "system/lib64/module/net/libstatistics.z.so",
+    "net.vpn": "system/lib64/module/net/libvpn.z.so",
+    "net.vpnExtension": "system/lib64/module/net/libvpnextension.z.so",
+    "net.webSocket": "system/lib64/module/net/libwebsocket.z.so",
+    "request.cacheDownload": "system/lib64/module/request/libcachedownload.z.so",
+    "resourceschedule.backgroundLoader": "system/lib64/module/resourceschedule/libbackgroundloader_napi.z.so",
+    "resourceschedule.backgroundProcessManager": "system/lib64/module/resourceschedule/libbackgroundprocessmanager_napi.z.so",
+    "resourceschedule.backgroundTaskManager": "system/lib64/module/resourceschedule/libbackgroundtaskmanager_napi.z.so",
+    "resourceschedule.deviceStandby": "system/lib64/module/resourceschedule/libdevicestandby.z.so",
+    "resourceschedule.systemload": "system/lib64/module/resourceschedule/libsystemload.z.so",
+    "resourceschedule.usageStatistics": "system/lib64/module/resourceschedule/libusagestatistics.z.so",
+    "resourceschedule.workScheduler": "system/lib64/module/resourceschedule/libworkscheduler.z.so",
+    "security.asset": "system/lib64/module/security/libasset_napi.z.so",
+    "security.cert": "system/lib64/module/security/libcert.z.so",
+    "security.certmanager": "system/lib64/module/security/libcertmanager.z.so",
+    "security.certManagerDialog": "system/lib64/module/security/libcertmanagerdialog.z.so",
+    "security.cryptoFramework": "system/lib64/module/security/libcryptoframework_napi.z.so",
+    "security.huks": "system/lib64/module/security/libhuks.z.so",
+    "security.identifySensitiveContent": "system/lib64/module/security/libidentifysensitivecontent_napi.z.so",
+    "security.securityGuard": "system/lib64/module/security/libsecurityguard_napi.z.so",
+    "selectionInput.SelectionExtensionAbility": "system/lib64/module/selectioninput/libselectionextensionability_napi.z.so",
+    "selectionInput.SelectionExtensionContext": "system/lib64/module/selectioninput/libselectionextensioncontext_napi.z.so",
+    "selectionInput.selectionManager": "system/lib64/module/selectioninput/libselectionmanager_napi.z.so",
+    "selectionInput.SelectionPanel": "system/lib64/module/selectioninput/libselectionpanel_napi.z.so",
+    "telephony.call": "system/lib64/module/telephony/libcall.z.so",
+    "telephony.data": "system/lib64/module/telephony/libdata.z.so",
+    "telephony.radio": "system/lib64/module/telephony/libradio.z.so",
+    "telephony.sim": "system/lib64/module/telephony/libsim.z.so",
+    "telephony.sms": "system/lib64/module/telephony/libsms.z.so",
+    "telephony.vcard": "system/lib64/module/telephony/libvcard.z.so",
+    "test.PerfTest": "system/lib64/module/test/libperftest.z.so",
+    "serial": "system/lib64/module/usbmanager/libserial.z.so",
+    "userIAM.companionDeviceAuth": "system/lib64/module/useriam/libcompaniondeviceauth.z.so",
+    "userIAM.faceAuth": "system/lib64/module/useriam/libfaceauth.z.so",
+    "userIAM.userAccessCtrl": "system/lib64/module/useriam/libuseraccessctrl.z.so",
+    "userIAM.userAuth": "system/lib64/module/useriam/libuserauth.z.so",
+    "userIAM.userAuthIcon": "system/lib64/module/useriam/libuserauthicon.z.so",
+    "util.ArrayList": "system/lib64/module/util/libarraylist.z.so",
+    "util.Deque": "system/lib64/module/util/libdeque.z.so",
+    "util.HashMap": "system/lib64/module/util/libhashmap.z.so",
+    "util.HashSet": "system/lib64/module/util/libhashset.z.so",
+    "util.json": "system/lib64/module/util/libjson.z.so",
+    "util.LightWeightMap": "system/lib64/module/util/liblightweightmap.z.so",
+    "util.LightWeightSet": "system/lib64/module/util/liblightweightset.z.so",
+    "util.LinkedList": "system/lib64/module/util/liblinkedlist.z.so",
+    "util.List": "system/lib64/module/util/liblist.z.so",
+    "util.PlainArray": "system/lib64/module/util/libplainarray.z.so",
+    "util.Queue": "system/lib64/module/util/libqueue.z.so",
+    "util.Stack": "system/lib64/module/util/libstack.z.so",
+    "stream": "system/lib64/module/util/libstream.z.so",
+    "util.struct": "system/lib64/module/util/libstruct.z.so",
+    "util.TreeMap": "system/lib64/module/util/libtreemap.z.so",
+    "util.TreeSet": "system/lib64/module/util/libtreeset.z.so",
+    "util.Vector": "system/lib64/module/util/libvector.z.so",
+    "web.netErrorList": "system/lib64/module/web/libneterrorlist_napi.z.so",
+    "web.WebNativeMessagingExtensionAbility": "system/lib64/module/web/libwebnativemessagingextensionability_napi.z.so",
+    "web.WebNativeMessagingExtensionContext": "system/lib64/module/web/libwebnativemessagingextensioncontext_napi.z.so",
+    "web.webNativeMessagingExtensionManager": "system/lib64/module/web/libwebnativemessagingextensionmanager_napi.z.so",
+    "web.webview": "system/lib64/module/web/libwebview_napi.z.so",
+    "window.floatingBall": "system/lib64/module/window/libfloatingball_napi.z.so",
+    "window.floatView": "system/lib64/module/window/libfloatview_napi.z.so"
+  },
+  "class_to_so": {
+    "dataAbilityHelper": {
+      "module": "ability.particleAbility",
+      "so": "system/lib64/module/ability/libparticleability.z.so"
+    },
+    "context": {
+      "module": "ability.particleAbility",
+      "so": "system/lib64/module/ability/libparticleability.z.so"
+    },
+    "GesturePath": {
+      "module": "accessibility.GesturePath",
+      "so": "system/lib64/module/accessibility/libgesturepath_napi.z.so"
+    },
+    "GesturePoint": {
+      "module": "accessibility.GesturePoint",
+      "so": "system/lib64/module/accessibility/libgesturepoint_napi.z.so"
+    },
+    "AppAccountManager": {
+      "module": "account.appAccount",
+      "so": "system/lib64/module/account/libappaccount.z.so"
+    },
+    "AuthenticatorCallback": {
+      "module": "account.appAccount",
+      "so": "system/lib64/module/account/libappaccount.z.so"
+    },
+    "AuthCallback": {
+      "module": "account.appAccount",
+      "so": "system/lib64/module/account/libappaccount.z.so"
+    },
+    "Authenticator": {
+      "module": "account.appAccount",
+      "so": "system/lib64/module/account/libappaccount.z.so"
+    },
+    "DistributedAccountAbility": {
+      "module": "account.distributedAccount",
+      "so": "system/lib64/module/account/libdistributedaccount.z.so"
+    },
+    "AccountManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "PINAuth": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "InputerManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "UserIdentityManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "UserAuth": {
+      "module": "userIAM.userAuth",
+      "so": "system/lib64/module/useriam/libuserauth.z.so"
+    },
+    "DomainAuthCallback": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "DomainAccountManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "DomainServerConfigManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "AuthorizationManager": {
+      "module": "account.osAccount.authorization",
+      "so": "system/lib64/module/account/osaccount/libauthorization.z.so"
+    },
+    "OsAccountSubProfileManager": {
+      "module": "account.osAccount",
+      "so": "system/lib64/module/account/libosaccount.z.so"
+    },
+    "IntelligentVoiceManager": {
+      "module": "ai.intelligentVoice",
+      "so": "system/lib64/module/ai/libintelligentvoice.z.so"
+    },
+    "WakeupManager": {
+      "module": "ai.intelligentVoice",
+      "so": "system/lib64/module/ai/libintelligentvoice.z.so"
+    },
+    "EnrollIntelligentVoiceEngine": {
+      "module": "ai.intelligentVoice",
+      "so": "system/lib64/module/ai/libintelligentvoice.z.so"
+    },
+    "WakeupIntelligentVoiceEngine": {
+      "module": "ai.intelligentVoice",
+      "so": "system/lib64/module/ai/libintelligentvoice.z.so"
+    },
+    "Model": {
+      "module": "ai.mindSporeLite",
+      "so": "system/lib64/module/ai/libmindsporelite_napi.z.so"
+    },
+    "AppIntentEntity": {
+      "module": "app.ability.insightIntent",
+      "so": "system/lib64/module/app/ability/libinsightintent_napi.z.so"
+    },
+    "AsyncLockOptions": {
+      "module": "arkts.utils",
+      "so": "system/lib64/module/arkts/libutils.z.so"
+    },
+    "ArcSwiperController": {
+      "module": "arkui.ArcSwiper",
+      "so": "system/lib64/module/arkui/libarcswiper.z.so"
+    },
+    "ArcDotIndicator": {
+      "module": "arkui.ArcSwiper",
+      "so": "system/lib64/module/arkui/libarcswiper.z.so"
+    },
+    "DragPreview": {
+      "module": "arkui.dragController",
+      "so": "system/lib64/module/arkui/libdragcontroller.z.so"
+    },
+    "DrawableDescriptor": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "PixelMapDrawableDescriptor": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "LayeredDrawableDescriptor": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "AnimatedDrawableDescriptor": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "PictureDrawableDescriptor": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "AnimationStopMode": {
+      "module": "arkui.drawableDescriptor",
+      "so": "system/lib64/module/arkui/libdrawabledescriptor.z.so"
+    },
+    "LockReason": {
+      "module": "telephony.observer",
+      "so": "system/lib64/module/telephony/libobserver.z.so"
+    },
+    "Material": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "MaterialType": {
+      "module": "arkui.uiMaterial",
+      "so": "system/lib64/module/arkui/libuimaterial.z.so"
+    },
+    "ImmersiveStyle": {
+      "module": "arkui.uiMaterial",
+      "so": "system/lib64/module/arkui/libuimaterial.z.so"
+    },
+    "MaterialLevel": {
+      "module": "arkui.uiMaterial",
+      "so": "system/lib64/module/arkui/libuimaterial.z.so"
+    },
+    "MaterialState": {
+      "module": "arkui.uiMaterial",
+      "so": "system/lib64/module/arkui/libuimaterial.z.so"
+    },
+    "ImmersiveMaterial": {
+      "module": "arkui.uiMaterial",
+      "so": "system/lib64/module/arkui/libuimaterial.z.so"
+    },
+    "A2dpSource": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "GattServer": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "GattClientDevice": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "BleScanner": {
+      "module": "bluetooth.ble",
+      "so": "system/lib64/module/bluetooth/libble.z.so"
+    },
+    "NetConnection": {
+      "module": "net.connection",
+      "so": "system/lib64/module/net/libconnection.z.so"
+    },
+    "NetInterface": {
+      "module": "net.connection",
+      "so": "system/lib64/module/net/libconnection.z.so"
+    },
+    "HandsFreeAudioGateway": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "HandsFreeUnit": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "NapiBluetoothHidHost": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "NapiBluetoothHidDevice": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "MapMse": {
+      "module": "bluetooth.map",
+      "so": "system/lib64/module/bluetooth/libmap.z.so"
+    },
+    "NapiBluetoothOpp": {
+      "module": "bluetooth.opp",
+      "so": "system/lib64/module/bluetooth/libopp.z.so"
+    },
+    "NapiBluetoothPan": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "PbapPse": {
+      "module": "bluetooth.pbap",
+      "so": "system/lib64/module/bluetooth/libpbap.z.so"
+    },
+    "TLSSocket": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "TLSSocketServer": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "TLSSocketServerConnection": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "UDPSocket": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "MulticastSocket": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "TCPSocketServer": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "TCPSocket": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "LocalSocket": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "LocalSocketServer": {
+      "module": "net.socket",
+      "so": "system/lib64/module/net/libsocket.z.so"
+    },
+    "BundleInstaller": {
+      "module": "bundle",
+      "so": "system/lib64/module/libbundle.z.so"
+    },
+    "Config": {
+      "module": "data.cloudData",
+      "so": "system/lib64/module/data/libclouddata.z.so"
+    },
+    "DataAbilityPredicates": {
+      "module": "data.dataAbility",
+      "so": "system/lib64/module/data/libdataability.z.so"
+    },
+    "DataSharePredicates": {
+      "module": "data.dataSharePredicates",
+      "so": "system/lib64/module/data/libdatasharepredicates.z.so"
+    },
+    "FieldNode": {
+      "module": "data.distributedKVStore",
+      "so": "system/lib64/module/data/libdistributedkvstore.z.so"
+    },
+    "Schema": {
+      "module": "data.distributedKVStore",
+      "so": "system/lib64/module/data/libdistributedkvstore.z.so"
+    },
+    "Query": {
+      "module": "data.distributedKVStore",
+      "so": "system/lib64/module/data/libdistributedkvstore.z.so"
+    },
+    "TextEmbedding": {
+      "module": "data.intelligence",
+      "so": "system/lib64/module/data/libintelligence_napi.z.so"
+    },
+    "ImageEmbedding": {
+      "module": "data.intelligence",
+      "so": "system/lib64/module/data/libintelligence_napi.z.so"
+    },
+    "Preferences": {
+      "module": "data.preferences",
+      "so": "system/lib64/module/data/libpreferences.z.so"
+    },
+    "RdbStore": {
+      "module": "data.relationalStore",
+      "so": "system/lib64/module/data/librelationalstore.z.so"
+    },
+    "RdbStoreV9": {
+      "module": "data.rdb",
+      "so": "system/lib64/module/data/librdb.z.so"
+    },
+    "RdbPredicates": {
+      "module": "data.relationalStore",
+      "so": "system/lib64/module/data/librelationalstore.z.so"
+    },
+    "RdbPredicatesV9": {
+      "module": "data.rdb",
+      "so": "system/lib64/module/data/librdb.z.so"
+    },
+    "ResultSet": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "LiteResultSet": {
+      "module": "data.relationalStore",
+      "so": "system/lib64/module/data/librelationalstore.z.so"
+    },
+    "Transaction": {
+      "module": "data.relationalStore",
+      "so": "system/lib64/module/data/librelationalstore.z.so"
+    },
+    "Storage": {
+      "module": "data.storage",
+      "so": "system/lib64/module/data/libstorage.z.so"
+    },
+    "UnifiedDataProperties": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "UnifiedData": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Summary": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "UnifiedRecord": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Text": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "PlainText": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Hyperlink": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "HTML": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "File": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Image": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Video": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Audio": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "Folder": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "SystemDefinedRecord": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "SDForm": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "SDAppItem": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "SystemDefinedPixelMap": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "ApplicationDefinedRecord": {
+      "module": "data.unifiedDataChannel",
+      "so": "system/lib64/module/data/libunifieddatachannel_napi.z.so"
+    },
+    "TypeDescriptor": {
+      "module": "data.uniformTypeDescriptor",
+      "so": "system/lib64/module/data/libuniformtypedescriptor_napi.z.so"
+    },
+    "JsDragContext": {
+      "module": "deviceStatus.dragInteraction",
+      "so": "system/lib64/module/devicestatus/libdraginteraction.z.so"
+    },
+    "DeviceManager": {
+      "module": "distributedDeviceManager",
+      "so": "system/lib64/module/libdistributeddevicemanager.z.so"
+    },
+    "DeviceType": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "DeviceStateChangeAction": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "DiscoverMode": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "ExchangeMedium": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "ExchangeFreq": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "SubscribeCap": {
+      "module": "distributedHardware.deviceManager",
+      "so": "system/lib64/module/distributedhardware/libdevicemanager.z.so"
+    },
+    "Server": {
+      "module": "distributedsched.linkEnhance",
+      "so": "system/lib64/module/distributedsched/liblinkenhance.z.so"
+    },
+    "Connection": {
+      "module": "distributedsched.linkEnhance",
+      "so": "system/lib64/module/distributedsched/liblinkenhance.z.so"
+    },
+    "BusType": {
+      "module": "driver.deviceManager",
+      "so": "system/lib64/module/driver/libdevicemanager_napi.z.so"
+    },
+    "A2dpSink": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "AvrcpController": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "AvrcpTarget": {
+      "module": "bluetoothManager",
+      "so": "system/lib64/module/libbluetoothmanager.z.so"
+    },
+    "PerformanceClassLevel": {
+      "module": "deviceInfo",
+      "so": "system/lib64/module/libdeviceinfo.z.so"
+    },
+    "Emitter": {
+      "module": "events.emitter",
+      "so": "system/lib64/module/events/libemitter.z.so"
+    },
+    "EventPriority": {
+      "module": "events.emitter",
+      "so": "system/lib64/module/events/libemitter.z.so"
+    },
+    "SyncFolder": {
+      "module": "file.cloudDiskManager",
+      "so": "system/lib64/module/file/libclouddiskmanager.z.so"
+    },
+    "CloudDiskAccessor": {
+      "module": "file.cloudDiskManager",
+      "so": "system/lib64/module/file/libclouddiskmanager.z.so"
+    },
+    "MultiDownloadProgress": {
+      "module": "file.cloudSync",
+      "so": "system/lib64/module/file/libcloudsync.z.so"
+    },
+    "DowngradeDownload": {
+      "module": "file.cloudSyncManager",
+      "so": "system/lib64/module/file/libcloudsyncmanager.z.so"
+    },
+    "FileAccessHelper": {
+      "module": "file.fileAccess",
+      "so": "system/lib64/module/file/libfileaccess.z.so"
+    },
+    "FileInfo": {
+      "module": "file.fileExtensionInfo",
+      "so": "system/lib64/module/file/libfileextensioninfo.z.so"
+    },
+    "RootInfo": {
+      "module": "file.fileExtensionInfo",
+      "so": "system/lib64/module/file/libfileextensioninfo.z.so"
+    },
+    "CopyResult": {
+      "module": "file.fileAccess",
+      "so": "system/lib64/module/file/libfileaccess.z.so"
+    },
+    "NotifyType": {
+      "module": "file.fileAccess",
+      "so": "system/lib64/module/file/libfileaccess.z.so"
+    },
+    "NapiRootIteratorExporter": {
+      "module": "file.fileAccess",
+      "so": "system/lib64/module/file/libfileaccess.z.so"
+    },
+    "FileUri": {
+      "module": "file.fileuri",
+      "so": "system/lib64/module/file/libfileuri.z.so"
+    },
+    "PhotoAccessHelper": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAccessHelperFetchFileResult": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAccessHelperFileAsset": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAccessHelperAlbum": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAccessPhotoAlbum": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAccessAlbumOrder": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "AnalysisAlbum": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "HighlightAlbum": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAssetEditData": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAssetChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAssetsChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAlbumChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAnalysisAlbumChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaHighlightAlbumChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaShareAlbumChangeRequest": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MediaAssetManager": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "MovingPhoto": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoProxy": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "CloudEnhancement": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "CloudEnhancementTaskState": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "CloudMediaAssetManager": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "CloudMediaAssetStatus": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAssetCustomRecordManager": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "PhotoAssetCustomRecord": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "CloudAssetsDownloadStatus": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "TaskSignal": {
+      "module": "file.photoAccessHelper",
+      "so": "system/lib64/module/file/libphotoaccesshelpernative.z.so"
+    },
+    "UserFileManager": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "UserFileMgrFetchFileResult": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "UserFileMgrFileAsset": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "UserFileMgrAlbum": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "UserFileMgrPhotoAlbum": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "UserFileMgrSmartAlbum": {
+      "module": "filemanagement.userFileManager",
+      "so": "system/lib64/module/filemanagement/libuserfilemanager.z.so"
+    },
+    "Font": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Path": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Typeface": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "TypefaceArguments": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Canvas": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "BlendMode": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "BlurType": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "CapStyle": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ClipOp": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "CornerPos": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "FilterMode": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "FontEdging": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "FontHinting": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "FontMetricsFlags": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "JoinStyle": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathDashStyle": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathDirection": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathFillType": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathIteratorVerb": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathMeasureMatrixFlags": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathOp": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PointMode": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RectType": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RegionOp": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ScaleToFit": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ShadowFlag": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "SrcRectConstraint": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "TextEncoding": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "TileMode": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "VertexMode": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ColorFilter": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "TextBlob": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Pen": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Brush": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ImageFilter": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "SamplingOptions": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "MaskFilter": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Lattice": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathEffect": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PathIterator": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "PointUtils": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RectUtils": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Region": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RoundRect": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ShaderEffect": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "ShadowLayer": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Matrix": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Tool": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RecordCmd": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "RecordCmdUtils": {
+      "module": "graphics.drawing",
+      "so": "system/lib64/module/graphics/libdrawing_napi.z.so"
+    },
+    "Color": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Vec2": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Vec3": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Vec4": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Quaternion": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Scene": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Node": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Camera": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Environment": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "PointLight": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "DirectionalLight": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "SpotLight": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Geometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "CubeGeometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "CustomGeometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "PlaneGeometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Mesh": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Morpher": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "MeshResource": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "SubMesh": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "PostProcessSettings": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "ToneMappingSettings": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Sampler": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Shader": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "SphereGeometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "CylinderGeometry": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Animation": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "SceneComponent": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "MaterialProperty": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "RenderContext": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "NodeContainer": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "Effect": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "EffectsContainer": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "OcclusionMaterial": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "BoidsSimPlugin": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "BoidsSimWorld": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "PCFConfig": {
+      "module": "scene.napi",
+      "so": "system/lib64/module/graphics/libscene.z.so"
+    },
+    "FontCollection": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "Affinity": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "BreakStrategy": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "EllipsisMode": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "FontStyle": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "FontWeight": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "FontWidth": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "LineHeightStyle": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "PlaceholderAlignment": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "RectHeightStyle": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "RectWidthStyle": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "SystemFontType": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextAlign": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextBadgeType": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextBaseline": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextDecorationStyle": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextDecorationType": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextDirection": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextDisplayState": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextHeightBehavior": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextHighContrast": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextProcessState": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextUndefinedGlyphDisplay": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextVerticalAlign": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "WordBreak": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "Run": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "TextLine": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "Paragraph": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "ParagraphBuilder": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "LineTypeset": {
+      "module": "graphics.text",
+      "so": "system/lib64/module/graphics/libtext_napi.z.so"
+    },
+    "Filter": {
+      "module": "effectKit",
+      "so": "system/lib64/module/libeffectkit.z.so"
+    },
+    "VisualEffect": {
+      "module": "uieffect",
+      "so": "system/lib64/module/graphics/libuieffect_napi.z.so"
+    },
+    "Mask": {
+      "module": "uieffect",
+      "so": "system/lib64/module/graphics/libuieffect_napi.z.so"
+    },
+    "event": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "param": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "EventType": {
+      "module": "hiSysEvent",
+      "so": "system/lib64/module/libhisysevent_napi.z.so"
+    },
+    "domain": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "AppEventPackageHolder": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "ExternalLogWrapper": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "ExternalLogContainer": {
+      "module": "hiviewdfx.hiAppEvent",
+      "so": "system/lib64/module/hiviewdfx/libhiappevent_napi.z.so"
+    },
+    "atManager": {
+      "module": "abilityAccessCtrl",
+      "so": "system/lib64/module/libabilityaccessctrl.z.so"
+    },
+    "CaptionsManager": {
+      "module": "accessibility",
+      "so": "system/lib64/module/libaccessibility_napi.z.so"
+    },
+    "CaptionsStyle": {
+      "module": "accessibility",
+      "so": "system/lib64/module/libaccessibility_napi.z.so"
+    },
+    "EventInfo": {
+      "module": "accessibility",
+      "so": "system/lib64/module/libaccessibility_napi.z.so"
+    },
+    "AdLoader": {
+      "module": "advertising",
+      "so": "system/lib64/module/libadvertising.z.so"
+    },
+    "SimpleAnimatorOptions": {
+      "module": "animator",
+      "so": "system/lib64/module/libanimator.z.so"
+    },
+    "BatteryPluggedType": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "BatteryChargeState": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "BatteryHealthState": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "BatteryCapacityLevel": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "CommonEventBatteryChangedKey": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "CommonEventBatteryChangedCode": {
+      "module": "batteryInfo",
+      "so": "system/lib64/module/libbatteryinfo.z.so"
+    },
+    "ConsumptionType": {
+      "module": "batteryStatistics",
+      "so": "system/lib64/module/libbatterystatistics.z.so"
+    },
+    "Buffer": {
+      "module": "buffer",
+      "so": "system/lib64/module/libbuffer.z.so"
+    },
+    "Blob": {
+      "module": "buffer",
+      "so": "system/lib64/module/libbuffer.z.so"
+    },
+    "IntervalType": {
+      "module": "resourceschedule.usageStatistics",
+      "so": "system/lib64/module/resourceschedule/libusagestatistics.z.so"
+    },
+    "Calendar": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "CalendarAccount": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "CalendarManager": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "EventFilter": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "AttendeeStatus": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "AttendeeType": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "RecurrenceFrequency": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "AttendeeRole": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "CalendarType": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "ServiceType": {
+      "module": "calendarManager",
+      "so": "system/lib64/module/libcalendarmanager.z.so"
+    },
+    "castSession": {
+      "module": "cast",
+      "so": "system/lib64/module/libcast.z.so"
+    },
+    "streamPlayer": {
+      "module": "cast",
+      "so": "system/lib64/module/libcast.z.so"
+    },
+    "mirrorPlayer": {
+      "module": "cast",
+      "so": "system/lib64/module/libcast.z.so"
+    },
+    "ChargeType": {
+      "module": "charger",
+      "so": "system/lib64/module/libcharger.z.so"
+    },
+    "commonEventSubscriber": {
+      "module": "commonEventManager",
+      "so": "system/lib64/module/libcommoneventmanager.z.so"
+    },
+    "Contact": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "Email": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "Event": {
+      "module": "hiAppEvent",
+      "so": "system/lib64/module/libhiappevent.z.so"
+    },
+    "ImAddress": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "PhoneNumber": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "PostalAddress": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "Relation": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "SipAddress": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "Attribute": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "FilterCondition": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "DataField": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "FilterType": {
+      "module": "contact",
+      "so": "system/lib64/module/libcontact.z.so"
+    },
+    "ConvertXml": {
+      "module": "convertxml",
+      "so": "system/lib64/module/libconvertxml.z.so"
+    },
+    "JsCoordinationContext": {
+      "module": "cooperate",
+      "so": "system/lib64/module/libcooperate.z.so"
+    },
+    "DeviceStateChange": {
+      "module": "distributedDeviceManager",
+      "so": "system/lib64/module/libdistributeddevicemanager.z.so"
+    },
+    "StrategyForHeartbeat": {
+      "module": "distributedDeviceManager",
+      "so": "system/lib64/module/libdistributeddevicemanager.z.so"
+    },
+    "DlpConnManager": {
+      "module": "dlpPermission",
+      "so": "system/lib64/module/libdlppermission_napi.z.so"
+    },
+    "dlpFile": {
+      "module": "dlpPermission",
+      "so": "system/lib64/module/libdlppermission_napi.z.so"
+    },
+    "ColorPicker": {
+      "module": "effectKit",
+      "so": "system/lib64/module/libeffectkit.z.so"
+    },
+    "STValue": {
+      "module": "ETS_INTEROP_JS_NAPI",
+      "so": "system/lib64/module/libets_interop_js_napi.z.so"
+    },
+    "FaultType": {
+      "module": "faultLogger",
+      "so": "system/lib64/module/libfaultlogger_napi.z.so"
+    },
+    "FaultLogInfo": {
+      "module": "faultLogger",
+      "so": "system/lib64/module/libfaultlogger_napi.z.so"
+    },
+    "PolicyInfo": {
+      "module": "fileshare",
+      "so": "system/lib64/module/libfileshare.z.so"
+    },
+    "PathPolicyInfo": {
+      "module": "fileshare",
+      "so": "system/lib64/module/libfileshare.z.so"
+    },
+    "PolicyErrorResult": {
+      "module": "fileshare",
+      "so": "system/lib64/module/libfileshare.z.so"
+    },
+    "SharedDirectoryInfo": {
+      "module": "fileshare",
+      "so": "system/lib64/module/libfileshare.z.so"
+    },
+    "Param": {
+      "module": "hiAppEvent",
+      "so": "system/lib64/module/libhiappevent.z.so"
+    },
+    "TraceFlag": {
+      "module": "hidebug",
+      "so": "system/lib64/module/libhidebug.z.so"
+    },
+    "tags": {
+      "module": "hidebug",
+      "so": "system/lib64/module/libhidebug.z.so"
+    },
+    "JsRawHeapTrimLevel": {
+      "module": "hidebug",
+      "so": "system/lib64/module/libhidebug.z.so"
+    },
+    "LogLevel": {
+      "module": "hilog",
+      "so": "system/lib64/module/libhilog_napi.z.so"
+    },
+    "PreferStrategy": {
+      "module": "hilog",
+      "so": "system/lib64/module/libhilog_napi.z.so"
+    },
+    "OutputType": {
+      "module": "hilog",
+      "so": "system/lib64/module/libhilog_napi.z.so"
+    },
+    "RuleType": {
+      "module": "hiSysEvent",
+      "so": "system/lib64/module/libhisysevent_napi.z.so"
+    },
+    "HiTraceFlag": {
+      "module": "hiTraceChain",
+      "so": "system/lib64/module/libhitracechain_napi.z.so"
+    },
+    "HiTraceTracepointType": {
+      "module": "hiTraceChain",
+      "so": "system/lib64/module/libhitracechain_napi.z.so"
+    },
+    "HiTraceCommunicationMode": {
+      "module": "hiTraceChain",
+      "so": "system/lib64/module/libhitracechain_napi.z.so"
+    },
+    "HiTraceOutputLevel": {
+      "module": "hiTraceMeter",
+      "so": "system/lib64/module/libhitracemeter_napi.z.so"
+    },
+    "PhoneNumberFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "BreakIterator": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nBreakIterator": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nCalendar": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "ChineseCalendar": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "IndexUtil": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nIndexUtil": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18NUtil": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "TimeZone": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nTimeZone": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "Transliterator": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nTransliterator": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "Character": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "Unicode": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "Util": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "Normalizer": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "I18nNormalizer": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "SystemLocaleManager": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "System": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "HolidayManager": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "EntityRecognizer": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "SimpleNumberFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "SimpleDateTimeFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "ISO8601DateTimeFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "StyledNumberFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "ZoneRules": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "ZoneOffsetTransition": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "StyledDateTimeFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "AdvancedMeasureFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "SymbolDateTimeFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "SymbolNumberFormat": {
+      "module": "i18n",
+      "so": "system/lib64/module/libi18n.z.so"
+    },
+    "InputMethodSetting": {
+      "module": "inputMethod",
+      "so": "system/lib64/module/libinputmethod.z.so"
+    },
+    "InputMethodController": {
+      "module": "inputMethod",
+      "so": "system/lib64/module/libinputmethod.z.so"
+    },
+    "InputMethodEngine": {
+      "module": "inputMethodEngine",
+      "so": "system/lib64/module/libinputmethodengine.z.so"
+    },
+    "KeyboardController": {
+      "module": "inputMethodEngine",
+      "so": "system/lib64/module/libinputmethodengine.z.so"
+    },
+    "TextInputClient": {
+      "module": "inputMethodEngine",
+      "so": "system/lib64/module/libinputmethodengine.z.so"
+    },
+    "KeyboardDelegate": {
+      "module": "inputMethodEngine",
+      "so": "system/lib64/module/libinputmethodengine.z.so"
+    },
+    "Locale": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "DateTimeFormat": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "Collator": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "RelativeTimeFormat": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "PluralRules": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "NumberFormat": {
+      "module": "intl",
+      "so": "system/lib64/module/libintl.z.so"
+    },
+    "PasteDataRecord": {
+      "module": "pasteboard",
+      "so": "system/lib64/module/libpasteboard_napi.z.so"
+    },
+    "PasteData": {
+      "module": "pasteboard",
+      "so": "system/lib64/module/libpasteboard_napi.z.so"
+    },
+    "SystemPasteboard": {
+      "module": "pasteboard",
+      "so": "system/lib64/module/libpasteboard_napi.z.so"
+    },
+    "ProgressSignal": {
+      "module": "pasteboard",
+      "so": "system/lib64/module/libpasteboard_napi.z.so"
+    },
+    "DevicePowerMode": {
+      "module": "power",
+      "so": "system/lib64/module/libpower.z.so"
+    },
+    "PowerKeyFilteringStrategy": {
+      "module": "power",
+      "so": "system/lib64/module/libpower.z.so"
+    },
+    "ProcessManager": {
+      "module": "process",
+      "so": "system/lib64/module/libprocess.z.so"
+    },
+    "ResourceManager": {
+      "module": "multimedia.resourceManager",
+      "so": "system/lib64/module/multimedia/libresourcemanager_napi.z.so"
+    },
+    "MessageParcel": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "MessageSequence": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "Ashmem": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "IPCSkeleton": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "RemoteObject": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "RemoteProxy": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "MessageOption": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "ErrorCode": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "CallingInfo": {
+      "module": "rpc",
+      "so": "system/lib64/module/librpc.z.so"
+    },
+    "RunningLockType": {
+      "module": "runningLock",
+      "so": "system/lib64/module/librunninglock.z.so"
+    },
+    "RunningLock": {
+      "module": "runningLock",
+      "so": "system/lib64/module/librunninglock.z.so"
+    },
+    "SensorType": {
+      "module": "sensor",
+      "so": "system/lib64/module/libsensor.z.so"
+    },
+    "SensorId": {
+      "module": "sensor",
+      "so": "system/lib64/module/libsensor.z.so"
+    },
+    "SensorAccuracy": {
+      "module": "sensor",
+      "so": "system/lib64/module/libsensor.z.so"
+    },
+    "tableName": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "domainName": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "date": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "display": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "general": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "input": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "network": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "phone": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "sound": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "tts": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "wireless": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "power": {
+      "module": "settings",
+      "so": "system/lib64/module/libsettings.z.so"
+    },
+    "ActivityEvent": {
+      "module": "stationary",
+      "so": "system/lib64/module/libstationary.z.so"
+    },
+    "ActivityState": {
+      "module": "stationary",
+      "so": "system/lib64/module/libstationary.z.so"
+    },
+    "paramWatcher": {
+      "module": "systemparameter",
+      "so": "system/lib64/module/libsystemparameter.z.so"
+    },
+    "Task": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "LongTask": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "GenericsTask": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "TaskGroup": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "SequenceRunner": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "AsyncRunner": {
+      "module": "taskpool",
+      "so": "system/lib64/module/libtaskpool.z.so"
+    },
+    "ThermalLevel": {
+      "module": "thermal",
+      "so": "system/lib64/module/libthermal.z.so"
+    },
+    "By": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "UiDriver": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "UiComponent": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "On": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "Driver": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "Component": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "UiWindow": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "PointerMatrix": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "UIEventObserver": {
+      "module": "UiTest",
+      "so": "system/lib64/module/libuitest.z.so"
+    },
+    "UpdateClient": {
+      "module": "update",
+      "so": "system/lib64/module/libupdate.z.so"
+    },
+    "Restorer": {
+      "module": "update",
+      "so": "system/lib64/module/libupdate.z.so"
+    },
+    "LocalUpdater": {
+      "module": "update",
+      "so": "system/lib64/module/libupdate.z.so"
+    },
+    "uri": {
+      "module": "uri",
+      "so": "system/lib64/module/liburi.z.so"
+    },
+    "URLSearchParams": {
+      "module": "url",
+      "so": "system/lib64/module/liburl.z.so"
+    },
+    "Url": {
+      "module": "url",
+      "so": "system/lib64/module/liburl.z.so"
+    },
+    "TextEncoder": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "TextDecoder": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "Base64": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "Base64Helper": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "Types": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "StringDecoder": {
+      "module": "util",
+      "so": "system/lib64/module/libutil.z.so"
+    },
+    "VibratorStopMode": {
+      "module": "vibrator",
+      "so": "system/lib64/module/libvibrator.z.so"
+    },
+    "EffectId": {
+      "module": "vibrator",
+      "so": "system/lib64/module/libvibrator.z.so"
+    },
+    "HapticFeedback": {
+      "module": "vibrator",
+      "so": "system/lib64/module/libvibrator.z.so"
+    },
+    "VibratorPatternBuilder": {
+      "module": "vibrator",
+      "so": "system/lib64/module/libvibrator.z.so"
+    },
+    "VibratorEventType": {
+      "module": "vibrator",
+      "so": "system/lib64/module/libvibrator.z.so"
+    },
+    "ThreadWorker": {
+      "module": "worker",
+      "so": "system/lib64/module/libworker.z.so"
+    },
+    "Worker": {
+      "module": "worker",
+      "so": "system/lib64/module/libworker.z.so"
+    },
+    "RestrictedWorker": {
+      "module": "worker",
+      "so": "system/lib64/module/libworker.z.so"
+    },
+    "XmlSerializer": {
+      "module": "xml",
+      "so": "system/lib64/module/libxml.z.so"
+    },
+    "XmlPullParser": {
+      "module": "xml",
+      "so": "system/lib64/module/libxml.z.so"
+    },
+    "XmlDynamicSerializer": {
+      "module": "xml",
+      "so": "system/lib64/module/libxml.z.so"
+    },
+    "XmlSAXParser": {
+      "module": "xml",
+      "so": "system/lib64/module/libxml.z.so"
+    },
+    "AudioEnum": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioRenderer": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioCapturer": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "TonePlayer": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioStreamManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioEffectManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioRoutingManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioVolumeGroupManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioVolumeManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioInterruptManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioSpatializationManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AsrProcessingController": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioSessionManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioCollaborativeManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioDeviceEnhanceManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioLoopback": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioRecordingManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioSuiteDownloadManager": {
+      "module": "multimedia.audio",
+      "so": "system/lib64/module/multimedia/libaudio.z.so"
+    },
+    "AudioHapticManager": {
+      "module": "multimedia.audioHaptic",
+      "so": "system/lib64/module/multimedia/libaudiohaptic_napi.z.so"
+    },
+    "AudioHapticPlayer": {
+      "module": "multimedia.audioHaptic",
+      "so": "system/lib64/module/multimedia/libaudiohaptic_napi.z.so"
+    },
+    "AudioHapticPlayerOptions": {
+      "module": "multimedia.audioHaptic",
+      "so": "system/lib64/module/multimedia/libaudiohaptic_napi.z.so"
+    },
+    "AVSession": {
+      "module": "multimedia.avsession",
+      "so": "system/lib64/module/multimedia/libavsession_napi.z.so"
+    },
+    "AVSessionController": {
+      "module": "multimedia.avsession",
+      "so": "system/lib64/module/multimedia/libavsession_napi.z.so"
+    },
+    "AVCastPickerHelper": {
+      "module": "multimedia.avsession",
+      "so": "system/lib64/module/multimedia/libavsession_napi.z.so"
+    },
+    "AVCastController": {
+      "module": "multimedia.avsession",
+      "so": "system/lib64/module/multimedia/libavsession_napi.z.so"
+    },
+    "CameraInput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "PreviewOutput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "PhotoOutput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "QuickThumbnail": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "VideoOutput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "CameraManager": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "camera": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "MetadataOutput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "PhotoSession": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "UnifyMovieFileOutput": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "VideoSession": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "Photo": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "CapturePhoto": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "SecureCameraSession": {
+      "module": "multimedia.camera",
+      "so": "system/lib64/module/multimedia/libcamera_napi.z.so"
+    },
+    "PickerProfile": {
+      "module": "multimedia.cameraPicker",
+      "so": "system/lib64/module/multimedia/libcamerapicker_napi.z.so"
+    },
+    "PickerResult": {
+      "module": "multimedia.cameraPicker",
+      "so": "system/lib64/module/multimedia/libcamerapicker_napi.z.so"
+    },
+    "CameraPicker": {
+      "module": "multimedia.cameraPicker",
+      "so": "system/lib64/module/multimedia/libcamerapicker_napi.z.so"
+    },
+    "CertificateStatus": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "ContentProtectionLevel": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "DrmErrorCode": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "ListenerType": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "MediaKeyRequestType": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "MediaKeyType": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "OfflineMediaKeyStatus": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "PreDefinedConfigName": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "MediaKeySession": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "MediaKeySystem": {
+      "module": "multimedia.drm",
+      "so": "system/lib64/module/multimedia/libdrm_napi.z.so"
+    },
+    "ImagePacker": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "PixelMap": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "ImageSource": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "XMPMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "Picture": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "AuxiliaryPicture": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "ImageMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "ExifMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "MakerNoteHuaweiMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "HeifsMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "FragmentMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "GifMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "XtStyleMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "RfDataBMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "WebPMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "JfifMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "PngMetadata": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "ImageReceiver": {
+      "module": "multimedia.sendableimage",
+      "so": "system/lib64/module/multimedia/libsendableimage.z.so"
+    },
+    "ImageCreator": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "ImageNapi": {
+      "module": "multimedia.image",
+      "so": "system/lib64/module/multimedia/libimage.z.so"
+    },
+    "AACProfile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVCProfile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVCodecType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVDataSourceError": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVErrorCode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVImageQueryOptions": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVMetricsEventType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVScreenCaptureFillMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVScreenCaptureRecordPreset": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVScreenCaptureStateCode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AacProfile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AudioEncoder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AudioOutputFormat": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AudioSourceType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "BufferingInfoType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "ErrorType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "FileGenerationMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "FrameFlags": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "H263Profile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "HEVCProfile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "HdrType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "LoadingRequestError": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MPEG2Profile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MPEG4Profile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MediaErrorCode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MediaType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "MetaSourceType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PickerMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PixelFormat": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PlaybackSpeed": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PlaylistLoopMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "ScreenCaptureEvent": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "SeekMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "SoundInterruptMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "StateChangeReason": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "SwitchMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VP8Profile": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoEncodeBitrateMode": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoPixelFormat": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoRecorderQualityLevel": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoScaleType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoSourceType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVMimeTypes": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "CodecMimeType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "ContainerFormatType": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MediaDescriptionKey": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PlaybackInfoKey": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "PlaybackMetricsKey": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AudioPlayer": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoPlayer": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVMetadataExtractor": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVImageGenerator": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVPlayer": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVAdsController": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AudioRecorder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "VideoRecorder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVRecorder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVTransCoder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "SoundPool": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "ParallelSoundPool": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVScreenCaptureRecorder": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "ScreenCaptureMonitor": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "MediaSource": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "AVDownloaderManager": {
+      "module": "multimedia.media",
+      "so": "system/lib64/module/multimedia/libmedia.z.so"
+    },
+    "FileAsset": {
+      "module": "multimedia.mediaLibrary",
+      "so": "system/lib64/module/multimedia/libmedialibrary.z.so"
+    },
+    "FetchFileResult": {
+      "module": "multimedia.mediaLibrary",
+      "so": "system/lib64/module/multimedia/libmedialibrary.z.so"
+    },
+    "Album": {
+      "module": "multimedia.mediaLibrary",
+      "so": "system/lib64/module/multimedia/libmedialibrary.z.so"
+    },
+    "SmartAlbum": {
+      "module": "multimedia.mediaLibrary",
+      "so": "system/lib64/module/multimedia/libmedialibrary.z.so"
+    },
+    "MediaLibrary": {
+      "module": "multimedia.mediaLibrary",
+      "so": "system/lib64/module/multimedia/libmedialibrary.z.so"
+    },
+    "MovingPhotoViewController": {
+      "module": "multimedia.movingphotoview",
+      "so": "system/lib64/module/multimedia/libmovingphotoview.z.so"
+    },
+    "ImageSourceSendable": {
+      "module": "multimedia.sendableimage",
+      "so": "system/lib64/module/multimedia/libsendableimage.z.so"
+    },
+    "ToneAttrs": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "ToneHapticsAttrs": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "ToneHapticsSettings": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "SystemSoundManager": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "AudioRendererInfo": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "RingtoneOptions": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "RingtonePlayer": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "SystemToneOptions": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "SystemTonePlayer": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "SystemSoundPlayer": {
+      "module": "multimedia.systemSoundManager",
+      "so": "system/lib64/module/multimedia/libsystemsoundmanager.z.so"
+    },
+    "ActionType": {
+      "module": "multimodalInput.gestureEvent",
+      "so": "system/lib64/module/multimodalinput/libgestureevent.z.so"
+    },
+    "TouchGestureAction": {
+      "module": "multimodalInput.gestureEvent",
+      "so": "system/lib64/module/multimodalinput/libgestureevent.z.so"
+    },
+    "ShieldMode": {
+      "module": "multimodalInput.inputConsumer",
+      "so": "system/lib64/module/multimodalinput/libinputconsumer.z.so"
+    },
+    "KeyCommandTriggerType": {
+      "module": "multimodalInput.inputConsumer",
+      "so": "system/lib64/module/multimodalinput/libinputconsumer.z.so"
+    },
+    "JsInputDeviceContext": {
+      "module": "multimodalInput.inputDevice",
+      "so": "system/lib64/module/multimodalinput/libinputdevice.z.so"
+    },
+    "JsCooperateContext": {
+      "module": "multimodalInput.inputDeviceCooperate",
+      "so": "system/lib64/module/multimodalinput/libinputdevicecooperate.z.so"
+    },
+    "IntentionCode": {
+      "module": "multimodalInput.intentionCode",
+      "so": "system/lib64/module/multimodalinput/libintentioncode.z.so"
+    },
+    "Action": {
+      "module": "multimodalInput.touchEvent",
+      "so": "system/lib64/module/multimodalinput/libtouchevent.z.so"
+    },
+    "Button": {
+      "module": "multimodalInput.mouseEvent",
+      "so": "system/lib64/module/multimodalinput/libmouseevent.z.so"
+    },
+    "Axis": {
+      "module": "multimodalInput.mouseEvent",
+      "so": "system/lib64/module/multimodalinput/libmouseevent.z.so"
+    },
+    "KeyCode": {
+      "module": "multimodalInput.keyCode",
+      "so": "system/lib64/module/multimodalinput/libkeycode.z.so"
+    },
+    "ToolType": {
+      "module": "multimodalInput.touchEvent",
+      "so": "system/lib64/module/multimodalinput/libtouchevent.z.so"
+    },
+    "JsPointerContext": {
+      "module": "multimodalInput.pointer",
+      "so": "system/lib64/module/multimodalinput/libpointer.z.so"
+    },
+    "JsShortKeyContext": {
+      "module": "multimodalInput.shortKey",
+      "so": "system/lib64/module/multimodalinput/libshortkey.z.so"
+    },
+    "SourceType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "FixedMode": {
+      "module": "multimodalInput.touchEvent",
+      "so": "system/lib64/module/multimodalinput/libtouchevent.z.so"
+    },
+    "OHOS_NET_HTTP_HttpRequest": {
+      "module": "net.http",
+      "so": "system/lib64/module/net/libhttp.z.so"
+    },
+    "OHOS_NET_HTTP_HttpResponseCache": {
+      "module": "net.http",
+      "so": "system/lib64/module/net/libhttp.z.so"
+    },
+    "HttpInterceptorChain": {
+      "module": "net.http",
+      "so": "system/lib64/module/net/libhttp.z.so"
+    },
+    "discoveryService": {
+      "module": "net.mdns",
+      "so": "system/lib64/module/net/libmdns.z.so"
+    },
+    "VpnConnection": {
+      "module": "net.vpn",
+      "so": "system/lib64/module/net/libvpn.z.so"
+    },
+    "VpnConnectionExt": {
+      "module": "net.vpnExtension",
+      "so": "system/lib64/module/net/libvpnextension.z.so"
+    },
+    "VpnObserverExt": {
+      "module": "net.vpnExtension",
+      "so": "system/lib64/module/net/libvpnextension.z.so"
+    },
+    "WebSocket": {
+      "module": "net.webSocket",
+      "so": "system/lib64/module/net/libwebsocket.z.so"
+    },
+    "WebSocketServer": {
+      "module": "net.webSocket",
+      "so": "system/lib64/module/net/libwebsocket.z.so"
+    },
+    "StopCode": {
+      "module": "resourceschedule.backgroundLoader",
+      "so": "system/lib64/module/resourceschedule/libbackgroundloader_napi.z.so"
+    },
+    "ContinuousTaskRequest": {
+      "module": "resourceschedule.backgroundTaskManager",
+      "so": "system/lib64/module/resourceschedule/libbackgroundtaskmanager_napi.z.so"
+    },
+    "SystemLoadLevel": {
+      "module": "resourceschedule.systemload",
+      "so": "system/lib64/module/resourceschedule/libsystemload.z.so"
+    },
+    "GroupType": {
+      "module": "resourceschedule.usageStatistics",
+      "so": "system/lib64/module/resourceschedule/libusagestatistics.z.so"
+    },
+    "NetworkType": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "ChargingType": {
+      "module": "resourceschedule.workScheduler",
+      "so": "system/lib64/module/resourceschedule/libworkscheduler.z.so"
+    },
+    "BatteryStatus": {
+      "module": "resourceschedule.workScheduler",
+      "so": "system/lib64/module/resourceschedule/libworkscheduler.z.so"
+    },
+    "StorageRequest": {
+      "module": "resourceschedule.workScheduler",
+      "so": "system/lib64/module/resourceschedule/libworkscheduler.z.so"
+    },
+    "HcfKey": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "PubKey": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "CertChainValidator": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "X509Cert": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "X509CrlEntry": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "X509CRLEntry": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "createX509Crl": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "createX509CRL": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "X500DistinguishedName": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "CertExtension": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "X509CertChain": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "CertChainBuildResult": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "CertCrlCollection": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "CmsGenerator": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "CertCmsParser": {
+      "module": "security.cert",
+      "so": "system/lib64/module/security/libcert.z.so"
+    },
+    "PriKey": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "KeyPair": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "SymKey": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "AsyKeyGenerator": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "AsyKeyGeneratorBySpec": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "SymKeyGenerator": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Sign": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Verify": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "KeyAgreement": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Mac": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Md": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Random": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Cipher": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Kdf": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "Kem": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "ECCKeyUtil": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "DHKeyUtil": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "SM2CryptoUtil": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "SignatureUtils": {
+      "module": "security.cryptoFramework",
+      "so": "system/lib64/module/security/libcryptoframework_napi.z.so"
+    },
+    "VoNRState": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "AudioDeviceType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "VideoStateType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "VideoRequestResultType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "ImsCallMode": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DeviceDirection": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DialScene": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DialType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DetailedCallState": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "ConferenceState": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallState": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallAbilityEventId": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallSessionEventId": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallRestrictionType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallRestrictionMode": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "RestrictionStatus": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallWaitingStatus": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "TransferStatus": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallTransferType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "CallTransferSettingType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "MmiCodeResult": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DisconnectedReason": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "MarkType": {
+      "module": "telephony.call",
+      "so": "system/lib64/module/telephony/libcall.z.so"
+    },
+    "DataConnectState": {
+      "module": "telephony.data",
+      "so": "system/lib64/module/telephony/libdata.z.so"
+    },
+    "DataFlowType": {
+      "module": "telephony.data",
+      "so": "system/lib64/module/telephony/libdata.z.so"
+    },
+    "ImsServiceType": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "ImsRegTech": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "ImsRegState": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NROptionMode": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "PreferredNetworkMode": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NetworkInformationState": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NetworkSelectionMode": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NsaState": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "RegState": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "RadioTechnology": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NetworkCapabilityType": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "NetworkCapabilityState": {
+      "module": "telephony.radio",
+      "so": "system/lib64/module/telephony/libradio.z.so"
+    },
+    "SimState": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "SimType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "ContactType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "LockState": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "LockType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "CardType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "PersoLockType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "OperatorConfigKey": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "OperatorSimCard": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "AuthType": {
+      "module": "telephony.sim",
+      "so": "system/lib64/module/telephony/libsim.z.so"
+    },
+    "SendSmsResult": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "ShortMessageClass": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "SimMessageStatus": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "RanType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "SmsEncodingScheme": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "MmsCharSets": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "MessageType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "MmsPriorityType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "MmsVersionType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "DispositionType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "ReportType": {
+      "module": "telephony.sms",
+      "so": "system/lib64/module/telephony/libsms.z.so"
+    },
+    "VCardType": {
+      "module": "telephony.vcard",
+      "so": "system/lib64/module/telephony/libvcard.z.so"
+    },
+    "PerfTest": {
+      "module": "test.PerfTest",
+      "so": "system/lib64/module/test/libperftest.z.so"
+    },
+    "FaceAuth": {
+      "module": "userIAM.faceAuth",
+      "so": "system/lib64/module/useriam/libfaceauth.z.so"
+    },
+    "WebNetErrorList": {
+      "module": "web.netErrorList",
+      "so": "system/lib64/module/web/libneterrorlist_napi.z.so"
+    },
+    "NmErrorCode": {
+      "module": "web.webNativeMessagingExtensionManager",
+      "so": "system/lib64/module/web/libwebnativemessagingextensionmanager_napi.z.so"
+    },
+    "WebDataBase": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebStorage": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebAsyncController": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebviewController": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebMessageType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebMessageExt": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "SecurityLevel": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "MediaPlaybackState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebMessagePort": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "HitTestTypeV9": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebHitTestType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "SecureDnsMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ArkWebEngineVersion": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebHistoryList": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebPrintDocument": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "RenderProcessMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "OfflineResourceType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ScrollType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "PressureLevel": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ControllerAttachState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebBlanklessErrorCode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "BlanklessFrameInterpolationState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDestroyMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "SiteIsolationMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebSoftKeyboardBehaviorMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ScrollbarMode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebHttpCookieSameSitePolicy": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "JsMessageType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "JsMessageExt": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "PdfData": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebCookieManager": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "GeolocationPermissions": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDownloadItem": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDownloadState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDownloadErrorCode": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDownloadManager": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebDownloadDelegate": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebSchemeHandlerRequest": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebResourceType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebSchemeHandlerResponse": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "WebSchemeHandler": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "AdsBlockManager": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "Preload": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "MediaError": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ReadyState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "SuspendType": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "NetworkState": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "PlaybackStatus": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "BackForwardCacheOptions": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "PrefetchOptions": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "BackForwardCacheSupportedFeatures": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ProxyController": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ProxyConfig": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ProxyRule": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "ProxySchemeFilter": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "UserAgentBrandVersion": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "UserAgentMetadata": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    },
+    "UserAgentFormFactor": {
+      "module": "web.webview",
+      "so": "system/lib64/module/web/libwebview_napi.z.so"
+    }
+  }
+}
