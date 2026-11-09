@@ -122,7 +122,10 @@ def normalize_dest(value):
         if part in ('', '.'):
             continue
         if part == '..':
-            return None
+            if not parts:
+                return None
+            parts.pop()
+            continue
         parts.append(part)
     if not parts:
         return None
