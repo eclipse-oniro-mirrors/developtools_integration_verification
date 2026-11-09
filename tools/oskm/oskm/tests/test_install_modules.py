@@ -170,6 +170,11 @@ class InstallModulesTest(unittest.TestCase):
         for value, expected in [('system/lib/a.so', ('system/lib/a.so', False)),
                                 ('system/app/Demo/', ('system/app/Demo', True)),
                                 ('./system//lib/a.so', ('system/lib/a.so', False)),
+                                ('sys_prod/etc/../variant/media/a.ogg',
+                                 ('sys_prod/variant/media/a.ogg', False)),
+                                ('system/app/../lib/a.so',
+                                 ('system/lib/a.so', False)),
+                                ('system/app/Demo/..', ('system/app', False)),
                                 # a single leading slash is tolerated (Huawei build quirk)
                                 ('/absolute', ('absolute', False)),
                                 ('/system/etc/a.cfg', ('system/etc/a.cfg', False)),
