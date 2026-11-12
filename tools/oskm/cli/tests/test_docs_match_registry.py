@@ -46,20 +46,6 @@ def _names():
     return {t['name'] for t in export()}
 
 
-def _agents_section():
-    """返回根 AGENTS.md 中的 oskm 常驻路由段。
-
-    KnowledgeBase 的根 AGENTS.md 很短，整份就是 oskm 路由；集成仓库的根
-    AGENTS.md 还要承载 CI、smoke test 等仓库级约束，因此只限制 oskm 路由段
-    的长度，不能要求整份文件都小于 40 行。
-    """
-    text = DOCS['AGENTS.md'].read_text(encoding='utf-8')
-    marker = '## oskm 知识库'
-    if marker in text:
-        return marker + text.split(marker, 1)[1]
-    return text
-
-
 class DocsMatchRegistry(unittest.TestCase):
     # 「50 个工具」「50 个只读工具」都要认。第一版只写了 `个工具`，结果
     # AGENTS.md 的「50 个只读工具」漏网，整条断言对它空转——是注入 43 做
@@ -119,7 +105,7 @@ class DocsMatchRegistry(unittest.TestCase):
         这里要保证：指得到 skill、指得到**当前真实存在的**入口，
         以及不再教人去挂一个已经删掉的 MCP server。
         """
-        text = _agents_section()
+        text = DOCS['AGENTS.md'].read_text(encoding='utf-8')
         self.assertIn('ohos-design-architecture-evidence-query` skill', text)
         self.assertIn('bootstrap.py', text)          # skill 入口
         self.assertIn('-m oskm.cli', text)           # 采集侧入口
@@ -134,7 +120,7 @@ class DocsMatchRegistry(unittest.TestCase):
         子命令清单，漂了会把命令送去扫描侧，报一句
         "invalid choice: <你的 --db 路径>"）。
         """
-        text = _agents_section()
+        text = DOCS['AGENTS.md'].read_text(encoding='utf-8')
         for removed in ('oskm.py', '-m agentic', 'agentic.runtime',
                         'build_bundle'):
             self.assertNotIn(removed, text, f'AGENTS.md 仍在教人用 {removed}')

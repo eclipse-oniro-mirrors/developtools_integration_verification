@@ -9,17 +9,16 @@ Python 3.10+，查询层**仅标准库且无 pip 依赖**；运行时安装的 D
 Node 与 ohos-typescript）。
 结果只存单个 SQLite 库，没有可选产物格式，也不产出 JSON 文件。
 
-## 组件构成
+## 五大组件
 
 ```
-tools/oskm/
+packages/oskm/
   oskm/          ①  采集流水线：框架 + 12 个采集器，写库
   oskm_schema/   ②  表结构：25 张表的唯一定义，①③④ 共用
   cli/           ③  查询 CLI：独立产物，只读封装 knowledge.db
   skills/ohos-design-architecture-evidence-query/
                  ④  Agent skill：独立产物，装 DB/SDK/CLI 并教 Agent 怎么问
   viewer/        ⑤  可视化：静态站点，浏览器直接打开库
-  lsp/           仓库本地扩展：clangd 索引与 MCP 集成
 ```
 
 | 组件 | 职责 | 交付形态 | 入口文档 |
@@ -34,16 +33,13 @@ tools/oskm/
 `skill 3.0.0`）：③ 是纯函数式的只读工具，给它一个库路径就出答案；
 ④ 是装配工。schema 契约只有 ③ 那一份，④ 的 `validate-db` 是转发。
 ③ 不 import 任何采集器，也不 import ④（都有门禁盯着）。
-
-`lsp/` 是 integration_verification 仓库保留的本地扩展，不属于上述两个发布产物；
-它负责构建和消费 clangd `.idx` 索引，详见后文。
 拆分理由、职责边界与迁移记录见
 [docs/architecture/cli-skill-split.md](./docs/architecture/cli-skill-split.md)。
 
 ## 快速上手
 
 ```bash
-cd tools/oskm/skills/ohos-design-architecture-evidence-query
+cd packages/oskm/skills/ohos-design-architecture-evidence-query
 
 # ④ 安装运行时（DB + interface/sdk-js + interface/sdk_c + CLI）
 cp oskm_runtime/.env.example oskm_runtime/.env
@@ -103,7 +99,7 @@ wukong100 实测（`date=20261111`，`cpu_arch=arm64`）：527 仓 · 57 子系�
 ## 构建与验证
 
 ```bash
-cd tools/oskm
+cd packages/oskm
 export OSKM_TEST_DB="$HOME/.oskm/knowledge.db"   # 真库（wukong100）
 
 python3.12 -m unittest discover -s oskm/tests -p "test_*.py"     # ①② 采集与表结构
@@ -121,24 +117,6 @@ python3.12 skills/ohos-design-architecture-evidence-query/scripts/build_skill.py
 > `oskm_schema/base.py` 用了 `str | None`。**一律用 `python3.12`。**
 
 产品级验收需要真实 OpenHarmony 代码树，见 [oskm/README.md](./oskm/README.md) 末节。
-
-## LSP 代码索引（clangd .idx）
-
-`lsp/` 在流水线编译完成后构建 clangd `.idx` 索引，默认输出到
-`out/<product>/lsp-portable/`；portable 模式包含可迁移索引、规范化 CDB 和
-manifest。索引可通过 `lsp/mcp/` 内的 MCP 服务消费，获得调用链、引用和定义跳转。
-
-```bash
-# 手动构建（在 OpenHarmony 源码根执行）
-python3 developtools/integration_verification/tools/oskm/lsp/build_index.py -i out/<product>
-
-# LSP 回归（在 integration_verification 仓库根执行）
-LSP_TEST_CLANGD="$PWD/tools/oskm/lsp/clangd/bin/clangd" \
-  python3 tools/oskm/lsp/test_portable_index.py -v
-```
-
-MCP 配置与 29 个 `lsp_*` 工具的说明见
-[lsp/mcp/README.md](./lsp/mcp/README.md) 和 [lsp/mcp/SKILL.md](./lsp/mcp/SKILL.md)。
 
 ## Agent 指南
 
