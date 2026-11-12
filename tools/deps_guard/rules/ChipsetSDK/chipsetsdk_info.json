@@ -48,6 +48,12 @@
         "headers": []
     },
     {
+        "name": "audio_framework:audio_suite_generic",
+        "so_file_name": "libaudio_suite_generic.z.so",
+        "path": "//foundation/multimedia/audio_framework/services/audio_suite:audio_suite_generic",
+        "headers": []
+    },
+    {
         "name": "thirdparty:libexif",
         "so_file_name": "libexif.z.so",
         "path": "//third_party/libexif:libexif",
