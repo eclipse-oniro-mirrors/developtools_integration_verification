@@ -46,7 +46,7 @@ erDiagram
         text declaration_scope "声明在哪"
         text implementation_kind "怎么实现"
         text language_coverage "dynamic/static/both"
-        text impl_so_path "按 cpu_arch 构造的镜像路径，932 行"
+        text impl_so_path "按 ScanRequest.cpu_arch 构造的镜像路径，932 行"
         text impl_napi_name "运行时注册名"
         text impl_match "匹配强度"
         int  impl_elf_id FK "由 arkts_links 回填"
@@ -121,7 +121,7 @@ viewer 里多一层。它的五列原样搬到 `arkts_modules` 上（`source_id`
 | `declaration_scope` | api_named(640) / api_auxiliary(426) / internal_component(140) / arkts_builtin(106) / arkts_named(4) / internal_ets(3) |
 | `implementation_kind` | napi(525) / arkui(407) / type_only(172) / unknown(108) / arkts_builtin(106) / arkts_language(1) |
 | `language_coverage` | dynamic(908) / static(213) / both(198) |
-| `impl_so_path` | 按 `cpu_arch` 构造的镜像路径：arm 为 `system/lib/…`，arm64 为 `system/lib64/…`。932 行非空 |
+| `impl_so_path` | 按 `ScanRequest.cpu_arch` 构造的镜像路径：arm 为 `system/lib/…`，arm64 为 `system/lib64/…`。932 行非空 |
 | `impl_napi_name` | NAPI 运行时注册名；arkui 行为 NULL |
 | `impl_match` | module_name(501) / arkui_engine(407) / declaration_path(17) / name_suffix(7) / NULL(387) |
 | `impl_elf_id` | 镜像中的 ELF 行，由 `arkts_links` 回填。932/932 |
@@ -234,7 +234,7 @@ sdk-js 仓里的声明文件），其摘要记在 `collector_runs.scope.napi_map
 
 映射表写的是 64 位路径（`system/lib64/module/...`），而 rk3568 是 32 位
 （3,513/3,517 的 ELF 为 ARM32，镜像里 `system/lib64/` 下**零个**安装目标）。
-因此采集器必须在落库前按 `scans.cpu_arch` 把库根改写成 `system/lib/`；否则存下来的
+因此采集器必须在落库前按本次 `ScanRequest.cpu_arch` 把库根改写成 `system/lib/`；否则存下来的
 不是本次产品的路径事实，后续只能靠查询侧或关联侧做别名补偿。
 
 当前模型选择在投影时一次归一，`impl_so_path` 与 `install_targets.dest` 使用同一套
@@ -244,7 +244,7 @@ sdk-js 仓里的声明文件），其摘要记在 `collector_runs.scope.napi_map
 
 按文件名匹配时，有 **14 个 `.so` 名在镜像中出现 2–3 次**
 （`libcommon.z.so`、`libutils.z.so`、`libsms.z.so` 等，同分区不同部件）。
-改用按 `cpu_arch` 归一后的全路径后，14/14 都能唯一定位。
+改用按本次 `ScanRequest.cpu_arch` 归一后的全路径后，14/14 都能唯一定位。
 
 这正是全路径相对裸文件名的价值所在。
 
@@ -391,7 +391,7 @@ kit    → arkts_kit_relations.module_id → 同上（Kit 本身无实现，经�
   与本文历次数字口径一致）
 - **一对一验证**：`count(*)` 与 `count(DISTINCT module_id)` 对照，相等才折叠
 - **实现映射**：四条规则按强度依次匹配；未命中项再按"末段同名"在全 SDK（含 zh-cn）
-  做文件系统直查以分类；so 路径按扫描 `cpu_arch` 归一后与 `install_targets.dest`
+  做文件系统直查以分类；so 路径按 `ScanRequest.cpu_arch` 归一后与 `install_targets.dest`
   精确求交，并统计多命中
 - **类名碰撞**：`grep -rlE '^\s*(export\s+)?(declare\s+)?(interface|class|enum)\s+<名>\b'`
   统计 SDK 内声明同名类型的文件数，与映射表条目数对照

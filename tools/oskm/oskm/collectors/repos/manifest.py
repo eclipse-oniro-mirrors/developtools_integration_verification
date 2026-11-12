@@ -30,11 +30,15 @@ def parse(manifest_dir, entry='default.xml'):
     manifest_dir: path to .repo/manifests/
     entry: filename within manifest_dir to start from (default: default.xml)
     When the named entry does not exist but `.repo/manifest.xml` does, that
-    symlink's target is used instead (yellow-zone HarmonyOS workspaces).
+    symlink's target is used instead (HarmonyOS workspaces).
 
     <default> attributes are inherited across includes: a sub-manifest
     that does not redeclare <default> keeps the parent's remote/revision.
     """
+    # Resolve the manifest root once. On macOS /var is a symlink to
+    # /private/var; without this, a valid .repo/manifest.xml fallback can be
+    # rejected as outside the manifests directory.
+    manifest_dir = Path(manifest_dir).resolve()
     start = manifest_dir / entry
     if not start.is_file():
         fallback = manifest_dir.parent / 'manifest.xml'

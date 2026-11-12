@@ -50,7 +50,8 @@ def discover(ctx):
         except OSError:
             ctx.issue(directory, 'HCB_DIRECTORY_UNREADABLE')
     if not paths:
-        raise ScanFatalError('HCB_INPUT_MISSING')
+        ctx.issue(ctx.package, 'HCB_INPUT_MISSING')
+        return []
     return sorted(paths)
 
 

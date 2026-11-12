@@ -17,7 +17,7 @@
 
 - `ndk_headers` 只保存 `(elf_module_id, header_path, match_strategy)`，不冗余部件、SONAME 或路径。
 - 列表用一条 SQL JOIN `elf_modules`、`install_targets`、`components`、`install_modules` 取出展示字段。
-- `source_url` 用 `header_path` 匹配最长仓路径前缀生成。blue 区用扫描时提交号拼 blob 链接；yellow 区内部镜像仓的 host 以 `szv-` 开头时，展示链接去掉该前缀，并用分支名拼 `files?ref=&filePath=&isFile=true` 链接。该规则在通用 `fileSource` 中实现，声明文件也复用同一套拼法；blue 拼法不动。
+- `source_url` 用 `header_path` 匹配最长仓路径前缀生成。公开托管仓用扫描时提交号拼 blob 链接；内部镜像仓的 host 以 `szv-` 开头时，展示链接去掉该前缀，并用分支名拼 `files?ref=&filePath=&isFile=true` 链接。该规则在通用 `fileSource` 中实现，声明文件也复用同一套拼法；公开仓拼法不动。
 - 档案页沿 `elf_module_id` 作为父链，能自然回链到 ELF 与部件；表本身不新增外键。
 
 ## 列设计

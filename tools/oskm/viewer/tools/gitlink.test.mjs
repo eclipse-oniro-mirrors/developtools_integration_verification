@@ -26,8 +26,8 @@ const load = async (repos) => {
   return import('data:text/javascript;base64,' + Buffer.from(patched).toString('base64'))
 }
 
-/* ---- yellow 区：内部镜像仓，走 files 格式（保留域名只验证 URL 形态） ---- */
-const yellowRepos = [{
+/* ---- 内部镜像仓：走 files 格式（保留域名只验证 URL 形态） ---- */
+const mirrorRepos = [{
   scan_id: 2, name: 'openharmony/interface_sdk_c',
   path: 'interface/sdk_c',
   remote_url: 'https://szv-open.codehub.example.invalid/mirror/openharmony/interface_sdk_c',
@@ -35,8 +35,8 @@ const yellowRepos = [{
   head_commit: 'dbedc2e4121c5bc056ab76bfbde8032cf2850f3d',
 }]
 
-test('yellow 内部镜像仓：NDK 头文件拼 files 链接，ref 用分支名', async () => {
-  const { ndkHeaderSource } = await load(yellowRepos)
+test('内部镜像仓：NDK 头文件拼 files 链接，ref 用分支名', async () => {
+  const { ndkHeaderSource } = await load(mirrorRepos)
   const got = ndkHeaderSource(2, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(
     got.url,
@@ -48,8 +48,8 @@ test('yellow 内部镜像仓：NDK 头文件拼 files 链接，ref 用分支名'
   assert.equal(got.exact, true)   // 有 head_commit，但链接用分支名，exact 语义保留
 })
 
-test('yellow 内部镜像仓：深目录头文件相对路径正确', async () => {
-  const { ndkHeaderSource } = await load(yellowRepos)
+test('内部镜像仓：深目录头文件相对路径正确', async () => {
+  const { ndkHeaderSource } = await load(mirrorRepos)
   const got = ndkHeaderSource(2, 'interface/sdk_c/third_party/icu4c/ndk_headers/unicode/utypes.h')
   assert.equal(
     got.url,
@@ -58,7 +58,7 @@ test('yellow 内部镜像仓：深目录头文件相对路径正确', async () =
       '&filePath=third_party%2Ficu4c%2Fndk_headers%2Funicode%2Futypes.h&isFile=true')
 })
 
-test('yellow 内部镜像仓：声明文件也拼 files 链接，ref 用分支名', async () => {
+test('内部镜像仓：声明文件也拼 files 链接，ref 用分支名', async () => {
   const repos = [{
     scan_id: 2, name: 'openharmony/interface_sdk_js',
     path: 'interface/sdk-js',
@@ -80,8 +80,8 @@ test('yellow 内部镜像仓：声明文件也拼 files 链接，ref 用分支�
   assert.deepEqual(mod.ndkHeaderSource(2, path), got)
 })
 
-/* ---- blue 区：gitcode 等公开仓，必须保持原 blob 拼法，一字不改 ---- */
-const blueRepos = [{
+/* ---- 公开仓：gitcode 等托管站，必须保持原 blob 拼法，一字不改 ---- */
+const publicRepos = [{
   scan_id: 1, name: 'interface_sdk_c',
   path: 'interface/sdk_c',
   remote_url: 'https://gitcode.com/openharmony/interface_sdk_c',
@@ -89,21 +89,21 @@ const blueRepos = [{
   head_commit: 'abc123def456',
 }]
 
-test('blue 区：NDK 头文件仍走 fileSource 原逻辑（blob + 提交号）', async () => {
-  const mod = await load(blueRepos)
+test('公开仓：NDK 头文件仍走 fileSource 原逻辑（blob + 提交号）', async () => {
+  const mod = await load(publicRepos)
   const got = mod.ndkHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(
     got.url,
     'https://gitcode.com/openharmony/interface_sdk_c/blob/abc123def456/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(got.ref, 'abc123def456')
   assert.equal(got.exact, true)
-  /* ndkHeaderSource 在 blue 下必须与 fileSource 完全一致 */
+  /* ndkHeaderSource 在公开仓下必须与 fileSource 完全一致 */
   const viaFile = mod.fileSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.deepEqual(got, viaFile)
 })
 
-test('blue 区：无 head_commit 时 fileSource 退 revision，ndk 链接跟随', async () => {
-  const repos = [{ ...blueRepos[0], head_commit: null }]
+test('公开仓：无 head_commit 时 fileSource 退 revision，ndk 链接跟随', async () => {
+  const repos = [{ ...publicRepos[0], head_commit: null }]
   const mod = await load(repos)
   const got = mod.ndkHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(got.ref, 'master')
@@ -114,7 +114,7 @@ test('blue 区：无 head_commit 时 fileSource 退 revision，ndk 链接跟随'
 })
 
 /* ---- gitlab 系（/-/blob/）也不受影响 ---- */
-test('gitlab 系 blue 区：保持 /-/blob/ 拼法', async () => {
+test('gitlab 系公开仓：保持 /-/blob/ 拼法', async () => {
   const repos = [{
     scan_id: 1, name: 'sdk', path: 'interface/sdk_c',
     remote_url: 'https://gitlab.example.com/oh/sdk',
@@ -128,7 +128,7 @@ test('gitlab 系 blue 区：保持 /-/blob/ 拼法', async () => {
 })
 
 test('空参/未匹配仓返回 null', async () => {
-  const mod = await load(yellowRepos)
+  const mod = await load(mirrorRepos)
   assert.equal(mod.ndkHeaderSource(null, 'x.h'), null)
   assert.equal(mod.ndkHeaderSource(2, ''), null)
   const { ndkHeaderSource: empty } = await load([{ scan_id: 2, name: 'a', path: 'b', remote_url: null }])

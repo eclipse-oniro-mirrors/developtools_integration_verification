@@ -78,4 +78,4 @@
 
 `public_api` 可携带 `platform_sdk_indirect` 是设计内组合：public 类型由直接 public 事实决定，indirect 标签只表达它被 `platform_sdk` 传递依赖。
 
-命中结果由 `oskm/tests/verify_rk3568.py` 的独立 `readelf -d` oracle 按同一 rank 公式逐边复核，并额外断言每个 callee 都落在 `system/` 或 `vendor/`。把匹配范围从“全部分区”收敛到 deps_guard 的遍历范围后，5,433 条边改判为运行时真正加载的那一份（5,431 条原指向 `ramdisk/lib/chipset-sdk-sp/`，2 条原指向 `updater/`）。`libc.so -> ld-musl-arm.so.1` 与 `librga.so.2 -> librga.z.so` 通过 `SONAME` 兜底解析；`libappspawn_module_engine.so`、`libinit_module_engine.so`、`libnative_drawing.so` 的 20 条边通过安装软链解析到真实 ELF。间接闭包不物化，扫描耗时约 3 秒、峰值 RSS 约 82 MiB。
+命中结果由当时 `oskm/tests/verify_rk3568.py`（已于 2026-11-12 删除）的独立 `readelf -d` oracle 按同一 rank 公式逐边复核，并额外断言每个 callee 都落在 `system/` 或 `vendor/`。把匹配范围从“全部分区”收敛到 deps_guard 的遍历范围后，5,433 条边改判为运行时真正加载的那一份（5,431 条原指向 `ramdisk/lib/chipset-sdk-sp/`，2 条原指向 `updater/`）。`libc.so -> ld-musl-arm.so.1` 与 `librga.so.2 -> librga.z.so` 通过 `SONAME` 兜底解析；`libappspawn_module_engine.so`、`libinit_module_engine.so`、`libnative_drawing.so` 的 20 条边通过安装软链解析到真实 ELF。间接闭包不物化，扫描耗时约 3 秒、峰值 RSS 约 82 MiB。

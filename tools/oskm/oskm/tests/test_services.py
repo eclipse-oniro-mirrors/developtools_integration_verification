@@ -512,7 +512,7 @@ class ServicesTest(unittest.TestCase):
             self.assertEqual(session.records('services')[0]['name'], 'replacement')
         scan_parser = parser()._subparsers._group_actions[0].choices['scan']
         self.assertEqual({a.dest for a in scan_parser._actions} - {'help'}, {'workspace_root',
-                         'product', 'zone', 'cpu_arch', 'db', 'only', 'without', 'scan_id',
+                         'product', 'cpu_arch', 'db', 'only', 'without', 'scan_id',
                          'reuse_upstream', 'fail_on'})
         for flag in ('--fields', '--partition', '--progress', '--module-info', '--output'):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):

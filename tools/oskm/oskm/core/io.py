@@ -23,21 +23,18 @@ from collections.abc import Mapping
 from pathlib import Path
 
 
-def valid_product(value, zone='blue'):
-    """Shared product-name shape check reused by request validation and by domains
-    that also validate an already-scanned product field (e.g. components).
+def valid_product(value):
+    """Validate the build product's relative path under ``out/``.
 
-    Blue zone forbids path separators; yellow zone products are '{abi}/{device}'
-    so a single '/' separator is allowed and path separators are validated as
-    exactly one slash between two non-empty segments.
+    A product has one segment (``out/{product}``) or two
+    (``out/{abi}/{device}``).
     """
-    if not (isinstance(value, str) and bool(value) and value not in ('.', '..')
+    if not (isinstance(value, str) and value and value not in ('.', '..')
             and '\\' not in value and '\x00' not in value):
         return False
-    if zone == 'yellow':
-        parts = value.split('/')
-        return len(parts) == 2 and all(parts) and '/' not in parts[0] + parts[1]
-    return '/' not in value
+    parts = value.split('/')
+    return len(parts) in (1, 2) and all(
+        part and part not in ('.', '..') for part in parts)
 
 
 def canonical(value, *, indent=None):

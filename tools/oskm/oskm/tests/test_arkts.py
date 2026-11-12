@@ -24,7 +24,14 @@ from oskm.core.io import canonical
 from oskm.core.models import QueryError, RequestError, ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
 from oskm.core.runner import run
 from oskm.core.session import ScanSession
-from agentic.query.arkts import ArktsQuery, export_document
+# oskm/tests -> oskm -> packages/oskm（oskm、oskm_schema）与 packages/oskm/cli
+# （oskm_cli）。查询侧的 ArktsQuery 属于 CLI 产物，不在采集包里。
+_PACKAGE = Path(__file__).resolve().parents[2]
+for _entry in (str(_PACKAGE), str(_PACKAGE / 'cli')):
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
+
+from oskm_cli.query.arkts import ArktsQuery, export_document
 from oskm.collectors.arkts.backend import Backend, validate_result
 from oskm.collectors.arkts.collector import ArktsCollector
 from oskm.collectors.arkts_links.collector import ArktsLinksCollector
@@ -40,14 +47,44 @@ HAS_BACKEND = BACKEND.is_dir() and WORKSPACE_NODE.is_file()
 
 
 class LinkingTest(unittest.TestCase):
-    def test_arkui_engine_so_is_zone_aware(self):
-        # The zone chooses the subdirectory layout; cpu_arch chooses lib vs lib64.
-        from oskm.collectors.arkts.models import (ARKUI_ENGINE_SO,
-                                                  YELLOW_ARKUI_ENGINE_SO,
-                                                  arkui_engine_so)
-        self.assertEqual(arkui_engine_so('blue', 'arm'),
-                         'system/lib/platformsdk/libace_engine_pa_ark.z.so')
-        self.assertEqual(arkui_engine_so('yellow', 'arm64'), YELLOW_ARKUI_ENGINE_SO)
+    def link_database(self):
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        connection.executescript('''
+            CREATE TABLE arkts_modules(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, module_key TEXT,
+                impl_so_path TEXT, impl_match TEXT, impl_elf_id INTEGER);
+            CREATE TABLE install_targets(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, dest TEXT);
+            CREATE TABLE elf_modules(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, install_target_id INTEGER);
+            CREATE TABLE collector_runs(
+                scan_id INTEGER, collector TEXT, status TEXT);
+            INSERT INTO arkts_modules(
+                id, scan_id, module_key, impl_so_path, impl_match)
+            VALUES(
+                1, 7, 'api/@internal/ets/button',
+                'system/lib64/platformsdk/libace_engine_pa_ark.z.so',
+                'arkui_engine');
+        ''')
+        return connection
+
+    def add_installed_elf(self, connection, dest, position):
+        target_id = connection.execute(
+            'INSERT INTO install_targets(scan_id, dest) VALUES(?,?)',
+            (7, dest)).lastrowid
+        connection.execute(
+            'INSERT INTO elf_modules(scan_id, install_target_id) VALUES(?,?)',
+            (7, target_id))
+
+    def test_arkui_engine_so_depends_on_arch(self):
+        # The image layout is an installation fact. Until an installed target
+        # provides better evidence, use the architecture-based reference path.
+        from oskm.collectors.arkts.models import ARKUI_ENGINE_SO, arkui_engine_so
+        expected_arm = 'system/lib/platformsdk/libace_engine_pa_ark.z.so'
+        expected_arm64 = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
+        self.assertEqual(arkui_engine_so('arm'), expected_arm)
+        self.assertEqual(arkui_engine_so('arm64'), expected_arm64)
         self.assertEqual(ARKUI_ENGINE_SO,
                          'system/lib64/platformsdk/libace_engine_pa_ark.z.so')
 
@@ -57,6 +94,38 @@ class LinkingTest(unittest.TestCase):
         self.assertEqual(arch_library_path(reference, 'arm'),
                          'system/lib/module/multimedia/libimage.z.so')
         self.assertEqual(arch_library_path(reference, 'arm64'), reference)
+
+    def test_post_insert_without_link_tables_is_a_noop(self):
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        ArktsLinksCollector.post_insert(connection, 1)
+
+    def test_collect_resolves_arkui_path_before_reporting_links(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        connection = self.link_database()
+        self.add_installed_elf(connection, actual, 0)
+        connection.executemany(
+            'INSERT INTO collector_runs(scan_id, collector, status) VALUES(?,?,?)',
+            ((7, 'arkts', 'complete'), (7, 'elf_modules', 'complete')))
+        with tempfile.TemporaryDirectory() as tmp:
+            context = ArktsLinksCollector.CONTEXT_TYPE(
+                scan_id=7, connection=connection,
+                request=ScanRequest(Path(tmp), 'test'), collector='arkts_links')
+            ArktsLinksCollector().collect(context)
+        path = connection.execute(
+            'SELECT impl_so_path FROM arkts_modules WHERE id=1').fetchone()[0]
+        self.assertEqual(path, actual)
+        self.assertEqual(context.records['arkts_links_run'][0]['linked'], 1)
+
+    def test_duplicate_installed_targets_are_one_arkui_destination(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        connection = self.link_database()
+        self.add_installed_elf(connection, actual, 0)
+        self.add_installed_elf(connection, actual, 1)
+        ArktsLinksCollector.post_insert(connection, 7)
+        path = connection.execute(
+            'SELECT impl_so_path FROM arkts_modules WHERE id=1').fetchone()[0]
+        self.assertEqual(path, actual)
 
     def test_module_targets_paths_and_out_of_scope(self):
         # A module declared for both language versions is one target. Keying on
@@ -171,6 +240,22 @@ class ArktsTest(unittest.TestCase):
         path.write_bytes(text if isinstance(text, bytes) else text.encode())
         return path
 
+    def add_installed_elf(self, connection, dest, position=0):
+        module_id = connection.execute(
+            'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
+            (self.scan_id, position, '{}')).lastrowid
+        target_id = connection.execute(
+            'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
+            'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
+            (self.scan_id, module_id, 0, dest, 0, 'system',
+             dest.rsplit('/', 1)[-1])).lastrowid
+        connection.execute(
+            'INSERT INTO elf_modules(scan_id, position, install_target_id, '
+            'install_module_id, partition, file_name, api_type, category, '
+            'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
+            (self.scan_id, position, target_id, module_id, 'system',
+             dest.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
+
     def scan(self, **kwargs):
         return run(self.database, self.request, only=('arkts',), without=('repos',), **kwargs)
 
@@ -218,7 +303,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(button['module']['implementation_kind'], 'arkui')
         self.assertEqual(button['module']['declaration_scope'], 'internal_ets')
         self.assertEqual(button['implementation']['impl_so_path'],
-                         'system/lib/platformsdk/libace_engine_pa_ark.z.so')
+                         'system/lib64/platformsdk/libace_engine_pa_ark.z.so')
         self.assertEqual(button['implementation']['impl_match'], 'arkui_engine')
         # 没解析到 ELF：这里没跑 arkts_links
         self.assertNotIn('installed_at', button['implementation'])
@@ -231,9 +316,82 @@ class ArktsTest(unittest.TestCase):
         self.assertTrue(all(p.startswith(SDK_PATH + '/') for p in paths), paths[:3])
         self.assertEqual(len(q.scope['napi_map']['sha256']), 64)
 
-    def _assert_napi_layout_and_exact_link(self, zone, cpu_arch, expected, wrong):
+    def test_arkui_path_uses_unique_installed_target_and_links_its_elf(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            module_id = connection.execute(
+                'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
+                (self.scan_id, 0, '{}')).lastrowid
+            target_id = connection.execute(
+                'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
+                'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
+                (self.scan_id, module_id, 0, actual, 0, 'system',
+                 actual.rsplit('/', 1)[-1])).lastrowid
+            connection.execute(
+                'INSERT INTO elf_modules(scan_id, position, install_target_id, '
+                'install_module_id, partition, file_name, api_type, category, '
+                'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                (self.scan_id, 0, target_id, module_id, 'system',
+                 actual.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+            self.assertEqual(button['implementation']['installed_at'], actual)
+
+    def test_arkui_path_keeps_fallback_with_missing_or_ambiguous_install_evidence(self):
+        fallback = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
+        actual = (
+            'system/lib64/libace_engine_pa_ark.z.so',
+            'system/lib/platformsdk/libace_engine_pa_ark.z.so',
+        )
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], fallback)
+            self.assertNotIn('installed_at', button['implementation'])
+
+            for position, dest in enumerate(actual):
+                self.add_installed_elf(connection, dest, position=position)
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], fallback)
+            self.assertNotIn('installed_at', button['implementation'])
+
+    def test_arkui_path_resolves_before_collect_reports_links(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            self.add_installed_elf(connection, actual)
+            connection.execute(
+                'INSERT INTO collector_runs(scan_id, collector, schema_version, '
+                'status, record_count) VALUES(?,?,?,?,?)',
+                (self.scan_id, 'elf_modules', 'test', 'complete', 1))
+            context = ArktsLinksCollector.CONTEXT_TYPE(
+                scan_id=self.scan_id, connection=connection, request=self.request,
+                collector='arkts_links')
+            ArktsLinksCollector().collect(context)
+            self.assertEqual(context.records['arkts_links_run'][0]['linked'], 1)
+
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+
+    def test_arkui_path_counts_distinct_destinations_not_duplicate_targets(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            self.add_installed_elf(connection, actual, position=0)
+            self.add_installed_elf(connection, actual, position=1)
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+            self.assertNotIn('installed_at', button['implementation'])
+
+    def _assert_napi_layout_and_exact_link(self, cpu_arch, expected, wrong):
         self.write('api/@ohos.multimedia.image.d.ts', 'declare class Image {}')
-        result = run(self.database, ScanRequest(self.root, 'sdk-source', zone=zone,
+        result = run(self.database, ScanRequest(self.root, 'sdk-source',
                                                 cpu_arch=cpu_arch),
                      only=('arkts',), without=('repos',))
         with ScanSession.open(self.database, scan_id=result.scan_id) as session:
@@ -277,14 +435,14 @@ class ArktsTest(unittest.TestCase):
             self.assertEqual(implementation['impl_so_path'], expected)
             self.assertEqual(implementation['installed_at'], expected)
 
-    def test_blue_arm_napi_path_and_link_use_lib(self):
+    def test_arm_napi_path_and_link_use_lib(self):
         self._assert_napi_layout_and_exact_link(
-            'blue', 'arm', 'system/lib/module/multimedia/libimage.z.so',
+            'arm', 'system/lib/module/multimedia/libimage.z.so',
             'system/lib64/module/multimedia/libimage.z.so')
 
-    def test_yellow_arm64_napi_path_and_link_use_lib64(self):
+    def test_arm64_napi_path_and_link_use_lib64(self):
         self._assert_napi_layout_and_exact_link(
-            'yellow', 'arm64', 'system/lib64/module/multimedia/libimage.z.so',
+            'arm64', 'system/lib64/module/multimedia/libimage.z.so',
             'system/lib/module/multimedia/libimage.z.so')
 
     def test_scope_does_not_repeat_the_per_file_hashes(self):
@@ -432,11 +590,15 @@ class ArktsTest(unittest.TestCase):
                             for d in document['sources']))
 
     def test_entry_script_derives_paths_without_extra_flags_or_path_node(self):
-        from agentic.query.session import SessionManager
-        from agentic.query.tools import dispatch
-        entry = Path(__file__).resolve().parents[2] / 'oskm.py'
-        env = dict(os.environ, PATH=str(self.root/'empty-path'))
-        completed = subprocess.run([sys.executable, str(entry), 'scan', '--workspace-root', str(self.root),
+        from oskm_cli.query.session import SessionManager
+        from oskm_cli.query.tools import dispatch
+        # 采集侧的入口是 `python3 -m oskm.cli`（`packages/oskm/oskm.py` 已于
+        # 2026-11-12 删除）。cwd 是临时目录，所以要显式给 PYTHONPATH——
+        # 旧写法靠"脚本所在目录自动进 sys.path[0]"省掉了这一步。
+        package = Path(__file__).resolve().parents[2]
+        env = dict(os.environ, PATH=str(self.root/'empty-path'),
+                   PYTHONPATH=str(package))
+        completed = subprocess.run([sys.executable, '-m', 'oskm.cli', 'scan', '--workspace-root', str(self.root),
             '--product', 'sdk-source', '--only', 'arkts', '--without', 'repos', '--db', str(self.root/'cli.db')],
             cwd=self.root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(completed.returncode, 4, completed.stderr)

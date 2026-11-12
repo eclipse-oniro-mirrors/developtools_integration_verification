@@ -197,3 +197,33 @@ Most tools require a connected device or build output that is unavailable in a d
 2. Run `python <tool>.py --help` to confirm argparse interface is intact.
 3. State explicitly: "Full validation requires `<resource>` which is not available. I verified syntax and interface. Manual test with `<resource>` is needed before merge."
 4. If you cannot syntax-check (e.g., the env lacks Python 3), flag this as a blocker.
+
+## oskm 知识库
+
+查 OpenHarmony 产品的顶层架构（部件 / 镜像文件 / 依赖 / SysCap / 编译开关 /
+SDK 接口）用 **`ohos-design-architecture-evidence-query` skill**，它会按需加载
+用法与陷阱说明。
+
+skill 与查询 CLI 是两个独立产物：skill 负责下载 DB / SDK / CLI 并教 Agent
+怎么问；`oskm-cli`（pyz）只读封装 `knowledge.db`，自己不下载任何数据。
+首次使用先配端点再安装：
+
+```bash
+cd tools/oskm/skills/ohos-design-architecture-evidence-query
+cp oskm_runtime/.env.example oskm_runtime/.env   # 填 OSKM_DOWNLOAD_ENDPOINT
+python3 bootstrap.py doctor
+python3 bootstrap.py install --runtime-root "$HOME/.oskm"
+CLI="$HOME/.oskm/oskm-cli.pyz"; DB="$HOME/.oskm/knowledge.db"
+python3 "$CLI" --db "$DB" arch overview
+python3 "$CLI" ask --list                 # 52 个查询工具
+```
+
+扫描是另一个入口，与查询侧没有共同命令：
+
+```bash
+cd tools/oskm && python3 -m oskm.cli scan --workspace-root <OH源码根> --product wukong100
+```
+
+完整用法见
+[usage.md](tools/oskm/skills/ohos-design-architecture-evidence-query/references/usage.md)；
+拆分设计与职责边界见 [cli-skill-split.md](tools/oskm/docs/architecture/cli-skill-split.md)。

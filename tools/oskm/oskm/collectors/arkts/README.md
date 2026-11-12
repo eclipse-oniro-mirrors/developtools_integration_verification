@@ -4,7 +4,7 @@
 不展开模块内部 API。
 
 当前阶段：**第一阶段已实现**，schema 7.0.0，含解析核心、四表采集、NAPI/ArkUI 实现映射、
-查询/导出和 7 个 MCP 工具。
+查询/导出和 7 个查询工具。
 
 | 文档 | 内容 |
 |---|---|
@@ -14,7 +14,7 @@
 | [arkts-sources-field-report.md](./arkts-sources-field-report.md) | `arkts_sources` 逐字段说明：三个"动静态"字段的区别、能否精简 |
 | [arkts-kit-relations-field-report.md](./arkts-kit-relations-field-report.md) | `arkts_kit_relations` 逐字段说明与精简评估：两类证据的区别、可无损去掉 31% |
 | [validation.md](./validation.md) | 验证记录：实测数据、核验方法、已知限制 |
-| [工具规格](../../../agentic/docs/spec/arkts.md) | MCP 工具参数与返回 |
+| [工具规格](../../../skills/ohos-design-architecture-evidence-query/references/spec/arkts.md) | 查询工具参数与返回 |
 
 ## 模块与声明文件是两层
 
@@ -61,8 +61,8 @@ api/@internal/ets/button     → system/lib/platformsdk/libace_engine_pa_ark.z.s
 用了哪条记在 `match_method`。586 条里 525 条命中，61 条未命中已逐条分类见
 [design.md §3.8.2](./design.md)。
 
-映射表是 64 位参考数据，但入库前会按 `scans.cpu_arch` 改写到目标库根：
-blue/arm 落 `system/lib/`，yellow/arm64 落 `system/lib64/`。因此 `impl_so_path`
+映射表是 64 位参考数据，但入库前会按本次 `ScanRequest.cpu_arch` 改写到目标库根
+（默认 `arm64`）：`arm` 落 `system/lib/`，`arm64` 落 `system/lib64/`。因此 `impl_so_path`
 本身就是本次产品的镜像路径，`arkts_links` 直接与 `install_targets.dest` 精确比较，
 不再依赖 `lib64→lib` 别名。
 
@@ -85,8 +85,8 @@ workspace root 拼接：SDK 为 `interface/sdk-js`，后端包为
 
 ```bash
 PKG=KnowledgeBase/packages/oskm
-python3 "$PKG/oskm.py" scan --workspace-root "$PWD" --product rk3568 \
-  --db KnowledgeBase/artifacts/rk3568/knowledge.db
+PYTHONPATH="$PKG" python3 -m oskm.cli scan --workspace-root "$PWD" \
+  --product wukong100 --db KnowledgeBase/artifacts/wukong100/knowledge.db
 ```
 
 只扫 SDK（在 `packages/oskm` 下运行，数据库父目录需已存在）：
@@ -143,7 +143,7 @@ with ScanSession.open(Database('/path/to/sdk-knowledge.db')) as session:
 ```bash
 python3 -m unittest discover -s oskm/tests -p 'test_*.py'
 node --test oskm/collectors/arkts/node/tests/core.test.cjs
-python3 -m unittest discover -s agentic/query/tests -p 'test_*.py'
+python3 -m unittest discover -s cli/tests -p 'test_*.py'
 python3 oskm/tests/verify_arkts.py --workspace-root /path/to/code
 ```
 
@@ -151,5 +151,5 @@ python3 oskm/tests/verify_arkts.py --workspace-root /path/to/code
 `createSourceFile` 逐条比对引用位置、检查零 ambiguous 和外键一致性，
 **不复用生产适配器或提取器**。
 
-集成测试按工程目录布局构造夹具，调用真实 `oskm.py` 并清空 PATH 以验证路径自动推导。
+集成测试按工程目录布局构造夹具，调用真实的采集侧入口（`python3 -m oskm.cli`）并清空 PATH 以验证路径自动推导。
 Node 测试需要工程内 Node；缺依赖时 Python 真实后端测试标为 skipped，不算解析验收通过。

@@ -18,19 +18,32 @@ repos → arkts → components → args → install_modules → component_links
 | 某个采集器的细节 | `collectors/<域>/` 下的 `README.md` / `design.md` / `validation.md` |
 | 表结构 | [`../oskm_schema/`](../oskm_schema/README.md)——**不在本目录** |
 
-## 统一命令行
+## 命令行
 
-全部能力由一个入口 `oskm.py` 提供。子命令和 `--only` / `--without` 的可选值由注册表生成——新增一个采集器包即自动出现，不需要改 CLI。
+采集侧入口是 **`python3 -m oskm.cli`**（子命令 `scan` / `list` / `scans` / `drop`）。
+子命令和 `--only` / `--without` 的可选值由注册表生成——新增一个采集器包即自动出现，
+不需要改 CLI。
+
+> **查询侧是另一个入口，两者没有共同命令。** 查询走独立产物 `oskm-cli`
+> （`cli/dist/oskm-cli-<版本>.pyz`，或 skill 的 `bootstrap.py`）。
+> 2026-11-12 之前有个 `packages/oskm/oskm.py` 在外面按子命令名分派两边，
+> 已删除：它必须手抄一份查询侧子命令清单，漂了会把命令送去扫描侧，报出
+> `invalid choice: '<你的 --db 路径>'` 这种方向完全错的错误。
+> 见 [../docs/architecture/cli-skill-split.md](../docs/architecture/cli-skill-split.md)。
+
+在 OpenHarmony 工程根扫描时，`packages/oskm` 不在 `sys.path` 上，所以要么
+`cd` 过去，要么定义一个壳函数（下文示例用后者）：
 
 ```bash
 cd <OpenHarmony 工程根>
-PKG=code/developtools/integration_verification/tools/oskm
+PKG=KnowledgeBase/packages/oskm
+oskm() { PYTHONPATH="$PKG" python3 -m oskm.cli "$@"; }
 ```
 
 ### 查看已注册的采集器与执行顺序
 
 ```bash
-python3 $PKG/oskm.py list
+oskm list          # 等价于 PYTHONPATH="$PKG" python3 -m oskm.cli list
 ```
 
 输出每个采集器的描述、`depends_on`、schema 版本，以及拓扑执行顺序 `repos → arkts → components → args → install_modules → component_links → services → hdi → sas → elf_modules → arkts_links → ndk_headers`。
@@ -38,37 +51,39 @@ python3 $PKG/oskm.py list
 ### 扫描
 
 ```bash
-# 蓝区 arm32：默认扫描全部采集器，写入 SQLite
-python3 $PKG/oskm.py scan --workspace-root "$PWD" --product rk3568 \
-  --cpu-arch arm --db KnowledgeBase/artifacts/rk3568/knowledge.db
+# 一层布局，默认 arm64：扫描全部采集器，写入 SQLite
+oskm scan --workspace-root "$PWD" --product wukong100 \
+  --db KnowledgeBase/artifacts/wukong100/knowledge.db
 
-# 黄区 arm64 构建布局（HarmonyOS out/{abi}/{device}）
-python3 $PKG/oskm.py scan --workspace-root "$PWD" \
+# 显式指定非默认架构（写入 scans.cpu_arch，影响 system/lib 还是 system/lib64）
+oskm scan --workspace-root "$PWD" --product <arm32 板型> \
+  --cpu-arch arm --db KnowledgeBase/artifacts/<board>/knowledge.db
+
+# 两层构建布局；布局由 product 的相对路径决定，与 CPU 架构无关
+oskm scan --workspace-root "$PWD" \
   --product generic_generic_arm_64only/general_all_phone_standard \
-  --zone yellow --cpu-arch arm64 \
-  --db KnowledgeBase/artifacts/yellow/knowledge.db
+  --cpu-arch arm64 \
+  --db KnowledgeBase/artifacts/device/knowledge.db
 
 # 只要某个领域（依赖会自动补齐并先执行）
-python3 $PKG/oskm.py scan --workspace-root "$PWD" --product rk3568 \
-  --db ... --only hdi
+oskm scan --workspace-root "$PWD" --product wukong100 --db ... --only hdi
 
 # 不做部件归属（取代旧的 --resolve-component false）
-python3 $PKG/oskm.py scan --workspace-root "$PWD" --product rk3568 \
+oskm scan --workspace-root "$PWD" --product wukong100 \
   --db ... --only services --without components
 
 # 只重扫一个领域，复用库里已有的上游结果
-python3 $PKG/oskm.py scan --workspace-root "$PWD" --product rk3568 \
+oskm scan --workspace-root "$PWD" --product wukong100 \
   --db ... --only hdi --scan-id 1 --reuse-upstream
 
 # 附带语义质量门禁
-python3 $PKG/oskm.py scan ... --fail-on error
+oskm scan ... --fail-on error
 ```
 
 | 参数 | 说明 |
 | --- | --- |
-| `--workspace-root` / `--product` | 必填；黄区时 `--product` 是 `{abi}/{device}` |
-| `--zone blue\|yellow` | 默认 `blue`。蓝区读取 `out/{product}`；黄区读取 `out/{abi}/{device}`，两个层级都不可为空 |
-| `--cpu-arch` | 目标 CPU 架构；写入 `scans.cpu_arch`。省略时按构建区推导：蓝区 `arm`（32 位），黄区 `arm64` |
+| `--workspace-root` / `--product` | 必填；`--product` 是 `out/` 下的相对产品路径，可为一层或两层 |
+| `--cpu-arch` | 本次扫描的目标 CPU 架构，写入 `scans.cpu_arch`；省略时默认为 `arm64` |
 | `--db` | SQLite 路径，默认 `out/knowledge.db` |
 | `--only a,b` | 逗号分隔；**依赖自动补齐**，`--only hdi` 会先跑 components 和 services |
 | `--without a,b` | 跳过某个依赖；下游看到"未选中"而非"失败"，静默不做对应步骤 |
@@ -76,25 +91,25 @@ python3 $PKG/oskm.py scan ... --fail-on error
 | `--reuse-upstream` | 只跑 `--only` 指定的，信任库里已有的上游行（需配合 `--scan-id`） |
 | `--fail-on none\|error\|warning` | 默认 none；见下方"两条独立的质量轴" |
 
-下文所有 `{build_root}` 都指 `ScanRequest.build_root`：蓝区为 `out/{product}`，黄区为 `out/{abi}/{device}`。采集器统一使用 `ctx.build`，不要自行拼接 `workspace/out/{product}`。
+下文所有 `{build_root}` 都指 `ScanRequest.build_root`：按 `product` 的路径段数自动选择 `out/{product}` 或 `out/{abi}/{device}`。采集器统一使用 `ctx.build`，不要自行拼接 `workspace/out/{product}`。
 
 stdout 是一条 JSON 执行摘要（含每个采集器的 status / records / issues 与 `gate_passed`），stderr 逐条输出诊断。
 
 ### 构建系统集成
 
-`oskm_collect.py` 是 hb 在 `postTargetCompilation` 阶段调用的包装入口，输出到 `{build_output}/oskm/knowledge.db`：
+`packages/oskm/oskm_collect.py` 是 hb 在 `postTargetCompilation` 阶段调用的包装入口，输出到 `{build_output}/oskm/knowledge.db`：
 
 ```bash
-python3 code/developtools/integration_verification/tools/oskm/oskm_collect.py \
+python3 KnowledgeBase/packages/oskm/oskm_collect.py \
   --input out/rk3568 --target-cpu arm
 
-# 黄区：--input 必须是 out/{abi}/{device}，未显式给 --product 时推导为 {abi}/{device}
-python3 code/developtools/integration_verification/tools/oskm/oskm_collect.py \
+# 两层布局：--input 为 out/{abi}/{device}，未显式给 --product 时推导为 {abi}/{device}
+python3 KnowledgeBase/packages/oskm/oskm_collect.py \
   --input out/generic_generic_arm_64only/general_all_phone_standard \
-  --target-cpu arm64 --zone yellow
+  --target-cpu arm64
 ```
 
-包装入口默认蓝区。蓝区未显式给 `--product` 时取 `--input` 的最后一级目录名；黄区且输入目录直接位于 `out/` 下时取父目录名和最后一级目录名。`--zone` 与 `--target-cpu` 都会写入这次扫描的 `scans` 行；未提供 `--target-cpu` 时，蓝区默认 `arm`、黄区默认 `arm64`，因此同一个库可以并存蓝区 arm32 与黄区 arm64 快照。
+包装入口同时支持 `out/{product}` 与 `out/{abi}/{device}`：未显式给 `--product` 时，根据 `--input` 在 `out/` 下的层级推导产品路径。`--target-cpu` 写入 `scans.cpu_arch`；未提供时默认为 `arm64`。
 
 ArkTS 不新增入口参数，直接从 `--workspace-root` 拼接以下工程路径：
 
@@ -112,22 +127,22 @@ ArkTS 扫描不依赖 PATH 中的 Node；依赖缺失或不符合锁定版本时
 
 ```bash
 sqlite3 KnowledgeBase/artifacts/rk3568/knowledge.db \
-  "SELECT s.scan_id, sc.zone, sc.cpu_arch, c.subsystem, s.name
+  "SELECT s.scan_id, c.subsystem, s.name
      FROM services s
      JOIN components c ON c.id = s.component_id
      JOIN scans sc ON sc.id = s.scan_id
     WHERE s.scan_id = 1"
 ```
 
-表结构即数据契约：`scans` / `collector_runs` / `issues` 三张框架表，加每个采集器自己的表。`scans.zone` 取 `blue|yellow`，`scans.cpu_arch` 记录目标架构；扫描入口在省略架构时按 `blue → arm`、`yellow → arm64` 补默认值。这两个字段描述整个快照，不复制到各采集器表。结构约束（NOT NULL、CHECK、外键、唯一键去重）由建表语句保证，不再有独立的文档校验步骤。旧版库没有这两列，需要重新扫描生成。
+表结构即数据契约：`scans` / `collector_runs` / `issues` 三张框架表，加每个采集器自己的表。`scans` 保存产品、`cpu_arch`、工作区和起止时间；`cpu_arch` 默认 `arm64`。构建布局按 `product` 的相对路径自动探测，与 CPU 架构无关。结构约束（NOT NULL、CHECK、外键、唯一键去重）由建表语句保证，不再有独立的文档校验步骤。表结构变更不做自动迁移：schema 与当前查询层不匹配的旧库直接报错，需要重新扫描。
 
 每张领域表有一个 `id` 代理主键（rowid 别名），跨表引用一律走 `id` 外键并带 `ON DELETE CASCADE`——`services.component_id → components.id`、`hdis.service_id → services.id` 等。业务键（如 `components(scan_id, name)`）降为 UNIQUE 约束。这样归属不会悬空（数据库直接拒绝），且一个 cfg 声明多个 service 时，设备声明能精确指向宿主的那一个。
 
 ### 快照管理
 
 ```bash
-python3 $PKG/oskm.py scans --db ...              # 列出库内全部快照
-python3 $PKG/oskm.py drop  --db ... --scan-id 1  # 删除一个快照（级联清空其全部行）
+oskm scans --db ...              # 列出库内全部快照
+oskm drop  --db ... --scan-id 1  # 删除一个快照（级联清空其全部行）
 ```
 
 一个库可以存多次扫描（多产品、多版本），每行带 `scan_id`；未完成的扫描 `finished_at` 为 NULL，查询默认看不到。
@@ -162,12 +177,12 @@ degraded 优先于门槛失败：读不到比读到的可疑更严重。
 ## Python API
 
 ```bash
-export PYTHONPATH="$PWD/code/developtools/integration_verification/tools/oskm${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$PWD/KnowledgeBase/packages/oskm${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
 ### 会话 API：跨域导航（推荐）
 
-`ScanSession` 可以只连库工作，不需要源码树——这是给查询层（`agentic/`）准备的路径。
+`ScanSession` 可以只连库工作，不需要源码树——这是给查询层（`cli/oskm_cli/`）准备的路径。
 
 ```python
 from pathlib import Path
@@ -177,10 +192,10 @@ from oskm.core.runner import run
 from oskm.core.session import ScanSession
 
 store = Database('knowledge.db')
-# 蓝区 arm32；或直接打开既有库
+# 显式请求 arm32；或直接打开既有库
 run(store, ScanRequest(Path.cwd(), 'rk3568', cpu_arch='arm'))
-# 黄区 arm64
-run(store, ScanRequest(Path.cwd(), 'abi/device', zone='yellow', cpu_arch='arm64'))
+# 两层布局使用默认 arm64
+run(store, ScanRequest(Path.cwd(), 'abi/device'))
 
 with ScanSession.open(store) as session:
     session.collectors            # ('repos','components','args','install_modules',
@@ -225,7 +240,7 @@ from oskm.core.models import FieldPredicate, PageRequest
 
 result = scan('services', ServiceScanRequest(Path.cwd(), 'rk3568', cpu_arch='arm'))
 result = scan('services', ServiceScanRequest(
-    Path.cwd(), 'abi/device', zone='yellow', cpu_arch='arm64'))
+    Path.cwd(), 'abi/device'))
 with result.query() as query:
     page = query.list_services(ServiceFilter(
         fields=(FieldPredicate('ondemand', 'eq', True),)), page=PageRequest(limit=20))
@@ -258,7 +273,7 @@ print([i for i in result.snapshot.get('issues', ()) if i.get('advisory')])
 }
 ```
 
-`snapshot` 层的 `schema_version` / `product` / `scope` / `status` 存在 `collector_runs` 表，问题存在 `issues` 表。
+`snapshot` 层的 `product` / `cpu_arch` 来自 `scans` 表，`schema_version` / `scope` / `status` 来自 `collector_runs` 表，问题存在 `issues` 表。
 
 - 原 cfg 实际存在的 `name/uid/gid/start-mode/ondemand` 提升到顶层，`path` 拆为 `executable=path[0]` 和 `args=path[1:]`。其余字段放进 `config`；没有额外字段则省略。
 - 不补不存在的字段，保留 null、异常类型、未知字段、数组顺序及重复项。**键缺失与值为 null 是两回事**，往返后仍可区分。
@@ -283,10 +298,19 @@ print([i for i in result.snapshot.get('issues', ()) if i.get('advisory')])
 每个采集器在一个事务内写入：中途失败不留部分行，快照保持未完成状态。`PRAGMA foreign_keys = ON` 在每个连接上启用，删除快照级联清空其全部行。重跑单个采集器会先删掉它在该快照下的旧行再写入，因此幂等。
 
 ```bash
-python3 -m unittest discover -s code/developtools/integration_verification/tools/oskm/oskm/tests -v
+python3 -m unittest discover -s packages/oskm/oskm/tests -v
 
-# 产品级验收（需要真实 OpenHarmony 代码树），一次扫描覆盖七个领域
-python3 code/developtools/integration_verification/tools/oskm/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
+# 产品级验收（需要真实 OpenHarmony 代码树）：跑一次全量扫描，
+# 再按域看 collector_runs / issues。原 verify_rk3568.py 已于 2026-11-12 删除，
+# 验收基线从 rk3568 换成 wukong100。
+cd packages/oskm
+python3.12 -m oskm.cli scan --workspace-root "$PWD"/<OH源码根> --product wukong100 \
+    --db ../../artifacts/wukong100/knowledge.db
+# 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+DB=../../artifacts/wukong100/knowledge.db
+export PYTHONPATH=cli
+python3.12 -m oskm_cli --db "$DB" ask get_scan_info  # 各采集器 status/record_count/error
+python3.12 -m oskm_cli --db "$DB" ask list_issues
 ```
 
 验收脚本独立于扫描器重新实现一遍解析逻辑做交叉验证，不调用扫描器内部函数生成期望值。实测数据见各采集器目录下的 `validation.md`。

@@ -260,8 +260,8 @@ class ElfModulesCollector(BaseCollector):
             if status is None:
                 if dependency == 'hdi':
                     # HDI records only feed the optional `hdi` classification
-                    # category. The yellow zone ships no HCB files, so a missing
-                    # hdi must not block ELF discovery -- it only loses the tag.
+                    # category. Some product images ship no HCB files, so a missing hdi
+                    # must not block ELF discovery -- it only loses the tag.
                     ctx.issue(manifest, 'HDI_INDEX_UNAVAILABLE',
                               severity='warning', advisory=True)
                     continue

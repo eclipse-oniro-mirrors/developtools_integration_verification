@@ -105,7 +105,7 @@ def _persist(connection, collector, ctx, scan_id):
 def _table_catalog(collector):
     """这个采集器声明了哪些表，供只读查询层使用。
 
-    查询层（agentic/）要的只是元数据：表名白名单、以及"哪张表按部件归属"。
+    查询层（cli/oskm_cli/）要的只是元数据：表名白名单、以及"哪张表按部件归属"。
     它原先靠 `framework.discover()` 拿——那会 import 全部 11 个采集器
     （实测 72 个模块、9,751 行闭包），只为读几个类属性。
     把元数据写进库之后，查询层对采集器的 Python 依赖降到零，
@@ -157,7 +157,7 @@ def run(database, request, *, only=None, without=(), scan_id=None, reuse_upstrea
             with db.transaction(connection):
                 scan_id = db.begin_scan(
                     connection, request.product, request.workspace_root,
-                    zone=request.zone, cpu_arch=request.cpu_arch)
+                    cpu_arch=request.cpu_arch)
         runs = []
         for name in order:
             run = _execute_collector(

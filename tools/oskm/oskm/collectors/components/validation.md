@@ -11,8 +11,19 @@
 ## 2. 自动化验证
 
 ```bash
-python3 -m unittest discover -s KnowledgeBase/packages/oskm/tests -q
-python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
+python3 -m unittest discover -s packages/oskm/oskm/tests -q
+
+# 产品级验收（需要真实 OpenHarmony 代码树）：跑一次全量扫描，
+# 再按域看 collector_runs / issues。原 verify_rk3568.py 已于 2026-11-12 删除，
+# 验收基线从 rk3568 换成 wukong100。
+cd packages/oskm
+python3.12 -m oskm.cli scan --workspace-root "$PWD"/<OH源码根> --product wukong100 \
+    --db ../../artifacts/wukong100/knowledge.db
+# 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+DB=../../artifacts/wukong100/knowledge.db
+export PYTHONPATH=cli
+python3.12 -m oskm_cli --db "$DB" ask get_scan_info  # 各采集器 status/record_count/error
+python3.12 -m oskm_cli --db "$DB" ask list_issues
 ```
 
 - 单元测试 **93 项通过**：部件 20 项，已有 services/SA/HDI 共 73 项。
@@ -41,7 +52,7 @@ python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PW
 
 ## 4. 唯一降级原因：重复的 features 字段
 
-部件 `drivers_interface_display` 的 [bundle.json](../../../../../../../drivers/interface/display/bundle.json) 在 component 内两次声明 features：第一处为空数组，第二处为非空特性列表。普通 JSON 解码通常保留后值；扫描器按详细设计拒绝静默覆盖，无法唯一解释该清单详情。
+部件 `drivers_interface_display` 的 `bundle.json`（`drivers/interface/display/bundle.json`） 在 component 内两次声明 features：第一处为空数组，第二处为非空特性列表。普通 JSON 解码通常保留后值；扫描器按详细设计拒绝静默覆盖，无法唯一解释该清单详情。
 
 诊断为：
 

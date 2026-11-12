@@ -26,8 +26,8 @@ const FILE_HOSTS = [
   [/.*/, (base, ref, path) => `${base}/blob/${ref}/${path}`],
 ]
 
-/* yellow 区内部镜像的 host 以 `szv-` 开头，展示时去掉此前缀；blue 区的公开
-   托管站不会带这个前缀。这里只识别 URL 形态，不绑定具体主机名。 */
+/* 内部镜像仓的 host 以 `szv-` 开头，展示时去掉此前缀；公开托管站不会带这个
+   前缀。这里只识别 URL 形态，不绑定具体主机名。 */
 const CODEHUB_MIRROR_HOST = /^https?:\/\/szv-[^/]+/i
 
 const cache = new Map()   // scanId -> { repos, memo }
@@ -87,7 +87,7 @@ export function labelSource(scanId, label) {
  * /blob/ 而不是 /tree/。仓的匹配复用同一份最长前缀索引。
  *
  * 一般托管站优先用 head_commit（扫描当时的确切提交），没有才退回 revision；
- * yellow 区 codehub 开源镜像例外，files 链接必须用 revision 分支名。没有验证过
+ * codehub 开源镜像例外，files 链接必须用 revision 分支名。没有验证过
  * 工作区文件与远端快照一致，所以 exact 只表示"存在扫描提交号"，不表示内容已比对。
  *
  * @returns {{url, repo, rel, ref, exact}|null}

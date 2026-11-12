@@ -485,13 +485,13 @@ P1 数据库不存正文，因此**无法离线还原未采集的 API**：后续
 
 ## 12. 本地依据
 
-- 后端：[package.json](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/package.json)、
-  [类型声明](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.d.ts)、
-  [实现入口](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.js)
+- 后端 `interface/sdk-js/build-tools/node_modules/typescript/package.json`、
+  类型声明 `interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.d.ts`、
+  实现入口 `interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.js`
   （依赖当前工作区已安装包，正式分发由锁定清单替代机器路径）
-- 样本：[ArkTS lang](../../../../../../../interface/sdk-js/arkts/@arkts.lang.d.ets)、
-  [ArkUI static](../../../../../../../interface/sdk-js/kits/@kit.ArkUI.static.d.ets)、
-  [DrmKit](../../../../../../../interface/sdk-js/kits/@kit.DrmKit.d.ts)、
-  [index](../../../../../../../interface/sdk-js/api/@internal/ets/index.d.ts)
+- 样本 `interface/sdk-js/arkts/@arkts.lang.d.ets`、
+  `interface/sdk-js/kits/@kit.ArkUI.static.d.ets`、
+  `interface/sdk-js/kits/@kit.DrmKit.d.ts`、
+  `interface/sdk-js/api/@internal/ets/index.d.ts`
 - 框架：[framework.py](../../core/framework.py)、[runner.py](../../core/runner.py)、
   [有界读取](../../core/io.py)

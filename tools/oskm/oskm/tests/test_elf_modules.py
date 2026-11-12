@@ -19,6 +19,10 @@
 from oskm.core.io import canonical
 from oskm.core import framework
 from oskm.core.api import scan as scan_one
+from oskm.core.db import Database
+from oskm.core.models import ScanRequest
+from oskm.core.runner import run
+from oskm.core.session import ScanSession
 from oskm.collectors.elf_modules.resolution import candidate_index, resolve_needed
 from oskm.collectors.elf_modules.elf import read_elf
 from oskm.collectors.elf_modules.models import (
@@ -546,6 +550,24 @@ class ElfModulesTest(unittest.TestCase):
         self.assertEqual(result.elf_modules, ())
         self.assertEqual(result.snapshot['status'], 'degraded')
         self.assertIn('INSTALL_INDEX_NOT_SELECTED', result.snapshot['issues'][0]['code'])
+
+    def test_missing_hcb_degrades_hdi_without_blocking_elf_discovery(self):
+        self.manifest([self.row('system/lib/liba.z.so', 'liba')])
+        self.elf('system/lib/liba.z.so', 'liba.z.so', [])
+        (self.package / 'system/etc/hdfconfig/hdf_default.hcb').unlink()
+        database = Database(self.root / 'knowledge.db')
+        result = run(database, ScanRequest(self.root, 'test'), only=('elf_modules',))
+        with ScanSession.open(database, scan_id=result.scan_id) as session:
+            connection = session.connection
+            hdi_status = connection.execute(
+                "SELECT status FROM collector_runs WHERE collector='hdi'").fetchone()['status']
+            hdi_issue = connection.execute(
+                "SELECT code FROM issues WHERE collector='hdi'").fetchone()['code']
+            elf_count = connection.execute(
+                'SELECT COUNT(*) AS count FROM elf_modules').fetchone()['count']
+        self.assertEqual(hdi_status, 'degraded')
+        self.assertEqual(hdi_issue, 'HCB_INPUT_MISSING')
+        self.assertEqual(elf_count, 1)
 
 
 if __name__ == '__main__':

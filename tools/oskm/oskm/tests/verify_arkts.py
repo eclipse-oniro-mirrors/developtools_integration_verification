@@ -13,20 +13,22 @@ import tempfile
 import time
 
 PACKAGE = Path(__file__).resolve().parents[2]
+# `oskm_cli` 是独立产物，住在 packages/oskm/cli/；查询侧的 ArktsQuery 在那里。
 sys.path.insert(0, str(PACKAGE))
+sys.path.insert(0, str(PACKAGE / 'cli'))
 from oskm.core.db import Database
 from oskm.core.io import canonical
 from oskm.core.models import ScanRequest
 from oskm.core.runner import run
 from oskm.core.session import ScanSession
-from agentic.query.arkts import ArktsQuery, export_document
+from oskm_cli.query.arkts import ArktsQuery, export_document
 from oskm.collectors.arkts.models import NODE_PATH
 
 
 SDK_RELATIVE = 'interface/sdk-js/'
 
 
-def verify_implementations(session, document):
+def verify_implementations(session, document, cpu_arch):
     """Re-derive the implementation mapping from the bundled map.
 
     Checks the collector's classification and link against the input file
@@ -34,11 +36,21 @@ def verify_implementations(session, document):
     """
     from oskm.collectors.arkts.models import arch_library_path, arkui_engine_so
     from oskm.collectors.arkts.napi import NAPI_MAP_PATH
-    scan = session.connection.execute(
-        'SELECT zone, cpu_arch FROM scans WHERE id=?', (session.scan_id,)).fetchone()
-    declared = {arch_library_path(path, scan['cpu_arch']) for path in
+    declared = {arch_library_path(path, cpu_arch) for path in
                 json.loads(NAPI_MAP_PATH.read_text())['module_to_so'].values()}
-    engine = arkui_engine_so(scan['zone'], scan['cpu_arch'])
+    # Installed evidence wins over the architecture fallback.  The fallback is
+    # needed when ELF/install collection is unavailable, and when multiple
+    # distinct ArkUI destinations make the link genuinely ambiguous.
+    engine_file = 'libace_engine_pa_ark.z.so'
+    destinations = tuple(row[0] for row in session.connection.execute(
+        'SELECT DISTINCT t.dest FROM install_targets t '
+        'JOIN elf_modules e ON e.install_target_id = t.id '
+        'AND e.scan_id = t.scan_id WHERE t.scan_id = ? '
+        'AND (t.dest = ? OR substr(t.dest, -length(?) - 1) = ?) '
+        'ORDER BY t.dest',
+        (session.scan_id, engine_file, engine_file, '/' + engine_file)).fetchall())
+    engine = (destinations[0] if len(destinations) == 1
+              else arkui_engine_so(cpu_arch))
     kinds = {m['module_key']: m['implementation_kind'] for m in document['modules']}
     rows = session.connection.execute(
         'SELECT module_key, impl_so_path, impl_match, impl_elf_id FROM arkts_modules '
@@ -66,7 +78,7 @@ def verify_implementations(session, document):
         assert row['dest'] == row['impl_so_path'], dict(row)
 
 
-def verify_domain(session, workspace):
+def verify_domain(session, workspace, cpu_arch):
     sdk = workspace/'interface/sdk-js'
     expected = sorted(p.relative_to(sdk).as_posix() for root in ('api', 'arkts', 'kits')
                       for p in (sdk/root).rglob('*') if p.is_file() and p.name.endswith(('.d.ts', '.d.ets')))
@@ -132,7 +144,7 @@ process.stdout.write(JSON.stringify(refs));
     # A module with both language variants exposes both of its files.
     dual = q.list_modules(language_coverage='both')['items'][0]['module_key']
     assert sorted(d['language_variant'] for d in q.get_module(dual)['declarations']['items']) == ['dynamic', 'static']
-    verify_implementations(session, document)
+    verify_implementations(session, document, cpu_arch)
     assert session.connection.execute('PRAGMA foreign_key_check').fetchall() == []
     assert session.connection.execute('SELECT count(*) FROM arkts_kit_relations r '
         'JOIN arkts_sources s ON s.id=r.source_id WHERE r.scan_id!=s.scan_id '
@@ -161,10 +173,11 @@ def main():
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix='oskm-arkts-verify-') as temp:
         database = Database(Path(temp)/'knowledge.db')
-        result = run(database, ScanRequest(workspace, 'sdk-source'), only=('arkts',), without=('repos',))
+        request = ScanRequest(workspace, 'sdk-source')
+        result = run(database, request, only=('arkts',), without=('repos',))
         scan_seconds = time.monotonic() - started
         with ScanSession.open(database, scan_id=result.scan_id) as session:
-            report = verify_domain(session, workspace)
+            report = verify_domain(session, workspace, request.cpu_arch)
         report.update(scan_seconds=round(scan_seconds,3), total_seconds=round(time.monotonic()-started,3),
             db_bytes=database.path.stat().st_size, python_peak_rss_kib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
             child_peak_rss_kib=resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)

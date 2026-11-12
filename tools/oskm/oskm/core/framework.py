@@ -273,7 +273,7 @@ class Upstream:
         row = self._connection.execute(
             'SELECT status FROM collector_runs WHERE scan_id = ? AND collector = ?',
             (self._scan_id, collector)).fetchone()
-        return row['status'] if row else None
+        return row[0] if row else None
 
     def failed(self, collector):
         """The dependency ran but could not produce usable rows."""
@@ -298,7 +298,7 @@ class ScanContext:
     def __init__(self, *, scan_id, connection, request, collector,
                  issue_fields=('path', 'pointer', 'code'),
                  on_progress=None, on_diagnostic=None, cancelled=None):
-        if not valid_product(request.product, request.zone):
+        if not valid_product(request.product):
             raise RequestError('INVALID_PRODUCT')
         if not isinstance(request.limits, ScanLimits) or any(
                 type(getattr(request.limits, item.name)) is not int
@@ -381,7 +381,7 @@ class ScanContext:
         return obj
 
     def relative(self, path):
-        return Path(path).relative_to(self.workspace).as_posix()
+        return Path(path).resolve().relative_to(self.workspace).as_posix()
 
     def component_index(self, *, location=None):
         """Lookup for attribution: a dict, None when the dependency ran but

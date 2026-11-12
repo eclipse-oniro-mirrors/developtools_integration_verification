@@ -252,8 +252,10 @@ class HDITest(unittest.TestCase):
         self.assertIn('HCB_DEVICE_STRUCTURE', self.codes(r))
 
     def test_missing_input_invalid_request_and_budgets(self):
-        with self.assertRaises(ScanFatalError):
-            self.scan()
+        r = self.scan()
+        self.assertEqual(r.hdis, ())
+        self.assertIn('HCB_INPUT_MISSING', self.codes(r))
+        self.assertEqual(r.snapshot['status'], 'degraded')
         for request in (replace(self.request, product='../x'), replace(self.request,
                         limits=ScanLimits(tree_depth=0)), replace(self.request, package_root=Path('/tmp'))):
             with self.assertRaises(RequestError):
@@ -340,9 +342,10 @@ class HDITest(unittest.TestCase):
         self.full()
         import os
         real = os.scandir
+        unreadable = (self.package / 'vendor/lib64').resolve()
 
         def scandir(path):
-            if Path(path) == self.package / 'vendor/lib64':
+            if Path(path).resolve() == unreadable:
                 raise PermissionError()
             return real(path)
         with patch('os.scandir', side_effect=scandir):

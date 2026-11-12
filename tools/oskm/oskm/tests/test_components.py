@@ -88,7 +88,7 @@ class ComponentTest(unittest.TestCase):
             with result.query() as query:
                 self.assertEqual(query.list_dependents('external').total, 1)
                 query.get_component('a')
-        self.assertEqual(opened, [self.index, manifest])
+        self.assertEqual(opened, [self.index.resolve(), manifest.resolve()])
         self.assertEqual(result.components[0]['deps']['components'], ('external', 'external'))
 
     def test_bundle_json_is_preserved_whole_not_truncated(self):

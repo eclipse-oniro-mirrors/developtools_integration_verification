@@ -31,7 +31,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .io import canonical
-from .models import resolve_cpu_arch
 from oskm_schema import SCAN_COLUMN, SCANS, FRAMEWORK_TABLES
 
 
@@ -55,6 +54,10 @@ def transaction(connection):
     connection.execute('COMMIT')
 
 
+# `cpu_arch` is snapshot metadata; `arm64` is the default.
+DEFAULT_CPU_ARCH = 'arm64'
+
+
 class Database:
     def __init__(self, path):
         self.path = Path(path)
@@ -73,8 +76,19 @@ class Database:
             connection.close()
 
     def create_all(self, connection, tables):
+        # Table DDL and its indexes form one boundary: if an index fails, the
+        # newly created tables must roll back too.
+        if connection.in_transaction:
+            self._create_all(connection, tables)
+            return
+        with transaction(connection):
+            self._create_all(connection, tables)
+
+    @staticmethod
+    def _create_all(connection, tables):
         for table in (*FRAMEWORK_TABLES, *tables):
             connection.execute(table.ddl())
+        for table in (*FRAMEWORK_TABLES, *tables):
             for statement in table.index_ddl():
                 connection.execute(statement)
 
@@ -120,13 +134,14 @@ def insert(connection, table, rows, *, scan_id=None):
     return len(rows)
 
 
-def begin_scan(connection, product, workspace_root, *, zone='blue', cpu_arch=None,
+def begin_scan(connection, product, workspace_root, *, cpu_arch=None,
                started_at=None):
-    cpu_arch = resolve_cpu_arch(zone, cpu_arch)
+    # cpu_arch is snapshot metadata; arm64 is the default.
     cursor = connection.execute(
         f'INSERT INTO {SCANS.name} '
-        '(product, zone, cpu_arch, workspace_root, started_at) VALUES (?, ?, ?, ?, ?)',
-        (product, zone, cpu_arch, str(workspace_root), started_at or now()))
+        '(product, cpu_arch, workspace_root, started_at) VALUES (?, ?, ?, ?)',
+        (product, cpu_arch or DEFAULT_CPU_ARCH, str(workspace_root),
+         started_at or now()))
     return cursor.lastrowid
 
 

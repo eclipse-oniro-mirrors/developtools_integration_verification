@@ -71,7 +71,7 @@
 | 4.0.0 | `arkts_sources` 删 `kind`、`sha256`、`repo_id`；`napi-map.json` 不再入库 | 参考数据不是声明文件；`repo_id` 恒单值且源码 URL 按路径前缀匹配，不读它 |
 | 5.0.0 | `coverage` 扁平成 `{能力: 状态}`；删 `references_status` | `extractor_version` 每行重复 4 次、全库一个值；`references_status` 是 `coverage['kit.references']` 的投射，0 反例 |
 | 6.0.0 | `arkts_module_impls` 整表折叠成 `arkts_modules.impl_*` 四列 | 实测 932 行对 932 个模块，`count(*) = count(DISTINCT module_id)`，严格一对一 |
-| 7.0.0 | `impl_so_path` 按扫描 `cpu_arch` 构造；`arkts_links` 改为完整路径精确关联，删除 `linked_by_arch_alias` | blue/arm 落 `system/lib/`，yellow/arm64 落 `system/lib64/`；旧库需重扫 |
+| 7.0.0 | `impl_so_path` 按本次 `ScanRequest.cpu_arch` 构造；`arkts_links` 改为完整路径精确关联，删除 `linked_by_arch_alias` | `arm` 落 `system/lib/`，`arm64` 落 `system/lib64/` |
 
 | 体量 | 3.0.0 | 6.0.0 |
 |---|---:|---:|
@@ -113,8 +113,9 @@
 
 映射表写的是 64 位路径，rk3568 是 32 位（3,513/3,517 的 ELF 为 ARM32，
 镜像里 `system/lib64/` 下零个安装目标）。上表与本节命中率是历史模型（先保留参考路径、
-关联时再做 `lib64→lib` 别名）的测值。当前模型在投影时就按 `scans.cpu_arch` 归一，
-`impl_so_path` 在 blue/arm 下直接写 `system/lib/…`，`arkts_links` 与 `dest` 精确关联。
+关联时再做 `lib64→lib` 别名）的测值。当前模型在投影时就按本次
+`ScanRequest.cpu_arch` 归一，`impl_so_path` 在 `arm` 下直接写 `system/lib/…`，
+`arkts_links` 与 `dest` 精确关联。
 
 全路径也消解了同名歧义：按文件名匹配时有 14 个 `.so` 名在镜像中出现 2–3 次，
 用全路径后全部唯一。
@@ -212,10 +213,10 @@ arkts 排采集序第 2、elf_modules 排最后，直接依赖会抛 `DEPENDENCY
 |---|---|
 | `python3 -m unittest discover -s oskm/tests -p 'test_*.py'` | 259 项通过，无跳过 |
 | `node --test oskm/collectors/arkts/node/tests/core.test.cjs`（工程内 v18.20.1） | 16 项通过 |
-| `python3 -m unittest discover -s agentic/query/tests -p 'test_*.py'` | 111 项通过（含 CLI 与 skill 门禁） |
+| `python3 -m unittest discover -s cli/tests -p 'test_*.py'` | 111 项通过（含 CLI 与 skill 门禁） |
 | `python3 oskm/tests/verify_arkts.py --workspace-root …` | 通过（含实现映射独立重算） |
 | `python3 -m oskm.cli list` | 自动注册 arkts，依赖仅 repos；其他领域注册不要求 Node |
-| `python3 -m compileall -q oskm/collectors/arkts agentic/query/tools/arkts.py` | 通过 |
+| `python3 -m compileall -q oskm/collectors/arkts cli/oskm_cli/query/tools/arkts.py` | 通过 |
 | `PRAGMA integrity_check` / `foreign_key_check` | ok / 无违规 |
 | `git diff --check` | 通过 |
 
@@ -271,7 +272,8 @@ v18.20.1/v20.19.2——换台机器（本机 PATH 为 v22.20.0）必然失败。
 
 ```bash
 PKG=KnowledgeBase/packages/oskm
-python3 "$PKG/oskm.py" scan --workspace-root "$PWD" --product rk3568 --db <db>
+PYTHONPATH="$PKG" python3 -m oskm.cli scan --workspace-root "$PWD" \
+    --product wukong100 --db <db>
 ```
 
 退出码 4（degraded），`gate_passed=true`。**11 个采集器**全部落库：
@@ -300,14 +302,29 @@ components/services/hdi 的 degraded 是它们各自的源码/关联问题，本
 
 生产 Node 固定在 `prebuilts/build-tools/common/nodejs/node-v18.20.1-linux-x64/bin/node`，
 编译器包固定在 `interface/sdk-js/build-tools/node_modules/typescript`。集成测试调用真实
-`oskm.py`、清空 PATH 后仍完成 ArkTS 扫描；移除工程 Node 时明确失败，**不自动改用系统 Node**。
+采集侧入口（`python3 -m oskm.cli`）、清空 PATH 后仍完成 ArkTS 扫描；移除工程 Node 时明确失败，**不自动改用系统 Node**。
 `scan --help` 只显示原有参数。
 
 ### 5.1 产品级回归脚本仍未全绿
 
 ```bash
-python3 oskm/tests/verify_rk3568.py --workspace-root /path/to/code
+python3 oskm/tests/verify_rk3568.py --workspace-root /path/to/code   # 已删除
 ```
+
+> `verify_rk3568.py` 已于 2026-11-12 删除（rk3568 不再是验收基线，改用
+> wukong100）。当时的产品级回归等价于跑一次全量扫描再看各域的
+> `collector_runs` / `issues`：
+>
+> ```bash
+> cd packages/oskm
+> python3.12 -m oskm.cli scan --workspace-root /path/to/code --product wukong100 \
+>     --db ../../artifacts/wukong100/knowledge.db
+> # 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+> export PYTHONPATH=cli
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db \
+>     ask get_scan_info        # 各采集器 status / record_count / error
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db ask list_issues
+> ```
 
 该脚本完成全量扫描，`verify_arkts.verify_domain` 作为第一项核验**通过**，
 随后在既有 `verify_install_modules()` 失败：
@@ -351,7 +368,7 @@ RSS 来自 Linux `getrusage`；子进程值是解析器/独立对照进程的最
 ## 7. 已知限制与未完成项
 
 - **1 份非 UTF-8 声明文件**导致本域 degraded，见 §2。这是输入缺陷，保留不掩盖。
-- **`verify_rk3568.py` 未全绿**，见 §5.1。原因是既有的 install_modules 硬编码基线。
+- **产品级回归脚本当时未全绿**，见 §5.1。原因是既有的 install_modules 硬编码基线。该脚本已删除，验收基线改为 wukong100 全量扫描。
 - ~~**`args` 采集器本次 0 条**（`GN_ARGS_PARSE_FAILED`）~~ —— 已查明并修复：`gn` 从
   工作目录向上找 `.gn` 定位源码根，采集器调 `subprocess.run` 时没传 `cwd`，
   从仓外调用 CLI 时 gn 0.3 秒就带着 `BUILDCONFIG.gn: Not allow import other gni` 退出。

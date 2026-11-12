@@ -1,264 +1,147 @@
-# oskm — OpenHarmony System Knowledge Scanner
+# OpenHarmony 系统知识扫描器
 
-oskm 对一个**已构建的产品**做静态扫描，把散落在构建产物、镜像清单、init 配置、SA profile、HDF 配置里的事实，归并成一个 SQLite 知识库。只陈述事实，不做推断——每条记录都保留来源文件里的原始声明。
+把一个 OpenHarmony 产品的构成事实——代码仓、部件、安装产物、ELF 依赖、
+运行时服务、编译开关、SDK/NDK 接口——扫进一个 SQLite 库，
+供人查看、供 Agent 查询。
+
+Python 3.10+，查询层**仅标准库且无 pip 依赖**；运行时安装的 DB 与两套 SDK
+来自同一个 `knowledge.tar.gz`，不要求 Git。从源码运行（ArkTS 扫描另用工程内的
+Node 与 ohos-typescript）。
+结果只存单个 SQLite 库，没有可选产物格式，也不产出 JSON 文件。
 
 ## 组件构成
 
 ```
 tools/oskm/
-  oskm/          采集流水线：框架 + 12 个采集器，写库
-  oskm_schema/   表结构：采集侧与查询侧共用的唯一定义
-  agentic/       查询层：CLI + skill，只读
-  viewer/        可视化：静态站点，浏览器直接打开库
+  oskm/          ①  采集流水线：框架 + 12 个采集器，写库
+  oskm_schema/   ②  表结构：25 张表的唯一定义，①③④ 共用
+  cli/           ③  查询 CLI：独立产物，只读封装 knowledge.db
+  skills/ohos-design-architecture-evidence-query/
+                 ④  Agent skill：独立产物，装 DB/SDK/CLI 并教 Agent 怎么问
+  viewer/        ⑤  可视化：静态站点，浏览器直接打开库
   lsp/           仓库本地扩展：clangd 索引与 MCP 集成
 ```
 
-## 构建系统集成
+| 组件 | 职责 | 交付形态 | 入口文档 |
+|---|---|---|---|
+| **① `oskm/`** | 扫描源码树与构建产物，按拓扑序跑采集器，写入 SQLite | 源码 | [oskm/README.md](./oskm/README.md) —— 命令行、Python API、数据契约 |
+| **② `oskm_schema/`** | 采集侧与查询侧**共用的唯一一份表定义** | 源码（打进 ③ 的 pyz） | [oskm_schema/README.md](./oskm_schema/README.md) —— 加表/改表怎么做 |
+| **③ `cli/`** | `ask / arch / diff / sql / validate-db`，只读、不联网、不写盘 | `cli/dist/oskm-cli.pyz`（固定名，不带版本） | [cli/README.md](./cli/README.md) |
+| **④ `skills/…`** | 下载并安装 DB / SDK / **CLI 本身**，维护 `~/.oskm`，按需刷新 | `skills/…/dist/ohos-design-architecture-evidence-query-<v>.tar.gz` | [SKILL.md](./skills/ohos-design-architecture-evidence-query/SKILL.md) 给 Agent · [usage.md](./skills/ohos-design-architecture-evidence-query/references/usage.md) 给人 |
+| **⑤ `viewer/`** | 静态站点，在浏览器里浏览关联、看详情与证据 | 静态站点 | [viewer/README.md](./viewer/README.md) |
 
-oskm 作为后编译分析工具集成在 OpenHarmony 构建系统中，通过 `enable_oskm_collect` 构建选项触发：
+**③④ 是两个能各自发布、各自版本化的产物**（`oskm-cli 1.0.0` /
+`skill 3.0.0`）：③ 是纯函数式的只读工具，给它一个库路径就出答案；
+④ 是装配工。schema 契约只有 ③ 那一份，④ 的 `validate-db` 是转发。
+③ 不 import 任何采集器，也不 import ④（都有门禁盯着）。
 
-```bash
-./build.sh --product-name rk3568 --ccache --jobs 16 --build-target make_all --gn-args enable_oskm_collect=true
-```
+`lsp/` 是 integration_verification 仓库保留的本地扩展，不属于上述两个发布产物；
+它负责构建和消费 clangd `.idx` 索引，详见后文。
+拆分理由、职责边界与迁移记录见
+[docs/architecture/cli-skill-split.md](./docs/architecture/cli-skill-split.md)。
 
-构建完成后输出：
-
-```
-out/rk3568/oskm/knowledge.db          # 知识库（SQLite）
-out/rk3568/lsp-portable/             # LSP 可迁移索引、规范化 CDB 和 manifest
-```
-
-### 工作原理
-
-1. GN 声明 `enable_oskm_collect`（`build/ohos_var.gni`，默认 `false`）
-2. hb 构建驱动在 `postTargetCompilation` 阶段调用 resolver
-3. resolver 调用 `oskm_collect(out_path, target_cpu, workspace_root, product)`
-4. oskm 扫描源码树，采集 12 个维度的数据写入 SQLite
-5. 扫描完成后，自动构建 clangd .idx 索引（失败不阻塞流水线）
-
-### 调用链路
-
-```
-./build.sh --gn-args enable_oskm_collect=true
-  → hb resolver: resolve_enable_oskm_collect()
-    → oskm_collect(out_path, target_cpu, workspace_root, product)
-      → oskm scan --workspace-root <root> --product <product> --db out/<product>/oskm/knowledge.db
-      → lsp/build_index.py（非阻塞，构建 clangd 索引）
-```
-
-## 手动运行
+## 快速上手
 
 ```bash
-# 扫描
-python3 oskm.py scan --workspace-root /path/to/openharmony --product rk3568 --db out/oskm/knowledge.db
+cd tools/oskm/skills/ohos-design-architecture-evidence-query
 
-# 查看已有扫描
-python3 oskm.py scans --db out/oskm/knowledge.db
+# ④ 安装运行时（DB + interface/sdk-js + interface/sdk_c + CLI）
+cp oskm_runtime/.env.example oskm_runtime/.env
+# OSKM_DOWNLOAD_SOURCE 选择 OPENHARMONY_CI（默认）或 HARMONYOS_CI；
+# OSKM_DOWNLOAD_ENDPOINT 提供归档端点。归档里就是 DB + CLI + 两套 SDK，
+# 没有单独的 CLI 下载端点。
+python3 bootstrap.py doctor
+python3 bootstrap.py install --runtime-root "$HOME/.oskm"
 
-# 列出已注册采集器
-python3 oskm.py list --db out/oskm/knowledge.db
+# ④ 查询：**直接调 CLI**，bootstrap 只负责装
+CLI="$HOME/.oskm/oskm-cli.pyz"; DB="$HOME/.oskm/knowledge.db"
+python3 "$CLI" --db "$DB" arch overview                  # 这个产品由什么构成
+python3 "$CLI" --db "$DB" arch trace system/lib64/module/multimedia/libimage.z.so
+python3 "$CLI" ask --list                                # 52 个查询工具
 
-# Agent 查询
-python3 oskm.py --db out/oskm/knowledge.db arch overview
-python3 oskm.py ask --list
+# ③ 不经 skill 直接用 CLI（它自己不下载任何数据）
+cd ../.. && python3.12 cli/dist/oskm-cli.pyz --db "$HOME/.oskm/knowledge.db" arch overview
 
-# 可视化
+# ① 扫描：写出一个快照（12 个采集器）。**采集侧是另一个入口**，
+#    两个产物没有共同命令——`oskm.py` 那个分派壳已于 2026-11-12 删除。
+python3 -m oskm.cli scan --workspace-root <OH源码根> --product wukong100 \
+    --db ../../artifacts/wukong100/knowledge.db
+
+# ⑤ 浏览
 cd viewer && npm install && npm run dev
 ```
 
-## 采集器
+wukong100 实测（`date=20261111`，`cpu_arch=arm64`）：527 仓 · 57 子系统 ·
+385 部件 · 5,936 安装模块 · 7,025 镜像落点 · 3,687 ELF（32,076 条依赖边）·
+171 服务 + 166 SA + 59 HDI · 3,004 编译参数 · 1,385 特性 · 310 SysCap ·
+1,763 InnerAPI · 50 Kit · 1,328 SDK 模块（935 个定位到实现 `.so`）·
+444 条 NDK 头文件映射。库 19.0 MB。
 
-12 个采集器按拓扑序执行，依赖通过数据库传递：
+> `cpu_arch=arm64`，所以实现路径是 `system/lib64/…` 而不是 `system/lib/…`；
+> 以 `ask get_scan_info` 的 `cpu_arch` 和真实 `dest` 为准，不要凭路径猜。
 
-| 顺序 | 采集器 | 数据来源 | 产出表 |
-|------|--------|----------|--------|
-| 1 | repos | repo manifest + git | repos |
-| 2 | components | components.json + bundle.json | components, innerapis, features, syscaps |
-| 3 | args | gn args --list --json | gn_args |
-| 4 | install_modules | system_module_info.json | install_modules, install_targets, install_module_tags |
-| 5 | component_links | 跨表关联 | features.gn_arg_id, innerapis.install_module_id |
-| 6 | services | init .cfg | services |
-| 7 | hdi | HDF 配置 (.hcb/.hcs) | hdis |
-| 8 | sas | SA profile (.json) | sas |
-| 9 | elf_modules | install_targets 中的 ELF 文件 | elf_modules, elf_module_dependencies |
-| 10 | arkts_links | ArkTS 声明与安装产物关联 | arkts_links_run |
-| 11 | ndk_headers | SDK/NDK 头文件映射 | ndk_headers |
-| 12 | arkts | interface/sdk-js 声明 | arkts_modules, arkts_kits, arkts_sources, arkts_kit_relations |
+## 数据怎么流动
 
-## 依赖
+```
+源码树 + 构建产物
+      │  ① oskm/  —— 采集器按拓扑序执行，依赖经数据库传递
+      ▼
+ knowledge.db  ←── ② oskm_schema/ 定义了里面每一张表
+      │
+      ├─ ③ cli/       oskm-cli（pyz）        → Agent 沿架构链精确查询
+      │        ▲
+      │        └── ④ skills/…  bootstrap.py 装 DB/SDK/CLI，再透传查询
+      └─ ⑤ viewer/    静态站点              → 人工浏览与评审
+```
 
-- Python 3.10+
-- 仅标准库（无第三方依赖）
-- 预构建的 `gn` 工具（args 采集器使用，路径在 `prebuilts/build-tools/` 下自动发现）
+一次扫描 = 一个快照；同一个库可存多个快照，查询时按 `scan_id` 隔离。
+每个快照在 `scans` 中记录产品、`cpu_arch`、工作区和起止时间；`cpu_arch`
+默认 `arm64`。构建布局根据 `out/` 下 `product` 的相对路径自动探测，
+与 CPU 架构无关。
+**③④⑤ 读同一张库，不各存一份。**
+
+## 构建与验证
+
+```bash
+cd tools/oskm
+export OSKM_TEST_DB="$HOME/.oskm/knowledge.db"   # 真库（wukong100）
+
+python3.12 -m unittest discover -s oskm/tests -p "test_*.py"     # ①② 采集与表结构
+python3.12 -m unittest discover -s cli/tests -p "test_*.py"      # ③ 查询层 + 边界门禁
+python3.12 -m unittest discover \
+    -s skills/ohos-design-architecture-evidence-query/tests -p "test_*.py"   # ④
+cd viewer && npm run verify                                      # ⑤
+
+# 两个产物互不依赖，构建先后顺序无所谓；产物各自落在自己目录的 dist/
+python3.12 cli/scripts/build_cli.py                                 # → cli/dist/oskm-cli.pyz
+python3.12 skills/ohos-design-architecture-evidence-query/scripts/build_skill.py
+```
+
+> 本机 `python3` 可能是 3.9（macOS Command Line Tools 就是），跑不了本仓——
+> `oskm_schema/base.py` 用了 `str | None`。**一律用 `python3.12`。**
+
+产品级验收需要真实 OpenHarmony 代码树，见 [oskm/README.md](./oskm/README.md) 末节。
 
 ## LSP 代码索引（clangd .idx）
 
-`oskm/lsp/` 提供一套基于 clangd 的代码索引工具链：流水线编译后自动生成
-`.idx` 索引，开发/Agent 侧通过 MCP 消费，获得精确的调用链、引用、定义跳转
-等语义查询能力。
-
-### 索引生成在哪里
-
-- **默认位置**：`out/<product>/lsp-portable/.cache/clangd/index/`。
-  `--index-mode native` 使用原位置 `out/<product>/.cache/clangd/index/`，仅供当前源码路径使用。
-- **portable 工作目录**：`out/<product>/lsp-portable/work/`，完成后清理分片工作子目录。
-- **portable 构建日志**：`out/<product>/lsp-portable/logs/`，保留 `build-index.log`、
-  `instance-N.log` 和 clangd 原始诊断 `instance-N.clangd.log`。
-  portable 模式不再创建产品 out 下的 `.cache/` 或 `.clangd-lsp-work/`。
-- **触发**：`--enable-oskm-collect` 编译选项 → `postTargetCompilation` 阶段 →
-  `oskm_collect.py` → `lsp/build_index.py`
-- **手动执行**：
+`lsp/` 在流水线编译完成后构建 clangd `.idx` 索引，默认输出到
+`out/<product>/lsp-portable/`；portable 模式包含可迁移索引、规范化 CDB 和
+manifest。索引可通过 `lsp/mcp/` 内的 MCP 服务消费，获得调用链、引用和定义跳转。
 
 ```bash
-python3 developtools/integration_verification/tools/oskm/lsp/build_index.py \
-    -i out/rk3568
-# 常用选项
-#   --instances 4          并行 clangd 实例数（默认按 CPU 自动）
-#   --jobs-per-instance 32 每实例线程数（默认自动）
-#   --timeout-hours 6      超时中止，进度保留、下次增量续建
-#   --dry-run              只打印计划不执行
-#   --index-mode portable  默认：生成可迁移索引（需要 bwrap）
-#   --index-mode native    原生路径索引
-```
+# 手动构建（在 OpenHarmony 源码根执行）
+python3 developtools/integration_verification/tools/oskm/lsp/build_index.py -i out/<product>
 
-### 生成流程（build_index.py 自动完成）
-
-1. **定位 clangd**：环境变量 `LSP_CLANGD_BIN` > `lsp/clangd/bin/clangd`（捆绑位）
-   > `PATH` > OHOS prebuilts 自带（clangd 15，降级：无 outgoingCalls）
-2. **校验/生成** `compile_commands.json`：优先使用构建自带的；缺失时自动通过
-   `ninja -t compdb`（cxx/cc/asm 规则，约半分钟，~99% 源文件覆盖）生成
-3. **musl nullptr_t 补丁**（`apply_musl_fix.py`）：仅 native 模式临时应用。
-   portable 模式使用下一步的 include 顺序修复，避免临时 shim 恢复后改变头文件摘要
-4. **确保源码根 `.clangd`**：注入 libcxx-ohos include 路径（缺失时自动生成），
-   并按 sysroot 重排 include 顺序（libcxx 置前、musl 目录显式排后、移除抢位的
-   `--sysroot`），根治 musl stddef.h 劫持 libc++ 头链的 nullptr_t 级联错误；
-   配置层修复对交互会话同样生效，不依赖索引构建期打的 musl shim
-5. **CDB 切分 + 并行构建**：按源文件 crc32 切成 N 份，N 个 clangd 实例
-   通过符号链接写同一索引目录（temp+rename 原子写，产物等价）
-6. **断点续建**：已有 shard 按文件摘要校验跳过，增量构建只处理变更文件
-
-### 依赖
-
-| 依赖 | 说明 |
-|---|---|
-| clangd >= 20 | **已捆绑**（`lsp/clangd/bin/clangd`，21.1.7-oskm1，含内置头文件）；outgoingCalls 需要 20+。检测顺序：`LSP_CLANGD_BIN` > 捆绑 > PATH > OHOS prebuilts（15，降级）。修复、源码补丁和重编说明见 [clangd/README.md](lsp/clangd/README.md) |
-| Node.js >= 18 | 仅 MCP 消费侧需要 |
-| compile_commands.json | OHOS 构建自动生成于 out 目录 |
-| Linux + bubblewrap (`bwrap`) | portable 模式构建和消费都需要；缺失时自动通过 apt 安装，需允许创建用户/挂载命名空间 |
-
-portable 模式生成索引和本地启动 clangd 时，先检查 `bwrap` 是否已在 `PATH` 中；
-已有时直接使用，缺失时依次执行 `apt update`、`apt install -y bubblewrap`。
-root 用户直接安装，普通用户通过 `sudo -n` 安装，需要配置免密 sudo。
-安装日志写入 stderr，避免干扰 MCP/LSP 的 stdio 通信。没有 apt、安装权限不足、
-安装失败或安装后仍找不到 `bwrap` 时明确报错，不回退到 native 模式。
-安装软件包不会解除宿主机对用户/挂载命名空间的限制；已有 `bwrap` 但命名空间
-不可用时仍会失败。native 模式不触发安装。
-
-### 流水线分发与多套代码
-
-portable 模式在每个 clangd 的私有挂载命名空间内，把当前源码根映射为
-`/tmp/ohos-clangd-workspace`，并生成固定路径的规范化 CDB。消费时通过 clangd
-路径映射把跳转结果还原为本机路径，不改写下载的 CDB，不创建机器全局软链接。
-多套代码即使同时运行，也分别映射到各自的源码和缓存，不会互相覆盖。
-
-分发时保留 `out/<product>/lsp-portable/` 整个目录，包括隐藏的 `.cache/`，
-同时提供匹配的源码、SDK、生成头文件和源码根 `.clangd`，保持树内相对目录结构。
-源码树之外的编译依赖仍需在本机可用。生成的 `lsp/lsp-mcp.json` 和源码根
-`.lsp-mcp.json` 软链也应一并分发；其中启动参数使用相对路径，从本机源码根启动 MCP。
-原有索引需要重新生成一次 portable 基线，不能仅改 CDB 前缀实现旧分片迁移。
-
-`portable-index.json` 记录格式、虚拟根、产品目录、clangd 完整版本、CDB 校验和、
-构建状态和可选的 `LSP_SNAPSHOT_ID`。消费前校验这些信息及分片存在性；校验失败
-明确报错，不静默回退为本地全量构建。相同快照可复制到多套工作区，各自独立增量更新；
-不同源码版本或产品分别生成对应产物，避免多个工作区共写一个缓存目录。
-
-回归验证（从 integration_verification 仓库根执行）：
-
-```bash
+# LSP 回归（在 integration_verification 仓库根执行）
 LSP_TEST_CLANGD="$PWD/tools/oskm/lsp/clangd/bin/clangd" \
   python3 tools/oskm/lsp/test_portable_index.py -v
 ```
 
-覆盖真实构建入口和 MCP 自动预热、响应文件/生成头文件、双目录同时加载、
-跨文件定义跳转、迁移后分片内容和修改时间不变，以及本地源码变更后的独立增量更新。
-构建进度默认每 60 秒输出，可通过 `LSP_INDEX_INTERVAL` 调整。
+MCP 配置与 29 个 `lsp_*` 工具的说明见
+[lsp/mcp/README.md](./lsp/mcp/README.md) 和 [lsp/mcp/SKILL.md](./lsp/mcp/SKILL.md)。
 
-### MCP 配置（消费侧）
+## Agent 指南
 
-MCP 服务本体在 `lsp/mcp/dist/index.js`（已含生产依赖，无需 npm install）。
-
-1. **配置文件零手工**：索引构建完成时，`build_index.py` 按本次构建的真实参数
-   （产品 out 目录、实际使用的捆绑 clangd）生成 `lsp/lsp-mcp.json`，并在
-   **源码树根目录创建软链** `.lsp-mcp.json` 指向它——开发侧无需任何配置。
-   （`lsp/.lsp-mcp.json.template` 仅供未执行过构建时手工参考）
-2. **OpenCode 零手工注册**：同一构建流程将源码根 `opencode.json` 相对软链到
-   仓库自带的 [`lsp/opencode.json`](lsp/opencode.json)。从源码根启动 `opencode`
-   即可发现 `lsp` MCP，无需修改全局配置。命令、工作目录均为相对路径，源码根
-   改名后无需重写配置；仍需保留源码、生成文件和 `out/<product>/lsp-portable`。
-3. 已有普通 JSON 配置时，只补充缺失的 `mcp.lsp`，保留模型、其他 MCP 等设置；
-   已有 `mcp.lsp`、JSONC 配置或自定义软链不覆盖，构建日志明确说明。
-   JSONC 用户可将 `lsp/opencode.json` 中的 `mcp.lsp` 手动合并到原配置。
-4. **必须从源码树根目录启动 opencode**（`.lsp-mcp.json` 相对路径按启动目录解析）。
-   可用 `opencode mcp list` 检查连接；首次启动仍需等待 clangd 加载现有索引。
-
-### 提供的功能（29 个 lsp_* 工具）
-
-| 能力 | 工具 |
-|---|---|
-| **双向调用链** | `lsp_call_hierarchy`（谁调用它 incoming / 它调用谁 outgoing）|
-| 定义跳转 | `lsp_goto_definition` / `lsp_goto_type_definition` |
-| 引用查找 | `lsp_find_references`（编译器级精确，全库）|
-| 符号搜索 | `lsp_workspace_symbols` / `lsp_find_symbol` |
-| 类型信息 | `lsp_hover` / `lsp_type_hierarchy`（继承树）|
-| 文件结构 | `lsp_document_symbols` / `lsp_file_imports` / `lsp_related_files` |
-| 诊断 | `lsp_diagnostics` / `lsp_workspace_diagnostics` |
-
-注：函数指针/注册表调用（如 ANI 方法）无静态调用边，属静态分析边界。
-
-### Agent 使用
-
-- **opencode**：配置完成后直接用自然语言指派，例如
-  "用 lsp_call_hierarchy 查 <文件> 第 50 行第 37 列的函数调用了哪些函数"
-  （行/列 **1 基**；位置偏差 ±2 行内自动纠正）
-- **冷启动**：clangd 首次拉起后约 2.5 分钟完成全量索引内存装载
-  （`warmup` 配置项已在 MCP 启动时自动触发，无需等待手动操作）；
-  `idleTimeout` 默认 8 小时保活
-- **详细工具指南**：见 `lsp/mcp/SKILL.md`
-
-## 目录结构
-
-```
-oskm/
-├── oskm_collect.py          ← 构建系统入口（由 hb resolver 调用）
-├── oskm.py                  ← CLI 入口
-├── oskm/                    ← Python 包
-│   ├── cli.py               ← CLI 子命令
-│   ├── core/                ← 框架（framework, db, schema, runner, ...）
-│   ├── collectors/          ← 9 个采集器
-│   │   ├── repos/
-│   │   ├── components/
-│   │   ├── args/
-│   │   ├── install_modules/
-│   │   ├── elf_modules/
-│   │   ├── services/
-│   │   ├── hdi/
-│   │   ├── system_abilities/
-│   │   └── component_links/
-│   └── tests/               ← 单元测试
-├── lsp/                     ← LSP 代码索引工具链
-│   ├── build_index.py       ← 索引构建编排器
-│   ├── clangd_tools.py      ← headless clangd 驱动
-│   ├── apply_musl_fix.py    ← musl nullptr_t 补丁
-│   ├── .lsp-mcp.json.template
-│   ├── clangd/              ← 捆绑 clangd 21.1.7-oskm1（bin + 内置头 + 源码补丁）
-│   └── mcp/                 ← lsp-mcp-server（dist + 生产依赖）
-├── README.md
-└── AGENTS.md
-```
-
-## 运行测试
-
-```bash
-cd developtools/integration_verification/tools/oskm
-python3 -m unittest discover -s oskm/tests -p "test_*.py"
-```
+改这个工程的代码前先读 [AGENTS.md](./AGENTS.md)。
+用这个库回答架构问题，走 `ohos-design-architecture-evidence-query` skill
+（[SKILL.md](./skills/ohos-design-architecture-evidence-query/SKILL.md)）。

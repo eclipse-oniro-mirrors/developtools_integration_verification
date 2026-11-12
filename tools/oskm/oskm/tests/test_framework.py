@@ -18,7 +18,9 @@
 """Registry enforcement, schema generation and the SQLite scan lifecycle."""
 from oskm_schema import Column, Index, SchemaError, Table
 from oskm.core.runner import run
-from oskm.core.models import ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
+from oskm.core.models import (RequestError, ScanCancelled, ScanFatalError,
+                              ScanLimits, ScanRequest)
+from oskm.core.io import valid_product
 from oskm.core.framework import BaseCollector, RegistryError, projection, register
 from oskm.core.db import Database, StoreError
 from oskm.core import db, framework
@@ -36,7 +38,40 @@ def table(name, *columns, **kwargs):
     return Table(name, columns=columns, **kwargs)
 
 
+class ProductLayoutTest(unittest.TestCase):
+    def test_products_allow_one_or_two_relative_segments(self):
+        for value in ('test', 'abi/device', 'generic_arm64/phone'):
+            with self.subTest(value=value):
+                self.assertTrue(valid_product(value))
+
+    def test_products_reject_empty_escaping_and_deep_paths(self):
+        for value in ('', '.', '..', 'a/', '/a', 'a//device', 'a/b/c',
+                      'a/./device', 'a/../device', 'a\\device', 'a\x00device'):
+            with self.subTest(value=value):
+                self.assertFalse(valid_product(value))
+
+    def test_build_root_uses_product_segment_count(self):
+        for product, expected in (('test', Path('out/test')),
+                                  ('abi/device', Path('out/abi/device'))):
+            with self.subTest(product=product):
+                request = ScanRequest(Path('/workspace'), product)
+                self.assertEqual(request.build_root, expected)
+
+    def test_build_root_rejects_unsupported_product_shapes(self):
+        for value in ('', 'a/b/c', '/a', 'a\\b'):
+            with self.subTest(value=value), self.assertRaises(RequestError):
+                ScanRequest(Path('/workspace'), value).build_root
+
+
 class SchemaTest(unittest.TestCase):
+    def test_scans_persist_cpu_arch(self):
+        store = Database(':memory:')
+        with store.connect() as connection:
+            store.create_all(connection, ())
+            columns = [row['name'] for row in connection.execute('PRAGMA table_info(scans)')]
+        self.assertEqual(columns, [
+            'id', 'product', 'cpu_arch', 'workspace_root', 'started_at', 'finished_at'])
+
     def test_real_columns_are_rejected_to_protect_decimal_fidelity(self):
         # Scans keep JSON number literals exact (parsed as Decimal); an IEEE-754
         # double would silently truncate them, so REAL must be unreachable.
@@ -260,41 +295,48 @@ class ScanTest(unittest.TestCase):
                          [('gadgets', '2.0.0', 2), ('widgets', '1.0.0', 2)])
         self.assertEqual(runs[1]['scope'], '["widgets"]')
 
-    def test_scan_records_zone_and_cpu_arch(self):
+    def test_scan_persists_cpu_arch(self):
         self.upstream_collectors()
         request = ScanRequest(self.root, 'generic_generic_arm_64only/general_all_phone_standard',
-                              zone='yellow', cpu_arch='arm64')
+                              cpu_arch='arm64')
         run(self.database, request, only=['widgets'])
-        scan = self.rows('SELECT product, zone, cpu_arch FROM scans')[0]
+        scan = self.rows('SELECT * FROM scans')[0]
         self.assertEqual(scan, {
+            'id': 1,
             'product': 'generic_generic_arm_64only/general_all_phone_standard',
-            'zone': 'yellow',
             'cpu_arch': 'arm64',
+            'workspace_root': str(self.root),
+            'started_at': scan['started_at'],
+            'finished_at': scan['finished_at'],
         })
 
-    def test_cpu_arch_defaults_by_zone(self):
+    def test_cpu_arch_defaults_to_arm64(self):
         self.upstream_collectors()
-        run(self.database, ScanRequest(self.root, 'test'), only=['widgets'])
-        run(self.database, ScanRequest(
-            self.root, 'generic_generic_arm_64only/general_all_phone_standard',
-            zone='yellow'), only=['widgets'])
-        scans = self.rows('SELECT zone, cpu_arch FROM scans ORDER BY id')
-        self.assertEqual(scans, [
-            {'zone': 'blue', 'cpu_arch': 'arm'},
-            {'zone': 'yellow', 'cpu_arch': 'arm64'},
-        ])
+        default = ScanRequest(self.root, 'test')
+        detected = ScanRequest(
+            self.root, 'generic_generic_arm_64only/general_all_phone_standard')
+        explicit = ScanRequest(self.root, 'test', cpu_arch='arm')
+        self.assertEqual((default.cpu_arch, detected.cpu_arch, explicit.cpu_arch),
+                         ('arm64', 'arm64', 'arm'))
+        run(self.database, default, only=['widgets'])
+        run(self.database, detected, only=['widgets'])
+        scans = self.rows('SELECT * FROM scans ORDER BY id')
+        self.assertEqual([scan['cpu_arch'] for scan in scans], ['arm64', 'arm64'])
 
-    def test_begin_scan_applies_the_same_cpu_arch_defaults(self):
+    def test_begin_scan_persists_cpu_arch(self):
         with self.database.connect() as connection:
             self.database.create_all(connection, ())
             with db.transaction(connection):
-                db.begin_scan(connection, 'blue-product', self.root)
-                db.begin_scan(connection, 'yellow-product', self.root, zone='yellow')
-        scans = self.rows('SELECT zone, cpu_arch FROM scans ORDER BY id')
-        self.assertEqual(scans, [
-            {'zone': 'blue', 'cpu_arch': 'arm'},
-            {'zone': 'yellow', 'cpu_arch': 'arm64'},
-        ])
+                db.begin_scan(connection, 'first-product', self.root,
+                              cpu_arch='arm64')
+                db.begin_scan(connection, 'second-product', self.root,
+                              cpu_arch='arm')
+                db.begin_scan(connection, 'default-product', self.root)
+        scans = self.rows('SELECT * FROM scans ORDER BY id')
+        self.assertEqual(
+            [(scan['product'], scan['cpu_arch']) for scan in scans],
+            [('first-product', 'arm64'), ('second-product', 'arm'),
+             ('default-product', 'arm64')])
 
     def test_decimal_literals_survive_the_round_trip(self):
         self.upstream_collectors()
@@ -522,8 +564,6 @@ class DocumentLinksResolve(unittest.TestCase):
                 continue
             for target in re.findall(r'\]\((\.{1,2}/[^)#\s]+)',
                                      markdown.read_text(encoding='utf-8')):
-                if 'artifacts/' in target:
-                    continue
                 if not (markdown.parent / target).resolve().exists():
                     dangling.append(f'{markdown.relative_to(root)} → {target}')
         self.assertEqual(dangling, [])

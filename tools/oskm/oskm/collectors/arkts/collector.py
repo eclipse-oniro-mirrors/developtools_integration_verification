@@ -21,7 +21,7 @@ from oskm_schema.arkts import TABLES
 PROJECTION_SOURCES = ('collector.py', 'projection.py', 'discovery.py', 'linking.py',
                       'models.py', 'napi.py', 'quality.py', 'backend.py', 'ir.py')
 # 表结构已移到中立包 oskm_schema（采集与查询共用，见
-# agentic/docs/standalone-packaging.md §5）。它仍必须进 input_digest——
+# docs/architecture/standalone-packaging.md §5）。它仍必须进 input_digest——
 # 改一列就该让游标失效，这跟它放在哪个目录无关。
 SCHEMA_SOURCES = (Path(oskm_schema.arkts.__file__), Path(oskm_schema.base.__file__))
 

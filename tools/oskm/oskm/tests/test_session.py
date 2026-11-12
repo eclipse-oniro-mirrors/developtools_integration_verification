@@ -169,8 +169,9 @@ class SessionTest(Fixture):
         document = session.document('services')
         self.assertEqual(set(document), {'snapshot', 'services'})
         self.assertEqual(document['snapshot']['schema_version'], '4.1.0')
-        self.assertEqual(document['snapshot']['zone'], 'blue')
-        self.assertEqual(document['snapshot']['cpu_arch'], 'arm')
+        self.assertEqual(document['snapshot']['cpu_arch'], 'arm64')
+        self.assertEqual(set(document['snapshot']),
+                         {'schema_version', 'product', 'cpu_arch', 'scope', 'status'})
         # The nested component object is rebuilt by joining, not stored per record.
         self.assertEqual(document['services'][0]['component'],
                          {'name': 'driver', 'subsystem': 'hdf',
@@ -259,8 +260,8 @@ class CommandLineTest(Fixture):
                           'services'])
         self.assertTrue(target.exists())
         _, scans = self.invoke('scans', '--db', str(target))
-        self.assertEqual((scans['scans'][0]['zone'], scans['scans'][0]['cpu_arch']),
-                         ('blue', 'arm'))
+        self.assertEqual(set(scans['scans'][0]),
+                         {'id', 'product', 'cpu_arch', 'started_at', 'finished_at'})
 
     def test_only_pulls_dependencies_and_without_drops_them(self):
         target = self.root / 'partial.db'
@@ -289,8 +290,8 @@ class CommandLineTest(Fixture):
         self.assertEqual(report['scan_id'], self.scan_id)
         _, scans = self.invoke('scans', '--db', str(self.database.path))
         self.assertEqual(len(scans['scans']), 1)
-        self.assertEqual((scans['scans'][0]['zone'], scans['scans'][0]['cpu_arch']),
-                         ('blue', 'arm'))
+        self.assertEqual(set(scans['scans'][0]),
+                         {'id', 'product', 'cpu_arch', 'started_at', 'finished_at'})
 
     def test_session_reports_a_missing_store_cleanly(self):
         with self.assertRaises(QueryError):

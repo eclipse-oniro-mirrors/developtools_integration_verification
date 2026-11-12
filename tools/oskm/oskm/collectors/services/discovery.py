@@ -31,7 +31,7 @@ def discover_configs(ctx):
         ctx.issue(path, 'DIRECTORY_UNREADABLE')
     for directory, dirs, files in os.walk(ctx.package, followlinks=False, onerror=failed):
         ctx.check()
-        directory = Path(directory)
+        directory = Path(directory).resolve()
         relative = directory.relative_to(ctx.package)
         # Record discovered init roots even if entering one subsequently fails.
         if relative.name == 'etc' and 'init' in dirs and not (directory / 'init').is_symlink():

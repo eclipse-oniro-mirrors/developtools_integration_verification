@@ -135,7 +135,7 @@ const EXAMPLES = ['libbase.z.so', 'sa_main', 'bundle_framework', 'system/bin/toy
 
   <section v-if="h" class="health" :class="{ warn: h.degraded }">
     <span class="who">
-      <b>{{ scan?.product }}</b> · {{ scan?.zone }}/{{ scan?.cpu_arch || '?' }} · 扫描 #{{ scan?.id }}
+      <b>{{ scan?.product }}</b> · 扫描 #{{ scan?.id }}
       <span class="dim">{{ (scan?.started_at || '').slice(0, 16).replace('T', ' ') }}</span>
     </span>
     <span class="runs">

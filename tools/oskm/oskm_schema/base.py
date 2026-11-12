@@ -202,13 +202,8 @@ SCANS = Table(
     columns=(
         Column('id', 'INTEGER', nullable=False),
         Column('product', nullable=False),
-        # Build layout and target ISA are properties of the whole snapshot.  They
-        # are deliberately stored on `scans`, not copied into every collector table.
-        Column('zone', nullable=False, default="'blue'",
-               check="zone IN ('blue','yellow')"),
-        # The scan entry points default this by zone (blue=arm, yellow=arm64);
-        # the hb wrapper overrides it from `--target-cpu` when available.
-        Column('cpu_arch', nullable=False, check='length(cpu_arch) > 0'),
+        # A scan snapshot is identified by product, target ISA, and workspace.
+        Column('cpu_arch', nullable=False, default="'arm64'"),
         Column('workspace_root', nullable=False),
         Column('started_at', nullable=False),
         Column('finished_at'),

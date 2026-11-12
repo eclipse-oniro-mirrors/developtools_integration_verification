@@ -19,7 +19,7 @@ export const COLUMNS = [
     value: r => (r.source_url ? '查看 ↗' : ''),
     href: r => r.source_url || null,
     meaning: '在代码仓里打开这份头文件。',
-    reading: 'blue 区用扫描当时的提交号拼 blob 链接；yellow 区 codehub 开源仓用分支名拼 files 链接。未做内容比对。' },
+    reading: '公开托管仓用扫描当时的提交号拼 blob 链接；codehub 开源仓用分支名拼 files 链接。未做内容比对。' },
 
   { key: 'dest', label: '镜像库路径', group: 'NDK 库', type: 'path', min: 260, show: true,
     link: r => (r.elf_module_id ? { entity: 'elf_modules', id: r.elf_module_id } : null),
