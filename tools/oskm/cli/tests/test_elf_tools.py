@@ -181,6 +181,7 @@ class GraphSession(FakeSession):
 
 class GraphManager(FakeManager):
     def __init__(self):
+        super().__init__()
         self.session = GraphSession()
 
 

@@ -134,7 +134,7 @@ def database_is_usable(db_path) -> bool:
     return True
 
 
-def needs_refresh(db_path, *, today: str | None = None) -> bool:
+def needs_refresh(db_path, *, current_date: str | None = None) -> bool:
     """Return whether a managed runtime is stale or incomplete.
 
     A database without a state file is an unmanaged input and is left alone for
@@ -145,7 +145,7 @@ def needs_refresh(db_path, *, today: str | None = None) -> bool:
     full re-download just because the CLI artifact was introduced later.
     ``cli_install.ensure_cli()`` handles that separately and idempotently.
     """
-    current = today if today is not None else globals()['today']()
+    current = current_date if current_date is not None else today()
     db_path = Path(db_path).expanduser().resolve()
     state = load_state(db_path)
     if state is None:

@@ -64,7 +64,7 @@ def _decode_cursor(cursor: str, scan_id: int, fingerprint: str) -> int:
         padding = '=' * (-len(cursor) % 4)
         payload = json.loads(
             base64.urlsafe_b64decode(cursor + padding).decode('utf-8'))
-    except (ValueError, UnicodeError, json.JSONDecodeError):
+    except (UnicodeError, json.JSONDecodeError):
         raise ToolError('INVALID_CURSOR', 'cursor is not valid base64 JSON') from None
     if not isinstance(payload, dict):
         raise ToolError('INVALID_CURSOR', 'cursor payload must be an object')

@@ -101,44 +101,44 @@ class RuntimeRefreshPolicy(unittest.TestCase):
     def test_current_date_and_present_files_do_not_refresh(self):
         self.write_state('20261102', '20261102')
         self.assertFalse(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_previous_date_refreshes_both_artifacts(self):
         self.write_state('20261101', '20261101')
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_previous_date_local_source_does_not_refresh_by_date(self):
         self.write_state('20261101', '20261101', source='local')
         self.assertFalse(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_incomplete_local_source_still_refreshes(self):
         self.write_state('20261102', '20261102', source='local')
         for child in (self.root / 'interface/sdk_c').iterdir():
             child.unlink()
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_missing_sdk_refreshes_even_on_the_same_date(self):
         self.write_state('20261102', '20261102')
         for child in (self.root / 'interface/sdk_c').iterdir():
             child.unlink()
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_missing_database_file_refreshes(self):
         self.write_state('20261102', '20261102')
         (self.root / 'knowledge.db').unlink()
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_truncated_database_refreshes(self):
         """廉价检查仍然抓得住"文件在但已经不是库了"。"""
         self.write_state('20261102', '20261102')
         (self.root / 'knowledge.db').write_bytes(b'SQLite format 3\x00truncated')
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_database_without_scans_refreshes(self):
         self.write_state('20261102', '20261102')
@@ -147,7 +147,7 @@ class RuntimeRefreshPolicy(unittest.TestCase):
         connection.commit()
         connection.close()
         self.assertTrue(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_legacy_schema_alone_does_not_refresh(self):
         """**故意的行为变更**：schema 不兼容不再触发刷新。
@@ -159,7 +159,7 @@ class RuntimeRefreshPolicy(unittest.TestCase):
         self.write_db(legacy=True)
         self.write_state('20261102', '20261102')
         self.assertFalse(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
         # 但显式校验仍然报得出来——而且是 CLI 报的，不是 skill 自己。
         with self.assertRaisesRegex(ValueError, '不兼容'):
             install.default_validator()(self.root / 'knowledge.db')
@@ -172,11 +172,11 @@ class RuntimeRefreshPolicy(unittest.TestCase):
         """
         self.write_state('20261102', '20261102', version=2)
         self.assertFalse(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     def test_unmanaged_database_is_not_refreshed(self):
         self.assertFalse(state.needs_refresh(
-            self.root / 'knowledge.db', today='20261102'))
+            self.root / 'knowledge.db', current_date='20261102'))
 
     # ------------------------------------------------------------ schema 契约
 

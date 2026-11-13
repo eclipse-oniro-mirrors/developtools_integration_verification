@@ -16,7 +16,7 @@ SCHEMA_VERSION = '7.0.0'
 def _text(value, name, *, optional=False):
     if optional and value is None:
         return
-    if type(value) is not str or len(value) > 4096 or '\x00' in value:
+    if not isinstance(value, str) or len(value) > 4096 or '\x00' in value:
         raise QueryError('INVALID_PARAM: ' + name)
 
 
@@ -46,7 +46,7 @@ class ArktsQuery:
     # 被加载（软链、vendored 副本都会导致），`is` 恒为 False 而且不报错，
     # 分支静默失效。按名字比较对这种情况免疫。
     def _page(self, table, clauses, params, *, limit, cursor, filters, evidence=False):
-        if type(limit) is not int or not 1 <= limit <= 200:
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 200:
             raise QueryError('INVALID_PARAM: limit')
         _text(cursor, 'cursor', optional=True)
         with snapshot(self.connection):
@@ -58,19 +58,20 @@ class ArktsQuery:
                 try:
                     raw = base64.b64decode(cursor.encode('ascii'), altchars=b'-_', validate=True)
                     decoded = json.loads(raw)
-                    if type(decoded) is not dict or set(decoded) != set(state) | {'last_key'}:
+                    if not isinstance(decoded, dict) or set(decoded) != set(state) | {'last_key'}:
                         raise ValueError()
-                    if type(decoded['version']) is not int or type(decoded['scan_id']) is not int:
+                    if (not isinstance(decoded['version'], int) or isinstance(decoded['version'], bool)
+                            or not isinstance(decoded['scan_id'], int) or isinstance(decoded['scan_id'], bool)):
                         raise ValueError()
                     for key in ('input_digest', 'filters_hash', 'view', 'last_key'):
-                        if type(decoded[key]) is not str:
+                        if not isinstance(decoded[key], str):
                             raise ValueError()
                     if decoded['scan_id'] != self.scan_id or decoded['input_digest'] != state['input_digest']:
                         raise QueryError('STALE_CURSOR')
                     if any(decoded[k] != v for k, v in state.items()):
                         raise ValueError()
                     last = decoded['last_key']
-                except (ValueError, UnicodeError, KeyError) as exc:
+                except (UnicodeError, KeyError) as exc:
                     raise QueryError('INVALID_CURSOR') from exc
             where = ' AND '.join(['t.scan_id=?', *clauses])
             params = [self.scan_id, *params]
@@ -225,7 +226,7 @@ class ArktsQuery:
     def _relations(self, *, relation_type=None, condition=None, include_unspecified=False, include_candidates=False):
         if relation_type not in (None, 'declared_membership', 'entry_reference') or condition not in (None, 'dynamic', 'static', 'both', 'unknown', 'unspecified'):
             raise QueryError('INVALID_PARAM: relation filter')
-        if type(include_unspecified) is not bool or type(include_candidates) is not bool:
+        if not isinstance(include_unspecified, bool) or not isinstance(include_candidates, bool):
             raise QueryError('INVALID_PARAM: inclusion flag')
         clauses, values = [], []
         if not include_candidates:

@@ -177,7 +177,7 @@ def cmd_refresh(root: Path, argv) -> int:
                                 '只在运行时过期或不完整时重新安装')
     args = parser.parse_args(argv)
     db_path = root / 'knowledge.db'
-    if not state.needs_refresh(db_path, today=args.date or state.today()):
+    if not state.needs_refresh(db_path, current_date=args.date or state.today()):
         print(f'==> 运行时已是最新，无需刷新: {root}', file=sys.stderr)
         return EXIT_OK
     return _do_install(root, args, skip_db=False, skip_sdk=False)

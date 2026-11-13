@@ -104,7 +104,7 @@ def _open(
                 raise DownloadError(
                     f'下载失败（HTTP {exc.code}）: {request.full_url}. '
                     '检查该日期/资源是否存在以及代理设置。') from exc
-        except (URLError, TimeoutError, OSError) as exc:
+        except OSError as exc:
             last_error = exc
             if attempt + 1 == attempts:
                 raise DownloadError(

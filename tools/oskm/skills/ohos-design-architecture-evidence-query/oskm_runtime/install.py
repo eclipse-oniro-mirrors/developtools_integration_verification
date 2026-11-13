@@ -321,7 +321,7 @@ def install_runtime(
                 if download_db:
                     # 源码树里没有归档自带的 CLI，只能用已装的 / 源码树的。
                     (validate or default_validator())(bundle_root / 'knowledge.db')
-            except (OSError, shutil.Error, ValueError) as exc:
+            except (shutil.Error, ValueError) as exc:
                 shutil.rmtree(local_stage, ignore_errors=True)
                 print(
                     f'==> 源码本地运行时不可用，回退下载: {exc}',

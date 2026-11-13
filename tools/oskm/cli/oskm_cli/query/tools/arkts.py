@@ -15,7 +15,7 @@ RELATION = {
 
 def tool(name, method, description, properties, required=()):
     def handler(params, manager):
-        if type(params) is not dict or set(params) - set(properties):
+        if not isinstance(params, dict) or set(params) - set(properties):
             raise ToolError('INVALID_PARAM', 'unknown parameter')
         missing = set(required) - set(params)
         if missing:

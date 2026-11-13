@@ -644,7 +644,6 @@ class SkillMatchesOrgGuide(unittest.TestCase):
             ≤1024 字符
           · 正文（代码块外）不许留 `[TODO: …]` 占位
         """
-        import re
         text = SKILL.read_text(encoding='utf-8')
         self.assertTrue(text.startswith('---'), '没有 YAML frontmatter')
         match = re.match(r'^---\n(.*?)\n---', text, re.DOTALL)
@@ -700,7 +699,6 @@ class SkillMatchesOrgGuide(unittest.TestCase):
         两条可机检的下限：它必须点出触发场景词（不只说"查询数据"），
         而且不能长出正文摘要——超过 400 字符基本就是在复述流程了。
         """
-        import re
         block = re.match(r'^---\n(.*?)\n---', SKILL.read_text(encoding='utf-8'),
                          re.DOTALL).group(1)
         description = next(line.split(':', 1)[1].strip().strip('"')
