@@ -23,8 +23,12 @@ The resolver in ``build_args_resolver.py`` calls ``oskm_collect()`` with the
 build output path, target CPU, workspace root, and product name.
 
 The output database is written to ``{out_path}/oskm/knowledge.db``.
+After the scan, a clangd .idx index is built under the build output
+(non-fatal on failure).
 """
 import argparse
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -63,6 +67,7 @@ def oskm_collect(out_path, target_cpu, workspace_root=None,
               file=sys.stderr)
     else:
         print(f"[oskm_collect] scan complete: {db_path}")
+    __build_lsp_index(out_path)
     return exit_code
 
 
@@ -113,6 +118,32 @@ def _run_scan(root, product, db_path, cpu_arch=None):
         argv.extend(('--cpu-arch', str(cpu_arch)))
     print(f"[oskm_collect] running: oskm {' '.join(argv)}")
     return oskm_main(argv)
+
+
+def __build_lsp_index(out_path):
+    """Build the clangd .idx index under the build output (non-fatal).
+
+    Delegates to lsp/build_index.py; any failure is logged and swallowed
+    so it never breaks the collection phase.
+    Set OSKM_LSP_INDEX=off to skip.
+    """
+    if os.environ.get('OSKM_LSP_INDEX', '').lower() in ('off', '0', 'no'):
+        print('[oskm_collect] lsp index disabled by OSKM_LSP_INDEX')
+        return
+    lsp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lsp')
+    build_script = os.path.join(lsp_dir, 'build_index.py')
+    if not os.path.isfile(build_script):
+        print('[oskm_collect] lsp/build_index.py not found, skip')
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, build_script, '-i', str(out_path)],
+            cwd=lsp_dir)
+        if result.returncode != 0:
+            print(f'[oskm_collect] lsp index build exit={result.returncode} '
+                  '(non-fatal)')
+    except Exception as exc:
+        print(f'[oskm_collect] lsp index build failed (non-fatal): {exc}')
 
 
 if __name__ == '__main__':
