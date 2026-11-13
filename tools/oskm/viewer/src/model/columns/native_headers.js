@@ -2,13 +2,13 @@
 
    一行只表达“这个 ELF 提供这个头文件”，不是“这个头文件属于这个部件”。
    部件、安装模块等归属字段都经 ELF JOIN 得到，避免在映射表里冗余存储。 */
-export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属'];
+export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属']
 
 export const MATCH_STRATEGIES = {
   'build_gn': 'BUILD.gn',
   'header_library': '@library',
   symbol: '符号匹配',
-};
+}
 
 export const COLUMNS = [
   { key: 'header_path', label: '源码头文件', group: '头文件', type: 'path', min: 360,
@@ -53,4 +53,4 @@ export const COLUMNS = [
     link: r => (r.install_module_id ? { entity: 'install_modules', id: r.install_module_id } : null),
     meaning: '装出这个 ELF 的 GN target。',
     reading: '点链接可查看同模块安装出的其它文件。' },
-];
+]

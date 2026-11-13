@@ -124,5 +124,5 @@ export function fileSource(scanId, path) {
  * @returns {{url, repo, rel, ref, exact}|null}
  */
 export function nativeHeaderSource(scanId, headerPath) {
-  return fileSource(scanId, headerPath);
+  return fileSource(scanId, headerPath)
 }
