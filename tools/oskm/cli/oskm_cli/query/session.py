@@ -19,14 +19,46 @@ def _quote_identifier(value: str) -> str:
 
 
 class SessionManager:
+
     def __init__(self):
         self._sessions: dict[int, _SessionEntry] = {}
         self._next_id = 1
         self._active: int | None = None
 
+
     @property
     def active_id(self) -> int | None:
         return self._active
+
+
+    @staticmethod
+    def _safe_detach(entry: _SessionEntry, alias: str):
+        try:
+            entry.session.connection.execute(
+                f'DETACH DATABASE {_quote_identifier(alias)}')
+        except Exception:
+            pass
+        entry.aliases.pop(alias, None)
+        alias_session = entry.alias_sessions.pop(alias, None)
+        if alias_session is not None:
+            alias_session.close()
+
+
+    @staticmethod
+    def _info(entry: _SessionEntry) -> dict:
+        s = entry.session
+        try:
+            scan = s.scan_row()
+        except QueryError as e:
+            raise ToolError(e.code, f'{e.code}: {e.message}') from e
+        return {
+            'session_id': entry.sid,
+            'scan_id': s.scan_id,
+            'product': scan['product'],
+            'cpu_arch': scan['cpu_arch'],
+            'db_path': entry.db_path,
+        }
+
 
     def open(self, db_path: str, *, scan_id: int | None = None,
              product: str | None = None) -> dict:
@@ -50,6 +82,7 @@ class SessionManager:
         self._active = sid
         return self._info(entry)
 
+
     def close(self, *, session_id: int | None = None) -> dict:
         sid = session_id or self._active
         if sid is None or sid not in self._sessions:
@@ -62,11 +95,13 @@ class SessionManager:
             self._active = max(self._sessions) if self._sessions else None
         return {'closed': True, 'session_id': sid}
 
+
     def switch(self, session_id: int) -> dict:
         if session_id not in self._sessions:
             raise ToolError('INVALID_SESSION_ID', f'session {session_id} not found')
         self._active = session_id
         return self._info(self._sessions[session_id])
+
 
     def list_sessions(self) -> dict:
         sessions = []
@@ -77,15 +112,18 @@ class SessionManager:
         aliases = list(self._sessions[self._active].aliases) if self._active else []
         return {'sessions': sessions, 'attached_aliases': aliases}
 
+
     def get_active(self) -> ReadOnlyScanSession:
         if self._active is None or self._active not in self._sessions:
             raise ToolError('NO_SESSION', 'no active session; call open_session first')
         return self._sessions[self._active].session
 
+
     def get_entry(self) -> _SessionEntry:
         if self._active is None or self._active not in self._sessions:
             raise ToolError('NO_SESSION', 'no active session; call open_session first')
         return self._sessions[self._active]
+
 
     def attach_secondary(self, db_path: str, alias: str = 'secondary') -> dict:
         import os
@@ -118,6 +156,7 @@ class SessionManager:
         return {'alias': alias, 'db_path': str(alias_session.db_path),
                 'tables': tbl_names, 'scan_id': alias_session.scan_id}
 
+
     def detach_secondary(self, alias: str) -> dict:
         entry = self.get_entry()
         if alias not in entry.aliases:
@@ -125,32 +164,6 @@ class SessionManager:
         self._safe_detach(entry, alias)
         return {'detached': True, 'alias': alias}
 
-    @staticmethod
-    def _safe_detach(entry: _SessionEntry, alias: str):
-        try:
-            entry.session.connection.execute(
-                f'DETACH DATABASE {_quote_identifier(alias)}')
-        except Exception:
-            pass
-        entry.aliases.pop(alias, None)
-        alias_session = entry.alias_sessions.pop(alias, None)
-        if alias_session is not None:
-            alias_session.close()
-
-    @staticmethod
-    def _info(entry: _SessionEntry) -> dict:
-        s = entry.session
-        try:
-            scan = s.scan_row()
-        except QueryError as e:
-            raise ToolError(e.code, f'{e.code}: {e.message}') from e
-        return {
-            'session_id': entry.sid,
-            'scan_id': s.scan_id,
-            'product': scan['product'],
-            'cpu_arch': scan['cpu_arch'],
-            'db_path': entry.db_path,
-        }
 
 
 class _SessionEntry:

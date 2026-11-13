@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """托管运行时的刷新判定：什么时候算过期。
 
 2026-11-12 拆分之后，`needs_refresh()` **只做廉价检查**（状态结构、日期、
@@ -212,6 +213,7 @@ class RuntimeRefreshPolicy(unittest.TestCase):
                     source.read_text(encoding='utf-8')), 1):
                 offenders.append(f'{source.name}:{number}: {line.strip()}')
         self.assertEqual(offenders, [])
+
 
 class StateFileRoundTrip(unittest.TestCase):
     def setUp(self):

@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Regression coverage for security and contract findings in MR 380."""
 from __future__ import annotations
 # cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。

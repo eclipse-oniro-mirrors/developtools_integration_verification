@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """ArkTS 的查询侧。
 
 原先住在 `oskm/collectors/arkts/`——那是采集器包，而这三个文件

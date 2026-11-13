@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 产物的门禁：固定名、可复现、可独立运行、产物落在 cli/ 内部。
 
 四条断言各自拦一类真实故障：
@@ -157,27 +158,24 @@ class PyzRunsStandalone(unittest.TestCase):
         cls.archive = build_cli.build_pyz(
             Path(cls.temp.name) / build_cli.artifact_name())['archive']
 
+
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def _run(self, *arguments):
-        return subprocess.run(
-            [sys.executable, str(self.archive), *arguments],
-            cwd=self.temp.name, capture_output=True, text=True,
-            env={'PATH': os.environ.get('PATH', ''),
-                 'HOME': self.temp.name, 'PYTHONNOUSERSITE': '1'})
 
     def test_version(self):
         result = self._run('--version')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), f'oskm-cli {__version__}')
 
+
     def test_usage_names_the_cli_not_the_old_dispatcher(self):
         result = self._run('--help')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('oskm-cli', result.stdout)
         self.assertIn('validate-db', result.stdout)
+
 
     def test_ask_list_is_generated_from_the_registry(self):
         result = self._run('ask', '--list')
@@ -187,11 +185,13 @@ class PyzRunsStandalone(unittest.TestCase):
         for tool in REGISTRY:
             self.assertIn(tool.name, result.stdout)
 
+
     def test_a_missing_database_explains_who_downloads(self):
         result = self._run('--db', 'nope.db', 'ask', 'get_scan_info')
         self.assertEqual(result.returncode, 3)
         self.assertIn('bootstrap.py install', result.stderr)
         self.assertIn('不会为任意缺失路径自动下载', result.stderr)
+
 
     def test_validate_db_rejects_a_non_database(self):
         path = Path(self.temp.name) / 'garbage.db'
@@ -199,6 +199,7 @@ class PyzRunsStandalone(unittest.TestCase):
         result = self._run('validate-db', str(path))
         self.assertEqual(result.returncode, 2)
         self.assertIn('不兼容', result.stderr)
+
 
     def test_the_cli_never_touches_the_network_or_the_runtime_root(self):
         """空 HOME + 无端点：查询路径上不该有任何东西去读配置、联网或写盘。
@@ -220,6 +221,15 @@ class PyzRunsStandalone(unittest.TestCase):
                        '.oskm', 'install --runtime-root', '刷新'):
             self.assertNotIn(leaked, result.stderr)
         self.assertEqual(sorted(path.name for path in home.iterdir()), before)
+
+
+    def _run(self, *arguments):
+        return subprocess.run(
+            [sys.executable, str(self.archive), *arguments],
+            cwd=self.temp.name, capture_output=True, text=True,
+            env={'PATH': os.environ.get('PATH', ''),
+                 'HOME': self.temp.name, 'PYTHONNOUSERSITE': '1'})
+
 
 
 class ReleaseLayoutTests(unittest.TestCase):

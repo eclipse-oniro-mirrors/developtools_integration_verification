@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """文档相对链接不许悬空，也不许指向已删除的文档。
 
 原来这组断言住在 `test_docs_match_registry.py` 里，而且写在文件中部那句
@@ -29,6 +30,15 @@ ROOT = OSKM.parents[1]
 
 
 class DocumentLinksResolve(unittest.TestCase):
+
+    @staticmethod
+    def _label(path):
+        try:
+            return str(path.relative_to(ROOT))
+        except ValueError:
+            return str(path)
+
+
     @classmethod
     def _markdowns(cls):
         paths = set(SKILL_ROOT.rglob('*.md'))
@@ -48,12 +58,6 @@ class DocumentLinksResolve(unittest.TestCase):
         assert len(found) > 15, found
         return found
 
-    @staticmethod
-    def _label(path):
-        try:
-            return str(path.relative_to(ROOT))
-        except ValueError:
-            return str(path)
 
     def test_no_dangling_relative_links(self):
         dangling = []
@@ -64,6 +68,7 @@ class DocumentLinksResolve(unittest.TestCase):
                 if not (markdown.parent / target).resolve().exists():
                     dangling.append(f'{self._label(markdown)} → {target}')
         self.assertEqual(dangling, [])
+
 
     # 2026-10-29 随 MCP 一起删掉的四份文档。
     GONE = ('mcp-design.md', 'transport-stdio-vs-http.md',
@@ -84,6 +89,7 @@ class DocumentLinksResolve(unittest.TestCase):
                     offenders.append(f'{self._label(markdown)} → {target}')
         self.assertEqual(offenders, [])
 
+
     def test_no_links_into_the_removed_agentic_tree(self):
         """`agentic/` 已经不存在了；指向它的链接一定是死的。
 
@@ -96,6 +102,22 @@ class DocumentLinksResolve(unittest.TestCase):
                 if 'agentic' in target:
                     offenders.append(f'{self._label(markdown)} → {target}')
         self.assertEqual(offenders, [])
+
+
+    def test_no_document_tells_the_reader_to_run_a_removed_command(self):
+        """已删除的查询透传不能重新出现在用户文档里。"""
+        offenders = []
+        for markdown in self._user_facing():
+            text = markdown.read_text(encoding='utf-8')
+            for number, line in enumerate(text.splitlines(), 1):
+                removed_agentic = '-m agentic' in line or 'agentic.runtime' in line
+                removed_query = bool(re.search(
+                    r'bootstrap\.py(?:\s+--\S+(?:\s+\S+)?)?\s+'
+                    r'(?:ask|arch|diff|sql)\b', line))
+                if removed_agentic or removed_query:
+                    offenders.append(f'{self._label(markdown)}:{number}: {line.strip()}')
+        self.assertEqual(offenders, [])
+
 
     # 只查**面向使用者**的文档。`docs/architecture/` 里的
     # `standalone-packaging.md` / `query-skill-design.md` / `cli-skill-split.md`
@@ -114,19 +136,6 @@ class DocumentLinksResolve(unittest.TestCase):
                 found.extend(sorted(base.rglob('*.md')))
         return sorted(set(found))
 
-    def test_no_document_tells_the_reader_to_run_a_removed_command(self):
-        """已删除的查询透传不能重新出现在用户文档里。"""
-        offenders = []
-        for markdown in self._user_facing():
-            text = markdown.read_text(encoding='utf-8')
-            for number, line in enumerate(text.splitlines(), 1):
-                removed_agentic = '-m agentic' in line or 'agentic.runtime' in line
-                removed_query = bool(re.search(
-                    r'bootstrap\.py(?:\s+--\S+(?:\s+\S+)?)?\s+'
-                    r'(?:ask|arch|diff|sql)\b', line))
-                if removed_agentic or removed_query:
-                    offenders.append(f'{self._label(markdown)}:{number}: {line.strip()}')
-        self.assertEqual(offenders, [])
 
 
 if __name__ == '__main__':

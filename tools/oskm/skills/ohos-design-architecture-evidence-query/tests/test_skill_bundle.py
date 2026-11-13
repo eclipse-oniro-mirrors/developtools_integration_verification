@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """skill 发布归档的门禁。
 
 拆分之后归档的性质变了，所以断言也变了。旧 `test_standalone_bundle.py`
@@ -39,6 +40,7 @@ SKILL_NAME = 'ohos-design-architecture-evidence-query'
 
 
 class SkillBundleTests(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix='oskm-skill-bundle-')
@@ -47,17 +49,11 @@ class SkillBundleTests(unittest.TestCase):
         cls.archive = Path(cls.release['archive'])
         cls.root = build_skill.skill_name()
 
+
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def _names(self):
-        with tarfile.open(self.archive, 'r:gz') as tar:
-            return [member.name for member in tar]
-
-    def _read(self, member):
-        with tarfile.open(self.archive, 'r:gz') as tar:
-            return tar.extractfile(f'{self.root}/{member}').read().decode('utf-8')
 
     # ---------------------------------------------------------------- 内容
 
@@ -88,11 +84,13 @@ class SkillBundleTests(unittest.TestCase):
         ):
             self.assertIn(required, names)
 
+
     def test_archive_has_exactly_one_package_root(self):
         names = self._names()
         self.assertEqual({name.split('/', 1)[0] for name in names}, {self.root})
         self.assertEqual([n for n in names if n.endswith('/SKILL.md')],
                          [f'{self.root}/SKILL.md'])
+
 
     def test_the_query_engine_is_not_bundled(self):
         """**这是拆分的核心断言**：skill 不再自带查询引擎与表定义。"""
@@ -105,6 +103,7 @@ class SkillBundleTests(unittest.TestCase):
             self.assertEqual(hits, [], f'{forbidden} 不该出现在 skill 归档里')
         self.assertFalse(any('collectors' in name for name in names))
         self.assertFalse(any(name.endswith('.pyz') for name in names))
+
 
     def test_the_archive_never_contains_its_own_output_directory(self):
         """默认输出就在 skill 内部，所以必须显式排除 `dist/`。
@@ -119,6 +118,7 @@ class SkillBundleTests(unittest.TestCase):
             self.assertFalse(name.endswith(('.tar.gz', '.tgz', '.pyz')), name)
             self.assertNotIn('SHA256SUMS', parts, name)
 
+
     def test_rebuilding_into_the_same_directory_does_not_grow_the_archive(self):
         first = build_skill.build_bundle(self.dist)
         second = build_skill.build_bundle(self.dist)
@@ -126,8 +126,10 @@ class SkillBundleTests(unittest.TestCase):
         self.assertEqual(first['size'], second['size'])
         self.assertEqual(first['members'], second['members'])
 
+
     def test_default_output_directory_is_inside_the_skill(self):
         self.assertEqual(build_skill.DEFAULT_OUTPUT, _SKILL / 'dist')
+
 
     def test_the_skill_builder_does_not_import_the_cli_builder(self):
         """两个产物各自独立，连构建期也不该有 import 依赖。"""
@@ -135,6 +137,7 @@ class SkillBundleTests(unittest.TestCase):
         self.assertNotIn('import build_cli', text)
         self.assertTrue(hasattr(build_skill, 'write_checksums'),
                         'SHA256SUMS 应该自己写，而不是借 CLI builder 的函数')
+
 
     def test_maintainer_and_generated_files_are_excluded(self):
         names = self._names()
@@ -151,12 +154,14 @@ class SkillBundleTests(unittest.TestCase):
             'schema-single-source.md', 'build_bundle.py', 'build_skill.py',
             'build_cli.py'} for name in names))
 
+
     def test_local_env_files_are_never_bundled(self):
         ignored = build_skill._ignore(
             _SKILL / 'oskm_runtime',
             ['.env', '.env.local', '.env.example', 'state.py'])
         self.assertTrue({'.env', '.env.local'}.issubset(ignored))
         self.assertNotIn('.env.example', ignored)
+
 
     def test_env_example_documents_exactly_the_supported_keys(self):
         text = self._read('oskm_runtime/.env.example')
@@ -172,8 +177,8 @@ class SkillBundleTests(unittest.TestCase):
         from oskm_runtime import environment
         self.assertEqual(set(values), {'OSKM_DOWNLOAD_SOURCE',
                                        'OSKM_DOWNLOAD_ENDPOINT'})
-        self.assertEqual(values['OSKM_DOWNLOAD_SOURCE'], 'OPENHARMONY_CI')
-        self.assertTrue(values['OSKM_DOWNLOAD_ENDPOINT'].startswith('https://'))
+        self.assertEqual(values.get('OSKM_DOWNLOAD_SOURCE'), 'OPENHARMONY_CI')
+        self.assertTrue(values.get('OSKM_DOWNLOAD_ENDPOINT', '').startswith('https://'))
         # 其余键以注释形式出现即可（它们都是可选的）。
         for optional in (environment.CLI_PATH_ENV, environment.RUNTIME_ROOT_ENV):
             self.assertIn(optional, text)
@@ -183,6 +188,7 @@ class SkillBundleTests(unittest.TestCase):
         self.assertIn('oskm-cli.pyz', text,
                       '.env.example 要说清楚归档里有什么')
 
+
     def test_env_example_documents_the_whole_archive(self):
         """`.env.example` 是使用者第一次读的东西，必须讲清归档里有哪些文件。"""
         text = self._read('oskm_runtime/.env.example')
@@ -190,11 +196,14 @@ class SkillBundleTests(unittest.TestCase):
                      'interface/sdk-js', 'interface/sdk_c'):
             self.assertIn(item, text, f'.env.example 没提 {item}')
 
+
     def test_no_version_pin_is_bundled(self):
         """CLI 与 `knowledge.db` 同类：固定文件名、不记版本，所以没有 pin。"""
         self.assertNotIn(f'{self.root}/oskm_runtime/cli_pin.json', self._names())
         for gone in ('check_pin', 'cli_version', 'PIN_FILE'):
             self.assertFalse(hasattr(build_skill, gone), gone)
+
+
     def test_skill_md_does_not_mention_the_removed_entry_point(self):
         """`python3 -m agentic` 已经不存在了；留在文档里就是坏指令。"""
         for member in ('SKILL.md', 'README.md', 'references/usage.md'):
@@ -202,10 +211,12 @@ class SkillBundleTests(unittest.TestCase):
             self.assertNotIn('-m agentic', text, member)
             self.assertNotIn('agentic/', text, member)
 
+
     def test_release_uses_the_skill_name_and_version(self):
         self.assertEqual(self.archive.name,
                          f'{SKILL_NAME}-{build_skill.skill_version()}.tar.gz')
         self.assertEqual(build_skill.skill_name(), SKILL_NAME)
+
 
     def test_checksums_are_written_next_to_the_archive(self):
         checksums = (self.dist / 'SHA256SUMS').read_text(encoding='utf-8')
@@ -216,12 +227,14 @@ class SkillBundleTests(unittest.TestCase):
                          hashlib.sha256(self.archive.read_bytes()).hexdigest())
         self.assertEqual(name, self.archive.name)
 
+
     # ------------------------------------------------------------ 确定性
 
     def test_archive_build_is_reproducible(self):
         with tempfile.TemporaryDirectory(prefix='oskm-skill-rebuild-') as temp:
             again = build_skill.build_bundle(Path(temp) / 'dist')
         self.assertEqual(again['sha256'], self.release['sha256'])
+
 
     def test_archive_member_metadata_is_normalized(self):
         with tarfile.open(self.archive, 'r:gz') as tar:
@@ -234,6 +247,7 @@ class SkillBundleTests(unittest.TestCase):
                 # USTAR 的 magic 就写在头里；TarInfo 不暴露 format 字段。
                 self.assertEqual(member.pax_headers, {}, member.name)
 
+
     def test_staging_rejects_a_query_engine_leaking_back_in(self):
         with tempfile.TemporaryDirectory(prefix='oskm-skill-stage-') as temp:
             package = build_skill.stage_bundle(temp)
@@ -242,10 +256,22 @@ class SkillBundleTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'forbidden path'):
                 build_skill._validate_package(package)
 
+
     def test_staging_rejects_a_real_env_file(self):
         with tempfile.TemporaryDirectory(prefix='oskm-skill-env-') as temp:
             package = build_skill.stage_bundle(temp)
             self.assertFalse((package / 'oskm_runtime' / '.env').exists())
+
+
+    def _names(self):
+        with tarfile.open(self.archive, 'r:gz') as tar:
+            return [member.name for member in tar]
+
+
+    def _read(self, member):
+        with tarfile.open(self.archive, 'r:gz') as tar:
+            return tar.extractfile(f'{self.root}/{member}').read().decode('utf-8')
+
 
 
 class ExtractedSkillTests(unittest.TestCase):
@@ -263,30 +289,11 @@ class ExtractedSkillTests(unittest.TestCase):
         cls.cli_release = build_cli.build_pyz(cls.cli_archive)
         cls.db = create_fixture_db(cls.base / 'knowledge.db')
 
+
     @classmethod
     def tearDownClass(cls):
         cls.temp.cleanup()
 
-    def _run(self, *arguments, **environ):
-        env = {
-            'PATH': os.environ.get('PATH', ''),
-            'HOME': str(self.base),
-            'PYTHONNOUSERSITE': '1',
-            'OSKM_CLI': str(self.cli_archive),
-        }
-        env.update(environ)
-        return subprocess.run(
-            [sys.executable, 'bootstrap.py', *arguments],
-            cwd=str(self.package), env=env, capture_output=True, text=True)
-
-    def _run_cli(self, *arguments, **environ):
-        """查询直接调 pyz——bootstrap 不再透传（2026-11-12 删除）。"""
-        env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(self.base),
-               'PYTHONNOUSERSITE': '1'}
-        env.update(environ)
-        return subprocess.run(
-            [sys.executable, str(self.cli_archive), *arguments],
-            cwd=str(self.base), env=env, capture_output=True, text=True)
 
     def test_the_two_artifacts_compose(self):
         """**这条是整个拆分的验收**：解压出来的 skill + 单独构建的 pyz。
@@ -300,26 +307,32 @@ class ExtractedSkillTests(unittest.TestCase):
         self.assertEqual(queried.returncode, 0, queried.stderr)
         self.assertEqual(json.loads(queried.stdout)['product'], 'synthetic')
 
+
     def test_bootstrap_rejects_query_commands_and_says_what_to_run(self):
         result = self._run('arch', 'overview')
         self.assertEqual(result.returncode, 2, result.stdout)
         self.assertIn('未知命令 arch', result.stderr)
         self.assertIn('oskm-cli.pyz', result.stderr)
+
+
     def test_extracted_skill_resolves_the_cli_from_the_environment(self):
         result = self._run('cli-path')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(Path(result.stdout.strip()).resolve(),
                          self.cli_archive.resolve())
 
+
     def test_extracted_skill_reports_doctor(self):
         result = self._run('doctor')
         self.assertIn('oskm_cli (OK)', result.stdout)
         self.assertIn('Runtime root:', result.stdout)
 
+
     def test_extracted_skill_validates_a_database_via_the_cli(self):
         result = self._run('validate-db', str(self.db))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(json.loads(result.stdout)['ok'])
+
 
     def test_without_a_cli_the_failure_is_actionable(self):
         """找不到 CLI 时，错误信息要指向"跑一次 install"，而不是某个端点。"""
@@ -328,6 +341,7 @@ class ExtractedSkillTests(unittest.TestCase):
         self.assertIn('oskm-cli.pyz', result.stderr)
         self.assertIn('bootstrap.py install', result.stderr)
         self.assertNotIn('OSKM_CLI_ENDPOINT', result.stderr)
+
 
     def test_a_managed_runtime_picks_up_a_locally_installed_cli(self):
         """不用 OSKM_CLI：`<root>/oskm-cli.pyz` 就该被认出来（第 2 级候选）。
@@ -346,6 +360,7 @@ class ExtractedSkillTests(unittest.TestCase):
         self.assertEqual(Path(result.stdout.strip()).resolve(),
                          built['archive'].resolve())
 
+
     def test_refresh_is_idempotent_on_an_unmanaged_runtime(self):
         """`refresh` 对没有状态文件的库什么都不做——用户自管的库不许被碰。"""
         empty = self.base / 'empty-root'
@@ -353,5 +368,29 @@ class ExtractedSkillTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('已是最新', result.stderr)
         self.assertFalse(empty.exists())
+
+
+    def _run(self, *arguments, **environ):
+        env = {
+            'PATH': os.environ.get('PATH', ''),
+            'HOME': str(self.base),
+            'PYTHONNOUSERSITE': '1',
+            'OSKM_CLI': str(self.cli_archive),
+        }
+        env.update(environ)
+        return subprocess.run(
+            [sys.executable, 'bootstrap.py', *arguments],
+            cwd=str(self.package), env=env, capture_output=True, text=True)
+
+
+    def _run_cli(self, *arguments, **environ):
+        """查询直接调 pyz——bootstrap 不再透传（2026-11-12 删除）。"""
+        env = {'PATH': os.environ.get('PATH', ''), 'HOME': str(self.base),
+               'PYTHONNOUSERSITE': '1'}
+        env.update(environ)
+        return subprocess.run(
+            [sys.executable, str(self.cli_archive), *arguments],
+            cwd=str(self.base), env=env, capture_output=True, text=True)
+
 if __name__ == '__main__':
     unittest.main()

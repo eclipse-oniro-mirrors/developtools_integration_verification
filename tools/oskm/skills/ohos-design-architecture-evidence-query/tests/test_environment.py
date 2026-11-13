@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 # tests -> skill root（oskm_runtime）-> skills -> packages/oskm。
 # `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
 import sys as _sys

@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """52 个工具每一个都至少被真调一次。
 
 两条断言，各拦一类故障：

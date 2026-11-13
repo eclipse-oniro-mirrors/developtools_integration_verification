@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 # tests -> skill root（oskm_runtime）-> skills -> packages/oskm
 # （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
 # `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
@@ -32,6 +33,33 @@ from oskm_testing.fixture import create_schema, write_minimal_pyz
 
 
 class RuntimeInstallTests(unittest.TestCase):
+
+    @staticmethod
+    def drop_scan_cpu_arch(path):
+        connection = sqlite3.connect(path)
+        try:
+            connection.execute('ALTER TABLE scans DROP COLUMN cpu_arch')
+            connection.commit()
+        finally:
+            connection.close()
+
+
+    @staticmethod
+    def write_sdks(path):
+        for name, relative in state.SDK_PATHS.items():
+            target = path / relative
+            target.mkdir(parents=True, exist_ok=True)
+            (target / 'marker.txt').write_text(name, encoding='utf-8')
+
+
+    @staticmethod
+    def copy_bundle(source):
+        def download(**kwargs):
+            shutil.copytree(source, kwargs['output'])
+            return Path(kwargs['output']).resolve()
+        return download
+
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='oskm runtime ')
         self.root = (Path(self.temp.name) / 'runtime').resolve()
@@ -48,17 +76,10 @@ class RuntimeInstallTests(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
+
     def tearDown(self):
         self.temp.cleanup()
 
-    @staticmethod
-    def drop_scan_cpu_arch(path):
-        connection = sqlite3.connect(path)
-        try:
-            connection.execute('ALTER TABLE scans DROP COLUMN cpu_arch')
-            connection.commit()
-        finally:
-            connection.close()
 
     @classmethod
     def write_db(cls, path, *, compatible=True, cpu_arch=True):
@@ -82,12 +103,6 @@ class RuntimeInstallTests(unittest.TestCase):
         if compatible and not cpu_arch:
             cls.drop_scan_cpu_arch(path)
 
-    @staticmethod
-    def write_sdks(path):
-        for name, relative in state.SDK_PATHS.items():
-            target = path / relative
-            target.mkdir(parents=True, exist_ok=True)
-            (target / 'marker.txt').write_text(name, encoding='utf-8')
 
     def write_bundle(
         self,
@@ -112,6 +127,7 @@ class RuntimeInstallTests(unittest.TestCase):
         write_minimal_pyz(bundle / cli_install.ARTIFACT_NAME)
         return bundle
 
+
     def write_source_runtime(self, relative, *, cpu_arch=True):
         source = Path(self.temp.name) / 'source'
         source.mkdir(exist_ok=True)
@@ -123,12 +139,6 @@ class RuntimeInstallTests(unittest.TestCase):
         )
         return source
 
-    @staticmethod
-    def copy_bundle(source):
-        def download(**kwargs):
-            shutil.copytree(source, kwargs['output'])
-            return Path(kwargs['output']).resolve()
-        return download
 
     def write_state(self, *, date='20261101', source=OPENHARMONY_CI,
                     db=None, sdk=None):
@@ -144,6 +154,7 @@ class RuntimeInstallTests(unittest.TestCase):
             document['sdk'] = sdk
         (self.root / state.STATE_NAME).write_text(
             json.dumps(document), encoding='utf-8')
+
 
     def test_install_extracts_complete_runtime_bundle(self):
         bundle = self.write_bundle()
@@ -177,6 +188,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 (self.root / relative / 'marker.txt').read_text(encoding='utf-8'),
                 f'{name}-new')
 
+
     def test_local_runtime_missing_cpu_arch_falls_back_to_download(self):
         source = self.write_source_runtime(Path('wukong100'), cpu_arch=False)
         source_db = source / 'out/wukong100/oskm/knowledge.db'
@@ -205,6 +217,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 connection.close()
             self.assertEqual('cpu_arch' in columns, has_cpu_arch)
 
+
     def test_install_tolerates_an_archive_without_the_cli(self):
         """归档里暂时没有 `oskm-cli.pyz` 也要能装。
 
@@ -230,6 +243,7 @@ class RuntimeInstallTests(unittest.TestCase):
             (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
         self.assertNotIn('cli', document)
 
+
     def test_install_prefers_one_level_source_runtime_without_download(self):
         source = self.write_source_runtime(Path('wukong100'))
         bundle = self.write_bundle(marker='fallback')
@@ -254,6 +268,7 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(document['source'], 'local')
         self.assertEqual(document['source_root'], str(source.resolve()))
 
+
     def test_install_prefers_two_level_source_runtime_without_download(self):
         source = self.write_source_runtime(
             Path('generic_generic_arm_64only/general_all_phone_standard'))
@@ -271,6 +286,7 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertTrue((self.root / 'knowledge.db').is_file())
         for relative in state.SDK_PATHS.values():
             self.assertTrue((self.root / relative / 'marker.txt').is_file())
+
 
     def test_install_prefers_newest_source_runtime_db(self):
         source = self.write_source_runtime(Path('one-level-old'))
@@ -300,6 +316,7 @@ class RuntimeInstallTests(unittest.TestCase):
             'new')
         connection.close()
 
+
     def test_non_source_directory_falls_back_to_download(self):
         source = self.write_source_runtime(Path('wukong100'))
         (source / '.gn').unlink()
@@ -315,6 +332,7 @@ class RuntimeInstallTests(unittest.TestCase):
 
         download.assert_called_once()
 
+
     def test_source_root_requires_both_interface_sdk_directories(self):
         source = self.write_source_runtime(Path('wukong100'))
         self.assertTrue(install.is_openharmony_source_root(source))
@@ -324,6 +342,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 shutil.rmtree(source / relative)
                 self.assertFalse(install.is_openharmony_source_root(source))
                 self.write_sdks(source)
+
 
     def test_install_falls_back_when_source_runtime_sdk_is_incomplete(self):
         source = self.write_source_runtime(Path('wukong100'))
@@ -340,6 +359,7 @@ class RuntimeInstallTests(unittest.TestCase):
 
         download.assert_called_once()
 
+
     def test_install_falls_back_when_source_runtime_db_schema_is_incompatible(self):
         source = self.write_source_runtime(Path('wukong100'))
         self.write_db(
@@ -355,6 +375,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 self.root, OPENHARMONY_CI, '20261102')
 
         download.assert_called_once()
+
 
     def test_skip_sdk_installs_only_db_and_preserves_sdk_state(self):
         self.write_sdks(self.root)
@@ -380,6 +401,7 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(document['db']['date'], '20261102')
         self.assertEqual(document['sdk'], old_sdk)
 
+
     def test_skip_db_installs_only_sdk_and_preserves_db_state(self):
         existing_db = self.root / 'knowledge.db'
         existing_db.write_bytes(b'keep-db')
@@ -399,6 +421,7 @@ class RuntimeInstallTests(unittest.TestCase):
             (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
         self.assertEqual(document['db'], old_db)
         self.assertEqual(document['sdk']['date'], '20261102')
+
 
     def test_schema_failure_preserves_existing_runtime(self):
         self.write_db(self.root / 'knowledge.db')
@@ -435,6 +458,7 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(json.loads(state_file.read_text(encoding='utf-8')),
                          old_document)
 
+
     def test_download_failure_preserves_existing_runtime(self):
         self.write_db(self.root / 'knowledge.db')
         self.write_sdks(self.root)
@@ -452,6 +476,7 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(
             (self.root / 'interface/sdk-js/marker.txt').read_text(encoding='utf-8'),
             old_sdk)
+
 
     def test_state_install_failure_rolls_back_existing_runtime(self):
         self.write_db(self.root / 'knowledge.db')
@@ -499,6 +524,7 @@ class RuntimeInstallTests(unittest.TestCase):
             old_sdk)
         self.assertEqual(json.loads(state_file.read_text(encoding='utf-8')),
                          old_document)
+
 
     # `test_ensure_runtime_refreshes_from_bundle` 与
     # `test_ensure_runtime_rejects_state_without_source` 于 2026-11-12 删除：

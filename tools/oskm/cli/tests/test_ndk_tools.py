@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """NDK 头文件映射工具。
 
 **参数全部从库里现取。** 原来这个文件钉的是 `libOpenSLES.so` / `'OpenSLES'` /

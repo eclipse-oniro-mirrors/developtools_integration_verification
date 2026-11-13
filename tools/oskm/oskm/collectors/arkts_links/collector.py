@@ -50,35 +50,6 @@ class ArktsLinksCollector(BaseCollector):
         return {row[0] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type='table'")}
 
-    @classmethod
-    def _arkui_destinations(cls, connection, scan_id):
-        """Distinct installed destinations for the ArkUI engine.
-
-        Duplicate install targets that point at the same destination are one
-        installation fact. Different destinations are genuinely ambiguous and
-        must not make the fallback path look linked.
-        """
-        rows = connection.execute(
-            'SELECT DISTINCT t.dest FROM install_targets t '
-            'JOIN elf_modules e ON e.install_target_id = t.id '
-            'AND e.scan_id = t.scan_id '
-            'WHERE t.scan_id = ? '
-            'AND (t.dest = ? OR substr(t.dest, -length(?) - 1) = ?) '
-            'ORDER BY t.dest',
-            (scan_id, _ARKUI_ENGINE_FILE, _ARKUI_ENGINE_FILE,
-             '/' + _ARKUI_ENGINE_FILE)).fetchall()
-        return tuple(row[0] for row in rows)
-
-    @classmethod
-    def _resolve_arkui_paths(cls, connection, scan_id):
-        """Use unique installation evidence, or retain the architecture fallback."""
-        destinations = cls._arkui_destinations(connection, scan_id)
-        if len(destinations) == 1:
-            connection.execute(
-                'UPDATE arkts_modules SET impl_so_path = ? '
-                "WHERE scan_id = ? AND impl_match = 'arkui_engine'",
-                (destinations[0], scan_id))
-        return destinations
 
     def collect(self, ctx):
         connection, scan_id = ctx.connection, ctx.scan_id
@@ -119,6 +90,7 @@ class ArktsLinksCollector(BaseCollector):
         ctx.emit('arkts_links_run', dict(linked=linked, unresolved=len(unresolved),
                                          ambiguous=ambiguous))
 
+
     @classmethod
     def post_insert(cls, connection, scan_id):
         tables = cls._table_names(connection)
@@ -137,10 +109,44 @@ class ArktsLinksCollector(BaseCollector):
             f'WHERE i.scan_id = ? AND i.impl_so_path IS NOT NULL '
             f'AND (SELECT COUNT(*) FROM ({_CANDIDATES})) = 1', (scan_id,))
 
+
     def scope(self, ctx):
         return 'arkts_modules.impl_so_path -> elf_modules'
+
 
     @classmethod
     def export_record(cls, row, connection, scan_id):
         from ...core.export import record_from_row
         return record_from_row(row, cls.TABLES[0])
+
+
+    @classmethod
+    def _arkui_destinations(cls, connection, scan_id):
+        """Distinct installed destinations for the ArkUI engine.
+
+        Duplicate install targets that point at the same destination are one
+        installation fact. Different destinations are genuinely ambiguous and
+        must not make the fallback path look linked.
+        """
+        rows = connection.execute(
+            'SELECT DISTINCT t.dest FROM install_targets t '
+            'JOIN elf_modules e ON e.install_target_id = t.id '
+            'AND e.scan_id = t.scan_id '
+            'WHERE t.scan_id = ? '
+            'AND (t.dest = ? OR substr(t.dest, -length(?) - 1) = ?) '
+            'ORDER BY t.dest',
+            (scan_id, _ARKUI_ENGINE_FILE, _ARKUI_ENGINE_FILE,
+             '/' + _ARKUI_ENGINE_FILE)).fetchall()
+        return tuple(row[0] for row in rows)
+
+
+    @classmethod
+    def _resolve_arkui_paths(cls, connection, scan_id):
+        """Use unique installation evidence, or retain the architecture fallback."""
+        destinations = cls._arkui_destinations(connection, scan_id)
+        if len(destinations) == 1:
+            connection.execute(
+                'UPDATE arkts_modules SET impl_so_path = ? '
+                "WHERE scan_id = ? AND impl_match = 'arkui_engine'",
+                (destinations[0], scan_id))
+        return destinations

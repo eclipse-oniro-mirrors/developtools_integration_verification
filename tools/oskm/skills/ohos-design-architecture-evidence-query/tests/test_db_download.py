@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 # tests -> skill root（oskm_runtime）-> skills -> packages/oskm。
 # `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
 import sys as _sys
@@ -39,6 +40,16 @@ class DownloadDatabaseTests(unittest.TestCase):
     endpoint = (
         'https://ci.example.invalid/api/daily_build/build/list/component')
 
+    @staticmethod
+    def sqlite_bytes(path):
+        connection = sqlite3.connect(path)
+        connection.execute('CREATE TABLE marker(value TEXT)')
+        connection.execute("INSERT INTO marker VALUES ('ok')")
+        connection.commit()
+        connection.close()
+        return Path(path).read_bytes()
+
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
@@ -49,20 +60,14 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
+
     def tearDown(self):
         self.temp.cleanup()
 
-    @staticmethod
-    def sqlite_bytes(path):
-        connection = sqlite3.connect(path)
-        connection.execute('CREATE TABLE marker(value TEXT)')
-        connection.execute("INSERT INTO marker VALUES ('ok')")
-        connection.commit()
-        connection.close()
-        return Path(path).read_bytes()
 
     def sqlite_payload(self):
         return self.sqlite_bytes(self.root / 'source.db')
+
 
     def payload(self):
         archive = self.root / 'source.tar.gz'
@@ -71,6 +76,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         with tarfile.open(archive, 'w:gz') as bundle:
             bundle.add(source, arcname='knowledge.db')
         return archive.read_bytes()
+
 
     def runtime_payload(self, extra_files=None):
         source = self.root / 'runtime-source.db'
@@ -100,11 +106,13 @@ class DownloadDatabaseTests(unittest.TestCase):
                 bundle.addfile(info, io.BytesIO(payload))
         return archive.read_bytes()
 
+
     def zip_payload(self):
         archive = self.root / 'knowledge.zip'
         with zipfile.ZipFile(archive, 'w') as bundle:
             bundle.writestr('build/knowledge.db', self.sqlite_payload())
         return archive.read_bytes()
+
 
     def assert_sqlite_marker(self, path):
         connection = sqlite3.connect(path)
@@ -113,6 +121,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                 connection.execute('SELECT value FROM marker').fetchone()[0], 'ok')
         finally:
             connection.close()
+
 
     def openharmony_response(self, archive):
         def open_url(request, timeout):
@@ -124,6 +133,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                 }).encode(), url=request.full_url)
             return FakeResponse(archive, url=request.full_url)
         return open_url
+
 
     def test_openharmony_posts_fixed_component_and_exact_date_range(self):
         requests = []
@@ -152,6 +162,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertEqual(archive_request.get_method(), 'GET')
         self.assertIsNone(archive_request.get_header('Authorization'))
 
+
     def test_openharmony_is_the_default_source(self):
         requests = []
         archive = self.zip_payload()
@@ -169,6 +180,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertEqual(requests[0].get_method(), 'POST')
         self.assertEqual(
             json.loads(requests[0].data)['component'], 'dayu600_7885_ai')
+
 
     def test_harmonyos_gets_exact_date(self):
         requests = []
@@ -196,6 +208,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertIsNone(requests[0].get_header('Authorization'))
         self.assert_sqlite_marker(output)
 
+
     def test_invalid_source_and_date_fail_before_network(self):
         output = self.root / 'knowledge.db'
         cases = (
@@ -214,6 +227,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                         db_download.download_database(**kwargs)
                 open_url.assert_not_called()
 
+
     def test_invalid_endpoint_fails_before_network(self):
         output = self.root / 'knowledge.db'
         cases = (
@@ -231,6 +245,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                             date='20261102', output=output)
                 open_url.assert_not_called()
 
+
     def test_http_failure_preserves_existing_output(self):
         output = self.root / 'knowledge.db'
         output.write_bytes(b'keep-me')
@@ -247,6 +262,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertEqual(output.read_bytes(), b'keep-me')
         self.assertEqual(list(self.root.glob('.oskm-db-download.*')), [])
 
+
     def test_http_status_failure_reports_uri_and_status(self):
         output = self.root / 'knowledge.db'
         error = HTTPError(
@@ -260,6 +276,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                 db_download.download_database(
                     date='20261102', output=output, attempts=1)
         self.assertFalse(output.exists())
+
 
     def test_invalid_sqlite_preserves_existing_output(self):
         output = self.root / 'knowledge.db'
@@ -283,6 +300,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                     date='20261102', output=output)
         self.assertEqual(output.read_bytes(), b'keep-me')
 
+
     def test_archives_must_contain_exactly_one_knowledge_db(self):
         archive = self.root / 'duplicates.zip'
         payload = self.payload()
@@ -300,6 +318,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                 db_download.download_database(
                     date='20261102', output=output)
         self.assertEqual(output.read_bytes(), b'keep-me')
+
 
     def test_downloaded_runtime_extracts_database_and_both_sdk_trees(self):
         output = self.root / 'runtime'
@@ -320,6 +339,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertTrue(
             (output / 'interface/sdk-js/api/runtime.d.ts').is_file())
         self.assertTrue((output / 'interface/sdk_c/runtime.h').is_file())
+
 
     def test_runtime_bundle_failure_preserves_existing_output(self):
         output = self.root / 'runtime'
@@ -349,6 +369,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         self.assertEqual(marker.read_text(encoding='utf-8'), 'keep-me')
         self.assertEqual(
             sorted(path.name for path in output.iterdir()), ['marker.txt'])
+
 
 if __name__ == '__main__':
     unittest.main()

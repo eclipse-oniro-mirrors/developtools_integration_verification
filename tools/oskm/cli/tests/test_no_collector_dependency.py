@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """两个产物的依赖边界——这是它们能各自独立发布的前提。
 
 三条边界，都有静态 + 动态双查：
@@ -75,6 +76,27 @@ class StaticBoundaries(unittest.TestCase):
                 continue
             yield source
 
+
+    def test_cli_has_no_oskm_imports(self):
+        self.assertEqual(self._offenders(CLI_PACKAGE, self.OSKM_IMPORT), [])
+
+
+    def test_cli_has_no_skill_runtime_imports(self):
+        """方向只能是 skill → CLI；反过来就把下载器焊回查询层了。"""
+        self.assertEqual(self._offenders(CLI_PACKAGE, self.RUNTIME_IMPORT), [])
+
+
+    def test_skill_runtime_has_no_oskm_imports(self):
+        if not SKILL_PACKAGE.is_dir():
+            self.skipTest(f'no skill runtime package: {SKILL_PACKAGE}')
+        self.assertEqual(self._offenders(SKILL_PACKAGE, self.OSKM_IMPORT), [])
+
+
+    def test_the_static_scan_actually_saw_sources(self):
+        """门禁空转比门禁误报更坏：先确认真的扫到了文件。"""
+        self.assertGreater(len(list(self._sources(CLI_PACKAGE))), 20)
+
+
     def _offenders(self, root, pattern):
         found = []
         for source in self._sources(root):
@@ -84,21 +106,6 @@ class StaticBoundaries(unittest.TestCase):
                     found.append(f'{source.relative_to(root.parent)}:{number}')
         return found
 
-    def test_cli_has_no_oskm_imports(self):
-        self.assertEqual(self._offenders(CLI_PACKAGE, self.OSKM_IMPORT), [])
-
-    def test_cli_has_no_skill_runtime_imports(self):
-        """方向只能是 skill → CLI；反过来就把下载器焊回查询层了。"""
-        self.assertEqual(self._offenders(CLI_PACKAGE, self.RUNTIME_IMPORT), [])
-
-    def test_skill_runtime_has_no_oskm_imports(self):
-        if not SKILL_PACKAGE.is_dir():
-            self.skipTest(f'no skill runtime package: {SKILL_PACKAGE}')
-        self.assertEqual(self._offenders(SKILL_PACKAGE, self.OSKM_IMPORT), [])
-
-    def test_the_static_scan_actually_saw_sources(self):
-        """门禁空转比门禁误报更坏：先确认真的扫到了文件。"""
-        self.assertGreater(len(list(self._sources(CLI_PACKAGE))), 20)
 
 
 class DynamicBoundaries(unittest.TestCase):

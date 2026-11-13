@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """文档里的工具清单必须与 REGISTRY 一致。
 
 这组断言的由来：工具数在四个地方被手抄过，实测全部过期——

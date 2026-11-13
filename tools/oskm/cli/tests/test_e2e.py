@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """End-to-end tests for the query tools against a real knowledge.db.
 
 Run: python3 -m unittest discover -s cli/tests -p "test_*.py"
@@ -280,7 +281,8 @@ class TestMultiDatabase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import shutil, tempfile
+        import shutil
+        import tempfile
         cls._tmpdir = tempfile.mkdtemp()
         cls.db_copy = os.path.join(cls._tmpdir, 'knowledge_copy.db')
         shutil.copy2(DB, cls.db_copy)

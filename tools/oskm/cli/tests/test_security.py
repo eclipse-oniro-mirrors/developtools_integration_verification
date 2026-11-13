@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Security tests for sql_query escape hatch."""
 # cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
 # `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。

@@ -59,8 +59,19 @@ DEFAULT_CPU_ARCH = 'arm64'
 
 
 class Database:
+
     def __init__(self, path):
         self.path = Path(path)
+
+
+    @staticmethod
+    def _create_all(connection, tables):
+        for table in (*FRAMEWORK_TABLES, *tables):
+            connection.execute(table.ddl())
+        for table in (*FRAMEWORK_TABLES, *tables):
+            for statement in table.index_ddl():
+                connection.execute(statement)
+
 
     @contextmanager
     def connect(self):
@@ -75,6 +86,7 @@ class Database:
         finally:
             connection.close()
 
+
     def create_all(self, connection, tables):
         # Table DDL and its indexes form one boundary: if an index fails, the
         # newly created tables must roll back too.
@@ -84,13 +96,6 @@ class Database:
         with transaction(connection):
             self._create_all(connection, tables)
 
-    @staticmethod
-    def _create_all(connection, tables):
-        for table in (*FRAMEWORK_TABLES, *tables):
-            connection.execute(table.ddl())
-        for table in (*FRAMEWORK_TABLES, *tables):
-            for statement in table.index_ddl():
-                connection.execute(statement)
 
 
 def _encode(table, row):

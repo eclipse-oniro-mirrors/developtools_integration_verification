@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """查询 CLI 的 SQL 只许引用 oskm_schema 里真实存在的表。
 
 **为什么是门禁而不是结构性改造**：本想把 SQL 里的表名字面量换成
@@ -90,16 +91,6 @@ def sql_table_refs():
 
 
 class SqlReferencesRealTables(unittest.TestCase):
-    def test_refs_were_found(self):
-        """正则失效时整条断言会空转，先确认真的解析到了引用。"""
-        self.assertGreater(len(sql_table_refs()), 50)
-
-    def test_every_table_name_exists_in_schema(self):
-        """改表名之后，旧名字会在这里被点名——带文件和行号。"""
-        known = declared_tables() | NOT_A_TABLE
-        unknown = sorted({f'{f}:{ln} → {t}' for f, ln, t in sql_table_refs()
-                          if t not in known})
-        self.assertEqual(unknown, [])
 
     @staticmethod
     def _live_tables():
@@ -108,12 +99,27 @@ class SqlReferencesRealTables(unittest.TestCase):
             "SELECT name FROM sqlite_master WHERE type='table' "
             "AND name NOT LIKE 'sqlite_%'")}
 
+
+    def test_refs_were_found(self):
+        """正则失效时整条断言会空转，先确认真的解析到了引用。"""
+        self.assertGreater(len(sql_table_refs()), 50)
+
+
+    def test_every_table_name_exists_in_schema(self):
+        """改表名之后，旧名字会在这里被点名——带文件和行号。"""
+        known = declared_tables() | NOT_A_TABLE
+        unknown = sorted({f'{f}:{ln} → {t}' for f, ln, t in sql_table_refs()
+                          if t not in known})
+        self.assertEqual(unknown, [])
+
+
     def test_schema_covers_the_live_database(self):
         """`oskm_schema` 的表名集合要与真库一致——少一张说明有表没搬过来。"""
         if not DB.is_file():
             self.skipTest(f'no database: {DB}')
         self.assertEqual(self._live_tables() - declared_tables(), set(),
                          '库里有表不在 oskm_schema')
+
 
     def test_required_columns_covers_the_live_database(self):
         """`REQUIRED_COLUMNS` 的表集合必须覆盖真库。
@@ -136,6 +142,7 @@ class SqlReferencesRealTables(unittest.TestCase):
         # 反向也要校：契约里不该有库里不存在的表，否则 validate-db 永远失败。
         self.assertEqual(set(REQUIRED_COLUMNS) - self._live_tables(), set(),
                          'REQUIRED_COLUMNS 里有真库没有的表')
+
 
 
 class SchemaLivesInTheNeutralPackage(unittest.TestCase):

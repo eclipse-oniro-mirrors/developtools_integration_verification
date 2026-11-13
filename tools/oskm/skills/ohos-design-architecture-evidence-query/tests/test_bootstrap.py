@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """`bootstrap.py` 的门禁：**只负责装，不负责查**。
 
 2026-11-12 删掉了查询透传（`ask/arch/diff/sql` 转发给 CLI + 自动注入 `--db`）。
@@ -190,7 +191,9 @@ class QueryCommandsAreRejected(unittest.TestCase):
         self.assertNotIn("'--scan-id'", source)
         self.assertNotIn("'--format'", source)
 
+
 class DoctorCommand(unittest.TestCase):
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='oskm doctor ')
         self.root = Path(self.temp.name) / 'runtime'
@@ -202,8 +205,10 @@ class DoctorCommand(unittest.TestCase):
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
+
     def tearDown(self):
         self.temp.cleanup()
+
 
     def test_doctor_reports_ready_without_git(self):
         stdout = io.StringIO()
@@ -225,6 +230,7 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn('未安装', output)
         self.assertNotIn('ci.example.invalid', output)
 
+
     def test_doctor_rejects_python_older_than_310(self):
         stdout = io.StringIO()
         with mock.patch.object(doctor.sys, 'version_info', (3, 9, 6)), \
@@ -234,6 +240,7 @@ class DoctorCommand(unittest.TestCase):
         output = stdout.getvalue()
         self.assertEqual(code, 1, output)
         self.assertIn('Python 3.10+', output)
+
 
     def test_doctor_reports_module_import_failure_and_pythonpath_hint(self):
         real_import = importlib.import_module
@@ -254,6 +261,7 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn('oskm_schema (FAIL: No module named oskm_schema)', output)
         self.assertIn('PYTHONPATH=<skill 目录>', output)
 
+
     def test_doctor_rejects_missing_endpoint(self):
         stdout = io.StringIO()
         with mock.patch.dict('os.environ', {
@@ -268,6 +276,7 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn(f'{ENDPOINT_ENV}=未配置', output)
         self.assertIn('下载配置无效', output)
 
+
     def test_doctor_rejects_invalid_source(self):
         stdout = io.StringIO()
         with mock.patch.dict('os.environ', {
@@ -279,6 +288,7 @@ class DoctorCommand(unittest.TestCase):
         output = stdout.getvalue()
         self.assertEqual(code, 1, output)
         self.assertIn(f'{SOURCE_ENV}=格式错误', output)
+
 
     def test_doctor_reports_a_managed_runtime(self):
         create_fixture_db(self.root / 'knowledge.db')
@@ -301,12 +311,6 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn('db=✓, sdk=✓, cli=✓', output)
         self.assertIn('可打开', output)
 
-    def _complete_runtime(self):
-        create_fixture_db(self.root / 'knowledge.db')
-        for name, relative in state.SDK_PATHS.items():
-            target = self.root / relative
-            target.mkdir(parents=True, exist_ok=True)
-            (target / 'marker.txt').write_text(name, encoding='utf-8')
 
     def test_missing_endpoint_is_only_a_warning_once_the_runtime_is_complete(self):
         """一个能正常查询的只读环境不该被 doctor 判成"未就绪"。
@@ -326,6 +330,7 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn('查询可用', output)
         self.assertNotIn('错误: 运行时依赖检查未通过', output)
 
+
     def test_missing_endpoint_is_a_failure_when_nothing_is_installed(self):
         stdout = io.StringIO()
         with mock.patch.dict('os.environ', {SOURCE_ENV: OPENHARMONY_CI,
@@ -336,12 +341,14 @@ class DoctorCommand(unittest.TestCase):
         self.assertEqual(code, 1, output)
         self.assertIn('FAIL: 下载配置无效', output)
 
+
     def test_runtime_completeness_requires_both_sdk_trees(self):
         self._complete_runtime()
         self.assertTrue(doctor.runtime_is_complete(self.root))
         for child in (self.root / 'interface/sdk_c').iterdir():
             child.unlink()
         self.assertFalse(doctor.runtime_is_complete(self.root))
+
 
     def test_doctor_reports_an_unmanaged_database(self):
         create_fixture_db(self.root / 'knowledge.db')
@@ -351,6 +358,15 @@ class DoctorCommand(unittest.TestCase):
         output = stdout.getvalue()
         self.assertEqual(code, 0, output)
         self.assertIn('非托管', output)
+
+
+    def _complete_runtime(self):
+        create_fixture_db(self.root / 'knowledge.db')
+        for name, relative in state.SDK_PATHS.items():
+            target = self.root / relative
+            target.mkdir(parents=True, exist_ok=True)
+            (target / 'marker.txt').write_text(name, encoding='utf-8')
+
 
 
 class InstallCommand(unittest.TestCase):
@@ -471,19 +487,6 @@ class RefreshCommand(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _managed_runtime(self, date):
-        create_fixture_db(self.root / 'knowledge.db')
-        for name, relative in state.SDK_PATHS.items():
-            target = self.root / relative
-            target.mkdir(parents=True, exist_ok=True)
-            (target / 'marker.txt').write_text(name, encoding='utf-8')
-        state.write_state(self.root / state.STATE_NAME, {
-            'version': state.STATE_VERSION, 'source': OPENHARMONY_CI,
-            'date': date,
-            'db': {'date': date, 'path': 'knowledge.db'},
-            'sdk': {'date': date,
-                    **{n: {'path': r} for n, r in state.SDK_PATHS.items()}},
-        })
 
     def test_up_to_date_runtime_is_left_alone(self):
         self._managed_runtime(state.today())
@@ -496,6 +499,7 @@ class RefreshCommand(unittest.TestCase):
         ensure_cli.assert_not_called()          # 不刷新就不必碰 CLI
         self.assertIn('已是最新', err)
 
+
     def test_stale_runtime_is_reinstalled(self):
         self._managed_runtime('20260101')
         with mock.patch.object(state, 'today', return_value='20261112'), \
@@ -507,6 +511,7 @@ class RefreshCommand(unittest.TestCase):
         install_runtime.assert_called_once_with(
             self.root.resolve(), OPENHARMONY_CI, '20261112',
             download_db=True, download_sdk=True)
+
 
     def test_explicit_date_is_honoured(self):
         self._managed_runtime('20260101')
@@ -521,6 +526,7 @@ class RefreshCommand(unittest.TestCase):
         self.assertEqual(code, 0, err)
         install_runtime.assert_not_called()     # 与状态里的日期一致 → 不过期
 
+
     def test_unmanaged_runtime_is_never_refreshed(self):
         """没有状态文件的库是用户自管的，`refresh` 不许碰它。"""
         create_fixture_db(self.root / 'knowledge.db')
@@ -529,6 +535,7 @@ class RefreshCommand(unittest.TestCase):
                 ['refresh', '--runtime-root', str(self.root)])
         self.assertEqual(code, 0, err)
         install_runtime.assert_not_called()
+
 
     def test_refresh_failure_is_reported_and_keeps_the_old_runtime(self):
         self._managed_runtime('20260101')
@@ -545,6 +552,22 @@ class RefreshCommand(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn('boom', err)
         self.assertEqual((self.root / 'knowledge.db').read_bytes(), before)
+
+
+    def _managed_runtime(self, date):
+        create_fixture_db(self.root / 'knowledge.db')
+        for name, relative in state.SDK_PATHS.items():
+            target = self.root / relative
+            target.mkdir(parents=True, exist_ok=True)
+            (target / 'marker.txt').write_text(name, encoding='utf-8')
+        state.write_state(self.root / state.STATE_NAME, {
+            'version': state.STATE_VERSION, 'source': OPENHARMONY_CI,
+            'date': date,
+            'db': {'date': date, 'path': 'knowledge.db'},
+            'sdk': {'date': date,
+                    **{n: {'path': r} for n, r in state.SDK_PATHS.items()}},
+        })
+
 
 
 class ManagedRuntimeCommands(unittest.TestCase):

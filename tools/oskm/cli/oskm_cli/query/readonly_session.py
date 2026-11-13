@@ -102,25 +102,32 @@ class Entity:
         self._session = session
         self._row = row
 
+
     def __getitem__(self, key):
         return self.record[key]
 
-    def get(self, key, default=None):
-        return self.record.get(key, default)
 
     def __repr__(self):
         return f'{type(self).__name__}({self.id!r})'
+
 
     @property
     def id(self):
         return self._row['id']
 
+
     @property
     def record(self):
         raise NotImplementedError
 
+
+    def get(self, key, default=None):
+        return self.record.get(key, default)
+
+
     def component(self):
         return self._session._component_by_id(self._row['component_id'])
+
 
 
 class Component(Entity):
@@ -228,6 +235,32 @@ class ReadOnlyScanSession:
         self.db_path: Path | None = None
         self._closed = False
 
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, *_):
+        self.close()
+
+
+    @property
+    def collectors(self):
+        return tuple(row['collector'] for row in self.connection.execute(
+            'SELECT collector FROM collector_runs WHERE scan_id = ? '
+            'ORDER BY collector', (self.scan_id,)))
+
+
+    @property
+    def status(self):
+        rows = [row['status'] for row in self.connection.execute(
+            'SELECT status FROM collector_runs WHERE scan_id = ?',
+            (self.scan_id,))]
+        if any(status == 'failed' for status in rows):
+            return 'failed'
+        return 'degraded' if any(status == 'degraded' for status in rows) else 'complete'
+
+
     def scan_row(self):
         row = self.connection.execute(
             'SELECT product, cpu_arch, workspace_root, started_at, finished_at '
@@ -236,6 +269,7 @@ class ReadOnlyScanSession:
             raise QueryError(
                 'SCAN_NOT_FOUND', f'scan {self.scan_id} does not exist')
         return row
+
 
     @classmethod
     def open(cls, db_path, *, scan_id=None, product=None):
@@ -281,35 +315,17 @@ class ReadOnlyScanSession:
             connection.close()
             raise
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_):
-        self.close()
 
     def close(self):
         if not self._closed:
             self.connection.close()
             self._closed = True
 
-    @property
-    def collectors(self):
-        return tuple(row['collector'] for row in self.connection.execute(
-            'SELECT collector FROM collector_runs WHERE scan_id = ? '
-            'ORDER BY collector', (self.scan_id,)))
-
-    @property
-    def status(self):
-        rows = [row['status'] for row in self.connection.execute(
-            'SELECT status FROM collector_runs WHERE scan_id = ?',
-            (self.scan_id,))]
-        if any(status == 'failed' for status in rows):
-            return 'failed'
-        return 'degraded' if any(status == 'degraded' for status in rows) else 'complete'
 
     def sql(self, statement, parameters=()):
         return tuple(dict(row) for row in self.connection.execute(
             statement, parameters))
+
 
     def components(self):
         rows = self.connection.execute(
@@ -317,24 +333,20 @@ class ReadOnlyScanSession:
             (self.scan_id,))
         return tuple(Component(self, row) for row in rows)
 
+
     def component(self, name):
         row = self.connection.execute(
             'SELECT * FROM components WHERE scan_id = ? AND name = ?',
             (self.scan_id, name)).fetchone()
         return Component(self, row) if row is not None else None
 
-    def _component_by_id(self, identifier):
-        if identifier is None:
-            return None
-        row = self.connection.execute(
-            'SELECT * FROM components WHERE id = ?', (identifier,)).fetchone()
-        return Component(self, row) if row is not None else None
 
     def services(self):
         rows = self.connection.execute(
             'SELECT * FROM services WHERE scan_id = ? ORDER BY position',
             (self.scan_id,))
         return tuple(Service(self, row) for row in rows)
+
 
     def service(self, cfg, name=None):
         rows = self.connection.execute(
@@ -345,18 +357,13 @@ class ReadOnlyScanSession:
                 return Service(self, row)
         return None
 
+
     def install_module(self, label):
         row = self.connection.execute(
             'SELECT * FROM install_modules WHERE scan_id = ? AND label = ? '
             'ORDER BY ordinal LIMIT 1', (self.scan_id, label)).fetchone()
         return InstallModule(self, row) if row is not None else None
 
-    def _module_by_id(self, identifier):
-        if identifier is None:
-            return None
-        row = self.connection.execute(
-            'SELECT * FROM install_modules WHERE id = ?', (identifier,)).fetchone()
-        return InstallModule(self, row) if row is not None else None
 
     def installed_at(self, dest):
         """Modules installing ``dest`` with the collector's directory fallback."""
@@ -392,6 +399,7 @@ class ReadOnlyScanSession:
                 modules.append(module)
         return tuple(modules)
 
+
     def installed_under(self, prefix):
         """(dest, module) pairs below an image directory, in path order."""
         prefix = prefix if prefix.endswith('/') else prefix + '/'
@@ -402,9 +410,26 @@ class ReadOnlyScanSession:
         return tuple((row['dest'], self._module_by_id(row['module_id']))
                      for row in rows)
 
+
     def owner_of(self, dest):
         for module in self.installed_at(dest):
             owner = module.component()
             if owner is not None:
                 return owner
         return None
+
+
+    def _component_by_id(self, identifier):
+        if identifier is None:
+            return None
+        row = self.connection.execute(
+            'SELECT * FROM components WHERE id = ?', (identifier,)).fetchone()
+        return Component(self, row) if row is not None else None
+
+
+    def _module_by_id(self, identifier):
+        if identifier is None:
+            return None
+        row = self.connection.execute(
+            'SELECT * FROM install_modules WHERE id = ?', (identifier,)).fetchone()
+        return InstallModule(self, row) if row is not None else None

@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 产物的三级定位、结构校验与载入。
 
 **CLI 与 `knowledge.db` 同类：固定文件名 `oskm-cli.pyz`，不记版本、不锁摘要。**

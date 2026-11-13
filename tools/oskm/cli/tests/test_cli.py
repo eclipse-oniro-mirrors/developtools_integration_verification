@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 的验收：ask / arch / diff / sql。
 
 `oskm ask` 的子命令是**生成的**，所以这里不逐个断言 50 个命令长什么样——

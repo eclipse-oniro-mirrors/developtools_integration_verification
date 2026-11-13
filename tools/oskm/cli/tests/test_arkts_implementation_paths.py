@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """ArkTS implementation and install paths are reported without rewriting.
 
 The collector writes ``impl_so_path`` using the scan request's ``cpu_arch``:

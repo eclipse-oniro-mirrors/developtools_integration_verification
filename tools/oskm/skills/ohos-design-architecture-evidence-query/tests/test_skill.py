@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """SKILL.md 的门禁：命令真跑、结构真校、索引真生成。
 
 命令尽量在合成库上执行，只验证命令形态、运行成本和输出契约；真实知识库会随扫描

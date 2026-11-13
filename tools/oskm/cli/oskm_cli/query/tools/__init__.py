@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Tool registry, error types, and JSON Schema helpers."""
 import json
 from dataclasses import dataclass, field

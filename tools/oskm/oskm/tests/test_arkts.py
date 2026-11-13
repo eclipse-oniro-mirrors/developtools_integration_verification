@@ -206,6 +206,7 @@ class TransportTest(unittest.TestCase):
 
 @unittest.skipUnless(HAS_BACKEND, 'locked Node/ohos-typescript integration dependency unavailable')
 class ArktsTest(unittest.TestCase):
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -235,10 +236,12 @@ class ArktsTest(unittest.TestCase):
         self.request = ScanRequest(self.root, 'sdk-source')
         self.scan_id = self.scan().scan_id
 
+
     def write(self, name, text):
         path = self.sdk/name; path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(text if isinstance(text, bytes) else text.encode())
         return path
+
 
     def add_installed_elf(self, connection, dest, position=0):
         module_id = connection.execute(
@@ -256,13 +259,16 @@ class ArktsTest(unittest.TestCase):
             (self.scan_id, position, target_id, module_id, 'system',
              dest.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
 
+
     def scan(self, **kwargs):
         return run(self.database, self.request, only=('arkts',), without=('repos',), **kwargs)
+
 
     def session(self):
         session = ScanSession.open(self.database, scan_id=self.scan_id)
         self.addCleanup(session.close)
         return session
+
 
     def test_inventory_failed_sources_and_no_api_entities(self):
         session = self.session(); q = ArktsQuery(session)
@@ -277,6 +283,7 @@ class ArktsTest(unittest.TestCase):
         self.assertFalse((self.root/'out').exists())
         self.assertFalse(any(r[0].startswith('api_') for r in session.connection.execute("SELECT name FROM sqlite_master")))
         self.assertEqual(session.connection.execute('PRAGMA foreign_key_check').fetchall(), [])
+
 
     def test_both_language_declarations_are_one_module(self):
         q = ArktsQuery(self.session())
@@ -293,6 +300,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(q.list_declarations(read_status='encoding_failed')['total'], 1)
         self.assertEqual(q.list_modules(language_coverage='both')['total'], 1)
         self.assertEqual(q.list_modules(declaration_format='static.d.ets')['total'], 1)
+
 
     def test_implementation_kind_and_arkui_engine_mapping(self):
         q = ArktsQuery(self.session())
@@ -315,6 +323,7 @@ class ArktsTest(unittest.TestCase):
         paths = [d['source_path'] for d in export_document(self.session())['sources']]
         self.assertTrue(all(p.startswith(SDK_PATH + '/') for p in paths), paths[:3])
         self.assertEqual(len(q.scope['napi_map']['sha256']), 64)
+
 
     def test_arkui_path_uses_unique_installed_target_and_links_its_elf(self):
         actual = 'system/lib64/libace_engine_pa_ark.z.so'
@@ -339,6 +348,7 @@ class ArktsTest(unittest.TestCase):
             self.assertEqual(button['implementation']['impl_so_path'], actual)
             self.assertEqual(button['implementation']['installed_at'], actual)
 
+
     def test_arkui_path_keeps_fallback_with_missing_or_ambiguous_install_evidence(self):
         fallback = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
         actual = (
@@ -359,6 +369,7 @@ class ArktsTest(unittest.TestCase):
             self.assertEqual(button['implementation']['impl_so_path'], fallback)
             self.assertNotIn('installed_at', button['implementation'])
 
+
     def test_arkui_path_resolves_before_collect_reports_links(self):
         actual = 'system/lib64/libace_engine_pa_ark.z.so'
         with ScanSession.open(self.database, scan_id=self.scan_id) as session:
@@ -378,6 +389,7 @@ class ArktsTest(unittest.TestCase):
             button = ArktsQuery(session).get_module('api/@internal/ets/button')
             self.assertEqual(button['implementation']['impl_so_path'], actual)
 
+
     def test_arkui_path_counts_distinct_destinations_not_duplicate_targets(self):
         actual = 'system/lib64/libace_engine_pa_ark.z.so'
         with ScanSession.open(self.database, scan_id=self.scan_id) as session:
@@ -388,6 +400,282 @@ class ArktsTest(unittest.TestCase):
             button = ArktsQuery(session).get_module('api/@internal/ets/button')
             self.assertEqual(button['implementation']['impl_so_path'], actual)
             self.assertNotIn('installed_at', button['implementation'])
+
+
+    def test_arm_napi_path_and_link_use_lib(self):
+        self._assert_napi_layout_and_exact_link(
+            'arm', 'system/lib/module/multimedia/libimage.z.so',
+            'system/lib64/module/multimedia/libimage.z.so')
+
+
+    def test_arm64_napi_path_and_link_use_lib64(self):
+        self._assert_napi_layout_and_exact_link(
+            'arm64', 'system/lib64/module/multimedia/libimage.z.so',
+            'system/lib/module/multimedia/libimage.z.so')
+
+
+    def test_scope_does_not_repeat_the_per_file_hashes(self):
+        q = ArktsQuery(self.session())
+        # The hashes are columns on arkts_sources; the scope keeps only a
+        # digest over them, so it stays small but still pins the content.
+        self.assertNotIn('files', q.scope)
+        before = q.scope['files_digest']
+        self.write('api/@ohos.b.d.ts', 'declare class B2 {}')
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertNotEqual(ArktsQuery(self.session()).scope['files_digest'], before)
+
+
+    def test_bidirectional_queries_dedup_and_candidate_filter(self):
+        q = ArktsQuery(self.session())
+        self.assertEqual(q.kit_modules('@kit.Demo')['total'], 2)
+        self.assertEqual(q.kit_modules('@kit.Demo', relation_type='declared_membership')['total'], 1)
+        self.assertEqual(q.kit_modules('@kit.Demo', condition='dynamic')['total'], 1)
+        # Three genuinely unresolved: a missing module, a bare external
+        # specifier and a Kit. The fourth used to be @ohos.b, reported as
+        # ambiguous only because its two declarations were two rows.
+        unresolved = q.kit_modules('@kit.Demo', view='unresolved')
+        self.assertEqual(unresolved['total'], 3)
+        self.assertEqual([(i['target_text'], i['resolution_status']) for i in unresolved['items']],
+                         [('@ohos.missing', 'not_found'), ('external', 'out_of_scope'), ('@kit.Empty', 'out_of_scope')])
+        self.assertEqual(q.module_kits('api/@ohos.a')['items'][0]['kit_key'], '@kit.Demo')
+        self.assertEqual(q.module_kits('arkts/@arkts.lang')['total'], 0)
+        self.assertEqual(q.module_kits('arkts/@arkts.lang', include_candidates=True)['total'], 1)
+        self.assertEqual(q.get_module('api/@ohos.a')['evidence']['total'], 5)
+        self.assertEqual(q.list_modules(query='%')['total'], 0)
+        self.assertEqual(q.list_kits(query='Automatic Scene')['items'][0]['origin'], 'label_only')
+
+
+    def test_member_routes_mentioned_in_and_reverse_lookup(self):
+        """两条来路、label_only 的回答、以及从部件/.so 反查 SDK 模块。"""
+        q = ArktsQuery(self.session())
+        # @ohos.a 既写了 @kit Demo 标签，又被 @kit.Demo 入口 import，两边都有。
+        routes = q.get_kit('@kit.Demo')['member_routes']
+        self.assertEqual(routes, dict(total=2, both=1, declared_only=0, referenced_only=1))
+        self.assertEqual(q.get_module('api/@ohos.a')['kit_routes']['both'], 1)
+        # 合计数掩盖不了来路差异：summary 只说 2 个模块，member_routes 说清是哪两条路。
+        self.assertEqual(q.get_kit('@kit.Demo')['summary']['modules'], 2)
+
+        # label_only 没有入口文件。空 sources 会被读成"查不到定义文件"，
+        # 而事实是它没有定义文件——所以改答"谁提过它"。
+        label = q.get_kit('label:Automatic Scene Configuration Kit')
+        self.assertEqual(label['sources']['total'], 0)
+        self.assertEqual(label['mentioned_in']['total'], 1)
+        self.assertEqual(label['mentioned_in']['items'][0]['module_key'], 'api/@internal/ets/button')
+        # 有入口的 Kit 不带这一项：对它们这个问题没有意义。
+        self.assertNotIn('mentioned_in', q.get_kit('@kit.Demo'))
+
+        # 反查：按实现库路径子串，调用方可以只给文件名；库内存的是架构化完整路径。
+        self.assertEqual(q.list_modules(implemented_by='libace_engine')['total'], 1)
+        self.assertEqual(q.list_modules(implemented_by='nothing-like-this')['total'], 0)
+        # 按部件反查要跨采集器。本夹具只跑了 arkts，缺表必须明确报出来，
+        # 不能静默返回 0 条——那会被读成"没有模块由这个部件实现"。
+        with self.assertRaisesRegex(QueryError, 'CAPABILITY_UNAVAILABLE'):
+            q.list_modules(component='ace_engine')
+        # 游标与新筛选项绑定：换一个 implemented_by，旧游标必须失效。
+        first = q.list_modules(limit=1)
+        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
+            q.list_modules(implemented_by='libace_engine', limit=1, cursor=first['next_cursor'])
+
+
+    def test_cursor_filter_binding_and_rescan_invalidation(self):
+        q = ArktsQuery(self.session()); first = q.list_modules(limit=2)
+        second = q.list_modules(limit=2, cursor=first['next_cursor'])
+        self.assertFalse({m['module_key'] for m in first['items']} & {m['module_key'] for m in second['items']})
+        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
+            q.list_modules(query='x', cursor=first['next_cursor'])
+        for limit in (0, 201, True, '1'):
+            with self.assertRaises(QueryError): q.list_modules(limit=limit)
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertEqual(q.list_modules(limit=2, cursor=first['next_cursor'])['items'], second['items'])
+        self.write('api/@ohos.new.d.ts', 'declare class New {}')
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=first['next_cursor'])
+
+
+    def test_evidence_roundtrip_and_export_without_sources(self):
+        session = self.session(); document = export_document(session)
+        for relation in document['kit_relations']:
+            data = (self.root/relation['source_path']).read_bytes()
+            self.assertEqual(data[relation['start_byte']:relation['end_byte']].decode(), relation['record'])
+            self.assertEqual(locations(data, [relation['start_byte']])[relation['start_byte']], (relation['line'], relation['column']))
+        before = canonical(document)
+        shutil.rmtree(self.sdk)
+        self.assertEqual(canonical(export_document(session)), before)
+        self.assertEqual(len(session.records('arkts')), 5)
+        self.assertNotIn('api.signatures', before.decode())
+        self.assertFalse(any('id' in relation or 'module_id' in relation for relation in document['kit_relations']))
+        # The licence header is no longer copied into the store; the span that
+        # locates it is, so the text can be read back from the source.
+        self.assertFalse(any('record' in module for module in document['modules']))
+        self.assertTrue(all('header_span' in d for d in document['sources']
+                            if d['read_status'] == 'ok'))
+
+
+    def test_scan_isolation_rescan_and_transaction_rollback(self):
+        session = self.session(); before = canonical(export_document(session))
+        new = self.scan().scan_id
+        self.assertNotEqual(new, self.scan_id)
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertEqual(canonical(export_document(session)), before)
+        session.connection.execute("CREATE TRIGGER fail_arkts BEFORE INSERT ON arkts_kit_relations BEGIN SELECT RAISE(ABORT, 'injected'); END")
+        with self.assertRaisesRegex(StoreError, 'injected'): self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertEqual(canonical(export_document(session)), before)
+        self.assertEqual(session.connection.execute('PRAGMA foreign_key_check').fetchall(), [])
+        self.assertEqual(session.connection.execute('SELECT count(*) FROM arkts_kit_relations r JOIN arkts_modules m ON m.id=r.module_id WHERE m.scan_id!=r.scan_id').fetchone()[0], 0)
+
+
+    def test_cancel_or_backend_failure_preserves_old_rows(self):
+        session = self.session(); before = canonical(export_document(session))
+        with self.assertRaises(ScanCancelled):
+            self.scan(scan_id=self.scan_id, reuse_upstream=True, cancelled=lambda: True)
+        with patch.object(Backend, 'parse', side_effect=ScanFatalError('injected')):
+            with self.assertRaises(ScanFatalError): self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertEqual(canonical(export_document(session)), before)
+
+
+    def test_roots_links_and_read_budgets(self):
+        (self.sdk/'api/outside.d.ts').symlink_to(self.root/'missing')
+        (self.sdk/'api/loop').symlink_to(self.sdk/'api', target_is_directory=True)
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        q = ArktsQuery(self.session())
+        self.assertEqual(q.scope['quality']['discovery'], 'partial')
+        self.assertEqual(q.get_module('api/outside')['declarations']['items'][0]['header_status'], 'failed')
+        low = replace(self.request, limits=ScanLimits(file_bytes=10))
+        result = run(self.database, low, only=('arkts',), without=('repos',))
+        self.assertEqual(result['arkts'].status, 'degraded')
+        with self.assertRaises(ScanFatalError):
+            run(self.database, replace(self.request, limits=ScanLimits(input_files=1)), only=('arkts',), without=('repos',))
+        with tempfile.TemporaryDirectory() as outside:
+            self.sdk.rename(self.sdk.with_name('sdk-saved'))
+            self.sdk.symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(RequestError, 'ROOT_OUTSIDE_WORKSPACE'):
+                run(self.database, self.request, only=('arkts',), without=('repos',))
+
+
+    def test_invalid_kit_and_syntax_failure_do_not_hide_inventory(self):
+        self.write('kits/invalid.d.ts', 'import x from "@ohos.a";')
+        self.write('kits/@kit.Broken.d.ts', '/** @file Broken\n * @kit Broken\n */\nimport x from "a"; import {')
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        document = export_document(self.session())
+        broken_path, invalid_path = SDK_PATH + '/kits/@kit.Broken.d.ts', SDK_PATH + '/kits/invalid.d.ts'
+        broken = next(d for d in document['sources'] if d['source_path'] == broken_path)
+        # references_status 已删：它本来就是 coverage['kit.references'] 的投射
+        self.assertEqual(broken['header_status'], 'ok')
+        self.assertEqual(broken['coverage']['kit.references'], 'failed')
+        self.assertFalse(any(r['source_path'] == broken_path for r in document['kit_relations']))
+        self.assertTrue(any(d['source_path'] == invalid_path and 'kit_key' not in d
+                            for d in document['sources']))
+
+
+    def test_entry_script_derives_paths_without_extra_flags_or_path_node(self):
+        from oskm_cli.query.session import SessionManager
+        from oskm_cli.query.tools import dispatch
+        # 采集侧的入口是 `python3 -m oskm.cli`（`packages/oskm/oskm.py` 已于
+        # 2026-11-12 删除）。cwd 是临时目录，所以要显式给 PYTHONPATH——
+        # 旧写法靠"脚本所在目录自动进 sys.path[0]"省掉了这一步。
+        package = Path(__file__).resolve().parents[2]
+        env = dict(os.environ, PATH=str(self.root / 'empty-path'),
+                   PYTHONPATH=str(package))
+        completed = subprocess.run([sys.executable, '-m', 'oskm.cli', 'scan', '--workspace-root', str(self.root),
+            '--product', 'sdk-source', '--only', 'arkts', '--without', 'repos', '--db', str(self.root / 'cli.db')],
+            cwd=self.root, env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(completed.returncode, 4, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)['collectors']['arkts']['records'], 5)
+        with ScanSession.open(Database(self.root / 'cli.db')) as scanned:
+            self.assertEqual(ArktsQuery(scanned).scope['backend']['node_version'], 'v18.20.1')
+        manager = SessionManager(); manager.open(str(self.database.path)); self.addCleanup(manager.close)
+        with patch('subprocess.Popen', side_effect=AssertionError('query started process')):
+            self.assertEqual(dispatch('arkts_kit_modules', {'kit_key':'@kit.Demo'}, manager)['total'], 2)
+            self.assertEqual(dispatch('list_arkts_modules', {'limit':False}, manager)['error']['code'], 'INVALID_PARAM')
+            self.assertEqual(dispatch('get_arkts_module', {'module_key':'missing'}, manager)['error']['code'], 'NOT_FOUND')
+            self.assertEqual(dispatch('get_arkts_kit', {}, manager)['error']['code'], 'MISSING_PARAM')
+            self.assertEqual(dispatch('list_arkts_kits', {'sql':'DROP TABLE x'}, manager)['error']['code'], 'INVALID_PARAM')
+
+
+    def test_old_database_unrun_domain_is_not_empty_success(self):
+        legacy = Database(self.root/'legacy.db')
+        run(legacy, ScanRequest(self.root,'sdk-source'), only=('repos',))
+        with ScanSession.open(legacy) as session:
+            with self.assertRaisesRegex(QueryError, 'COLLECTOR_NOT_RUN'): ArktsQuery(session)
+
+
+    def test_repo_snapshot_survives_upstream_replacement(self):
+        session = self.session()
+        session.connection.execute('INSERT INTO repos(scan_id,name,path,remote_url,head_commit) VALUES(?,?,?,?,?)',
+            (self.scan_id, 'sdk', SDK_PATH, 'https://example.test/sdk.git', 'abc123'))
+        session.connection.execute('INSERT INTO collector_runs(scan_id,collector,schema_version,status,record_count) VALUES(?,?,?,?,?)',
+            (self.scan_id, 'repos', '1.0.0', 'complete', 1))
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        q = ArktsQuery(session)
+        source = q.get_module('api/@ohos.a')['declarations']['items'][0]['source']
+        self.assertFalse(source['source_metadata_stale'])
+        self.assertEqual(source['content_match'], 'unverified')
+        self.assertIn('/blob/abc123/api/', source['url'])
+        self.assertFalse(q.get_kit('@kit.Demo')['sources']['items'][0]['source']['source_metadata_stale'])
+        session.connection.execute('DELETE FROM repos WHERE scan_id=?', (self.scan_id,))
+        source = q.get_module('api/@ohos.a')['declarations']['items'][0]['source']
+        self.assertTrue(source['source_metadata_stale'])
+        self.assertEqual(source['repo']['head_commit'], 'abc123')
+        self.assertTrue(q.get_kit('@kit.Demo')['sources']['items'][0]['source']['source_metadata_stale'])
+        self.assertEqual(q.list_modules()['total'], 5)
+        session.connection.execute("UPDATE collector_runs SET status='failed' WHERE collector='repos' AND scan_id=?", (self.scan_id,))
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        self.assertEqual(ArktsQuery(session).list_modules()['total'], 5)
+
+
+    def test_missing_capability_and_mismatched_backend_fail_before_source(self):
+        backend = Backend(BACKEND, WORKSPACE_NODE)
+        lock = backend.lock
+        ready = dict(type='ready', protocol_version=1, ir_schema_version='1.0.0',
+            adapter_version=lock['adapter_version'], node_version=lock['node_versions'][0],
+            backend={k:lock[k] for k in ('package_name','package_version','compiler_version','entry_sha256')},
+            profiles=['module_kit_v1'], capabilities=[])
+        with patch.object(backend, '_exchange', return_value=ready):
+            with self.assertRaises(ScanFatalError): backend.__enter__()
+        self.assertIsNotNone(backend.process.poll())
+        other = Backend(BACKEND, WORKSPACE_NODE)
+        # package.json bytes are exempt (the build rewrites its npm metadata);
+        # tamper with a pinned lib file instead to prove the identity gate.
+        other.lock['files'] = {'lib/typescript.js': 'incorrect'}
+        with self.assertRaisesRegex(ScanFatalError, 'IDENTITY_MISMATCH'): other.__enter__()
+
+
+    def test_missing_workspace_node_does_not_fall_back_to_path(self):
+        (self.root/NODE_PATH).unlink()
+        with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'):
+            self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        from oskm.cli import parser
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            parser().parse_args(['scan', '--workspace-root', str(self.root), '--product', 'test', '--arkts-node', 'node'])
+
+
+    def test_configuration_and_discovery_changes_invalidate_digest(self):
+        q = ArktsQuery(self.session()); page = q.list_modules(limit=1)
+        self.request = replace(self.request, options={'arkts': {'file_seconds':16}})
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+        page = q.list_modules(limit=1)
+        (self.sdk/'api/skip').symlink_to(self.sdk/'api', target_is_directory=True)
+        self.scan(scan_id=self.scan_id, reuse_upstream=True)
+        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+
+
+    def test_protocol_integrity_rejects_future_fields_and_bad_evidence(self):
+        data = '/** @file 中😀\n * @kit Demo\n */'.encode()
+        with Backend(BACKEND, WORKSPACE_NODE) as backend:
+            result = backend.parse('api/@ohos.x.d.ts', 'module', data)
+            request = dict(id=1, path='api/@ohos.x.d.ts', sha256=hashlib.sha256(data).hexdigest(),
+                           profile='module_kit_v1', ir_schema_version='1.0.0', file_role='module')
+            for mutation in (lambda r:r.update(id=999), lambda r:r.update(sha256='bad'),
+                lambda r:r['facts'].update({'api.signatures': []}),
+                lambda r:r['facts']['file.header'].update(span=[0,999]),
+                lambda r:r['facts']['file.header']['tags'][0].update(span=[1,14]),
+                lambda r:r.update(ir_schema_version='2.0.0')):
+                bad = copy.deepcopy(result); mutation(bad)
+                with self.assertRaises(ScanFatalError): validate_result(bad, request, data)
+        missing = Backend(self.root/'absent', WORKSPACE_NODE)
+        with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'): missing.__enter__()
+
 
     def _assert_napi_layout_and_exact_link(self, cpu_arch, expected, wrong):
         self.write('api/@ohos.multimedia.image.d.ts', 'declare class Image {}')
@@ -435,262 +723,6 @@ class ArktsTest(unittest.TestCase):
             self.assertEqual(implementation['impl_so_path'], expected)
             self.assertEqual(implementation['installed_at'], expected)
 
-    def test_arm_napi_path_and_link_use_lib(self):
-        self._assert_napi_layout_and_exact_link(
-            'arm', 'system/lib/module/multimedia/libimage.z.so',
-            'system/lib64/module/multimedia/libimage.z.so')
-
-    def test_arm64_napi_path_and_link_use_lib64(self):
-        self._assert_napi_layout_and_exact_link(
-            'arm64', 'system/lib64/module/multimedia/libimage.z.so',
-            'system/lib/module/multimedia/libimage.z.so')
-
-    def test_scope_does_not_repeat_the_per_file_hashes(self):
-        q = ArktsQuery(self.session())
-        # The hashes are columns on arkts_sources; the scope keeps only a
-        # digest over them, so it stays small but still pins the content.
-        self.assertNotIn('files', q.scope)
-        before = q.scope['files_digest']
-        self.write('api/@ohos.b.d.ts', 'declare class B2 {}')
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertNotEqual(ArktsQuery(self.session()).scope['files_digest'], before)
-
-    def test_bidirectional_queries_dedup_and_candidate_filter(self):
-        q = ArktsQuery(self.session())
-        self.assertEqual(q.kit_modules('@kit.Demo')['total'], 2)
-        self.assertEqual(q.kit_modules('@kit.Demo', relation_type='declared_membership')['total'], 1)
-        self.assertEqual(q.kit_modules('@kit.Demo', condition='dynamic')['total'], 1)
-        # Three genuinely unresolved: a missing module, a bare external
-        # specifier and a Kit. The fourth used to be @ohos.b, reported as
-        # ambiguous only because its two declarations were two rows.
-        unresolved = q.kit_modules('@kit.Demo', view='unresolved')
-        self.assertEqual(unresolved['total'], 3)
-        self.assertEqual([(i['target_text'], i['resolution_status']) for i in unresolved['items']],
-                         [('@ohos.missing', 'not_found'), ('external', 'out_of_scope'), ('@kit.Empty', 'out_of_scope')])
-        self.assertEqual(q.module_kits('api/@ohos.a')['items'][0]['kit_key'], '@kit.Demo')
-        self.assertEqual(q.module_kits('arkts/@arkts.lang')['total'], 0)
-        self.assertEqual(q.module_kits('arkts/@arkts.lang', include_candidates=True)['total'], 1)
-        self.assertEqual(q.get_module('api/@ohos.a')['evidence']['total'], 5)
-        self.assertEqual(q.list_modules(query='%')['total'], 0)
-        self.assertEqual(q.list_kits(query='Automatic Scene')['items'][0]['origin'], 'label_only')
-
-    def test_member_routes_mentioned_in_and_reverse_lookup(self):
-        """两条来路、label_only 的回答、以及从部件/.so 反查 SDK 模块。"""
-        q = ArktsQuery(self.session())
-        # @ohos.a 既写了 @kit Demo 标签，又被 @kit.Demo 入口 import，两边都有。
-        routes = q.get_kit('@kit.Demo')['member_routes']
-        self.assertEqual(routes, dict(total=2, both=1, declared_only=0, referenced_only=1))
-        self.assertEqual(q.get_module('api/@ohos.a')['kit_routes']['both'], 1)
-        # 合计数掩盖不了来路差异：summary 只说 2 个模块，member_routes 说清是哪两条路。
-        self.assertEqual(q.get_kit('@kit.Demo')['summary']['modules'], 2)
-
-        # label_only 没有入口文件。空 sources 会被读成"查不到定义文件"，
-        # 而事实是它没有定义文件——所以改答"谁提过它"。
-        label = q.get_kit('label:Automatic Scene Configuration Kit')
-        self.assertEqual(label['sources']['total'], 0)
-        self.assertEqual(label['mentioned_in']['total'], 1)
-        self.assertEqual(label['mentioned_in']['items'][0]['module_key'], 'api/@internal/ets/button')
-        # 有入口的 Kit 不带这一项：对它们这个问题没有意义。
-        self.assertNotIn('mentioned_in', q.get_kit('@kit.Demo'))
-
-        # 反查：按实现库路径子串，调用方可以只给文件名；库内存的是架构化完整路径。
-        self.assertEqual(q.list_modules(implemented_by='libace_engine')['total'], 1)
-        self.assertEqual(q.list_modules(implemented_by='nothing-like-this')['total'], 0)
-        # 按部件反查要跨采集器。本夹具只跑了 arkts，缺表必须明确报出来，
-        # 不能静默返回 0 条——那会被读成"没有模块由这个部件实现"。
-        with self.assertRaisesRegex(QueryError, 'CAPABILITY_UNAVAILABLE'):
-            q.list_modules(component='ace_engine')
-        # 游标与新筛选项绑定：换一个 implemented_by，旧游标必须失效。
-        first = q.list_modules(limit=1)
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(implemented_by='libace_engine', limit=1, cursor=first['next_cursor'])
-
-    def test_cursor_filter_binding_and_rescan_invalidation(self):
-        q = ArktsQuery(self.session()); first = q.list_modules(limit=2)
-        second = q.list_modules(limit=2, cursor=first['next_cursor'])
-        self.assertFalse({m['module_key'] for m in first['items']} & {m['module_key'] for m in second['items']})
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(query='x', cursor=first['next_cursor'])
-        for limit in (0, 201, True, '1'):
-            with self.assertRaises(QueryError): q.list_modules(limit=limit)
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(q.list_modules(limit=2, cursor=first['next_cursor'])['items'], second['items'])
-        self.write('api/@ohos.new.d.ts', 'declare class New {}')
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=first['next_cursor'])
-
-    def test_evidence_roundtrip_and_export_without_sources(self):
-        session = self.session(); document = export_document(session)
-        for relation in document['kit_relations']:
-            data = (self.root/relation['source_path']).read_bytes()
-            self.assertEqual(data[relation['start_byte']:relation['end_byte']].decode(), relation['record'])
-            self.assertEqual(locations(data, [relation['start_byte']])[relation['start_byte']], (relation['line'], relation['column']))
-        before = canonical(document)
-        shutil.rmtree(self.sdk)
-        self.assertEqual(canonical(export_document(session)), before)
-        self.assertEqual(len(session.records('arkts')), 5)
-        self.assertNotIn('api.signatures', before.decode())
-        self.assertFalse(any('id' in relation or 'module_id' in relation for relation in document['kit_relations']))
-        # The licence header is no longer copied into the store; the span that
-        # locates it is, so the text can be read back from the source.
-        self.assertFalse(any('record' in module for module in document['modules']))
-        self.assertTrue(all('header_span' in d for d in document['sources']
-                            if d['read_status'] == 'ok'))
-
-    def test_scan_isolation_rescan_and_transaction_rollback(self):
-        session = self.session(); before = canonical(export_document(session))
-        new = self.scan().scan_id
-        self.assertNotEqual(new, self.scan_id)
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(canonical(export_document(session)), before)
-        session.connection.execute("CREATE TRIGGER fail_arkts BEFORE INSERT ON arkts_kit_relations BEGIN SELECT RAISE(ABORT, 'injected'); END")
-        with self.assertRaisesRegex(StoreError, 'injected'): self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(canonical(export_document(session)), before)
-        self.assertEqual(session.connection.execute('PRAGMA foreign_key_check').fetchall(), [])
-        self.assertEqual(session.connection.execute('SELECT count(*) FROM arkts_kit_relations r JOIN arkts_modules m ON m.id=r.module_id WHERE m.scan_id!=r.scan_id').fetchone()[0], 0)
-
-    def test_cancel_or_backend_failure_preserves_old_rows(self):
-        session = self.session(); before = canonical(export_document(session))
-        with self.assertRaises(ScanCancelled):
-            self.scan(scan_id=self.scan_id, reuse_upstream=True, cancelled=lambda: True)
-        with patch.object(Backend, 'parse', side_effect=ScanFatalError('injected')):
-            with self.assertRaises(ScanFatalError): self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(canonical(export_document(session)), before)
-
-    def test_roots_links_and_read_budgets(self):
-        (self.sdk/'api/outside.d.ts').symlink_to(self.root/'missing')
-        (self.sdk/'api/loop').symlink_to(self.sdk/'api', target_is_directory=True)
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        q = ArktsQuery(self.session())
-        self.assertEqual(q.scope['quality']['discovery'], 'partial')
-        self.assertEqual(q.get_module('api/outside')['declarations']['items'][0]['header_status'], 'failed')
-        low = replace(self.request, limits=ScanLimits(file_bytes=10))
-        result = run(self.database, low, only=('arkts',), without=('repos',))
-        self.assertEqual(result['arkts'].status, 'degraded')
-        with self.assertRaises(ScanFatalError):
-            run(self.database, replace(self.request, limits=ScanLimits(input_files=1)), only=('arkts',), without=('repos',))
-        with tempfile.TemporaryDirectory() as outside:
-            self.sdk.rename(self.sdk.with_name('sdk-saved'))
-            self.sdk.symlink_to(outside, target_is_directory=True)
-            with self.assertRaisesRegex(RequestError, 'ROOT_OUTSIDE_WORKSPACE'):
-                run(self.database, self.request, only=('arkts',), without=('repos',))
-
-    def test_invalid_kit_and_syntax_failure_do_not_hide_inventory(self):
-        self.write('kits/invalid.d.ts', 'import x from "@ohos.a";')
-        self.write('kits/@kit.Broken.d.ts', '/** @file Broken\n * @kit Broken\n */\nimport x from "a"; import {')
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        document = export_document(self.session())
-        broken_path, invalid_path = SDK_PATH + '/kits/@kit.Broken.d.ts', SDK_PATH + '/kits/invalid.d.ts'
-        broken = next(d for d in document['sources'] if d['source_path'] == broken_path)
-        # references_status 已删：它本来就是 coverage['kit.references'] 的投射
-        self.assertEqual(broken['header_status'], 'ok')
-        self.assertEqual(broken['coverage']['kit.references'], 'failed')
-        self.assertFalse(any(r['source_path'] == broken_path for r in document['kit_relations']))
-        self.assertTrue(any(d['source_path'] == invalid_path and 'kit_key' not in d
-                            for d in document['sources']))
-
-    def test_entry_script_derives_paths_without_extra_flags_or_path_node(self):
-        from oskm_cli.query.session import SessionManager
-        from oskm_cli.query.tools import dispatch
-        # 采集侧的入口是 `python3 -m oskm.cli`（`packages/oskm/oskm.py` 已于
-        # 2026-11-12 删除）。cwd 是临时目录，所以要显式给 PYTHONPATH——
-        # 旧写法靠"脚本所在目录自动进 sys.path[0]"省掉了这一步。
-        package = Path(__file__).resolve().parents[2]
-        env = dict(os.environ, PATH=str(self.root/'empty-path'),
-                   PYTHONPATH=str(package))
-        completed = subprocess.run([sys.executable, '-m', 'oskm.cli', 'scan', '--workspace-root', str(self.root),
-            '--product', 'sdk-source', '--only', 'arkts', '--without', 'repos', '--db', str(self.root/'cli.db')],
-            cwd=self.root, env=env, capture_output=True, text=True, timeout=30)
-        self.assertEqual(completed.returncode, 4, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)['collectors']['arkts']['records'], 5)
-        with ScanSession.open(Database(self.root/'cli.db')) as scanned:
-            self.assertEqual(ArktsQuery(scanned).scope['backend']['node_version'], 'v18.20.1')
-        manager = SessionManager(); manager.open(str(self.database.path)); self.addCleanup(manager.close)
-        with patch('subprocess.Popen', side_effect=AssertionError('query started process')):
-            self.assertEqual(dispatch('arkts_kit_modules', {'kit_key':'@kit.Demo'}, manager)['total'], 2)
-            self.assertEqual(dispatch('list_arkts_modules', {'limit':False}, manager)['error']['code'], 'INVALID_PARAM')
-            self.assertEqual(dispatch('get_arkts_module', {'module_key':'missing'}, manager)['error']['code'], 'NOT_FOUND')
-            self.assertEqual(dispatch('get_arkts_kit', {}, manager)['error']['code'], 'MISSING_PARAM')
-            self.assertEqual(dispatch('list_arkts_kits', {'sql':'DROP TABLE x'}, manager)['error']['code'], 'INVALID_PARAM')
-
-    def test_old_database_unrun_domain_is_not_empty_success(self):
-        legacy = Database(self.root/'legacy.db')
-        run(legacy, ScanRequest(self.root,'sdk-source'), only=('repos',))
-        with ScanSession.open(legacy) as session:
-            with self.assertRaisesRegex(QueryError, 'COLLECTOR_NOT_RUN'): ArktsQuery(session)
-
-    def test_repo_snapshot_survives_upstream_replacement(self):
-        session = self.session()
-        session.connection.execute('INSERT INTO repos(scan_id,name,path,remote_url,head_commit) VALUES(?,?,?,?,?)',
-            (self.scan_id, 'sdk', SDK_PATH, 'https://example.test/sdk.git', 'abc123'))
-        session.connection.execute('INSERT INTO collector_runs(scan_id,collector,schema_version,status,record_count) VALUES(?,?,?,?,?)',
-            (self.scan_id, 'repos', '1.0.0', 'complete', 1))
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        q = ArktsQuery(session)
-        source = q.get_module('api/@ohos.a')['declarations']['items'][0]['source']
-        self.assertFalse(source['source_metadata_stale'])
-        self.assertEqual(source['content_match'], 'unverified')
-        self.assertIn('/blob/abc123/api/', source['url'])
-        self.assertFalse(q.get_kit('@kit.Demo')['sources']['items'][0]['source']['source_metadata_stale'])
-        session.connection.execute('DELETE FROM repos WHERE scan_id=?', (self.scan_id,))
-        source = q.get_module('api/@ohos.a')['declarations']['items'][0]['source']
-        self.assertTrue(source['source_metadata_stale'])
-        self.assertEqual(source['repo']['head_commit'], 'abc123')
-        self.assertTrue(q.get_kit('@kit.Demo')['sources']['items'][0]['source']['source_metadata_stale'])
-        self.assertEqual(q.list_modules()['total'], 5)
-        session.connection.execute("UPDATE collector_runs SET status='failed' WHERE collector='repos' AND scan_id=?", (self.scan_id,))
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(ArktsQuery(session).list_modules()['total'], 5)
-
-    def test_missing_capability_and_mismatched_backend_fail_before_source(self):
-        backend = Backend(BACKEND, WORKSPACE_NODE)
-        lock = backend.lock
-        ready = dict(type='ready', protocol_version=1, ir_schema_version='1.0.0',
-            adapter_version=lock['adapter_version'], node_version=lock['node_versions'][0],
-            backend={k:lock[k] for k in ('package_name','package_version','compiler_version','entry_sha256')},
-            profiles=['module_kit_v1'], capabilities=[])
-        with patch.object(backend, '_exchange', return_value=ready):
-            with self.assertRaises(ScanFatalError): backend.__enter__()
-        self.assertIsNotNone(backend.process.poll())
-        other = Backend(BACKEND, WORKSPACE_NODE)
-        # package.json bytes are exempt (the build rewrites its npm metadata);
-        # tamper with a pinned lib file instead to prove the identity gate.
-        other.lock['files'] = {'lib/typescript.js': 'incorrect'}
-        with self.assertRaisesRegex(ScanFatalError, 'IDENTITY_MISMATCH'): other.__enter__()
-
-    def test_missing_workspace_node_does_not_fall_back_to_path(self):
-        (self.root/NODE_PATH).unlink()
-        with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'):
-            self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        from oskm.cli import parser
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-            parser().parse_args(['scan', '--workspace-root', str(self.root), '--product', 'test', '--arkts-node', 'node'])
-
-    def test_configuration_and_discovery_changes_invalidate_digest(self):
-        q = ArktsQuery(self.session()); page = q.list_modules(limit=1)
-        self.request = replace(self.request, options={'arkts': {'file_seconds':16}})
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
-        page = q.list_modules(limit=1)
-        (self.sdk/'api/skip').symlink_to(self.sdk/'api', target_is_directory=True)
-        self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
-
-    def test_protocol_integrity_rejects_future_fields_and_bad_evidence(self):
-        data = '/** @file 中😀\n * @kit Demo\n */'.encode()
-        with Backend(BACKEND, WORKSPACE_NODE) as backend:
-            result = backend.parse('api/@ohos.x.d.ts', 'module', data)
-            request = dict(id=1, path='api/@ohos.x.d.ts', sha256=hashlib.sha256(data).hexdigest(),
-                           profile='module_kit_v1', ir_schema_version='1.0.0', file_role='module')
-            for mutation in (lambda r:r.update(id=999), lambda r:r.update(sha256='bad'),
-                lambda r:r['facts'].update({'api.signatures': []}),
-                lambda r:r['facts']['file.header'].update(span=[0,999]),
-                lambda r:r['facts']['file.header']['tags'][0].update(span=[1,14]),
-                lambda r:r.update(ir_schema_version='2.0.0')):
-                bad = copy.deepcopy(result); mutation(bad)
-                with self.assertRaises(ScanFatalError): validate_result(bad, request, data)
-        missing = Backend(self.root/'absent', WORKSPACE_NODE)
-        with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'): missing.__enter__()
 
 
 if __name__ == '__main__': unittest.main()

@@ -1,3 +1,4 @@
+# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Behavioral checks for the collector-free read-only session."""
 # cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
 # `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
