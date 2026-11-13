@@ -23,8 +23,10 @@ The resolver in ``build_args_resolver.py`` calls ``oskm_collect()`` with the
 build output path, target CPU, workspace root, and product name.
 
 The output database is written to ``{out_path}/oskm/knowledge.db``.
-After the scan, a clangd .idx index is built under the build output
-(non-fatal on failure).
+After the scan, the read-only CLI zipapp is written to
+``{out_path}/oskm/oskm-cli.pyz`` and a clangd .idx index is built under
+the build output. Both post-scan steps are independent of the scan result
+and are non-fatal on failure.
 """
 import argparse
 import os
@@ -67,6 +69,7 @@ def oskm_collect(out_path, target_cpu, workspace_root=None,
               file=sys.stderr)
     else:
         print(f"[oskm_collect] scan complete: {db_path}")
+    __build_cli_zipapp(db_path.parent)
     __build_lsp_index(out_path)
     return exit_code
 
@@ -118,6 +121,35 @@ def _run_scan(root, product, db_path, cpu_arch=None):
         argv.extend(('--cpu-arch', str(cpu_arch)))
     print(f"[oskm_collect] running: oskm {' '.join(argv)}")
     return oskm_main(argv)
+
+
+def __build_cli_zipapp(output_dir):
+    """Build the read-only query CLI next to the collected database.
+
+    Delegates to ``cli/scripts/build_cli.py``. A CLI build failure is logged
+    and swallowed so it never breaks the collection phase.
+    Set OSKM_BUILD_CLI=off to skip.
+    """
+    if os.environ.get('OSKM_BUILD_CLI', '').lower() in ('off', '0', 'no'):
+        print('[oskm_collect] cli build disabled by OSKM_BUILD_CLI')
+        return
+    script = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'cli', 'scripts',
+        'build_cli.py')
+    if not os.path.isfile(script):
+        print('[oskm_collect] cli/scripts/build_cli.py not found, skip')
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, script, '--output-dir', str(output_dir)],
+            cwd=os.path.dirname(os.path.abspath(__file__)))
+        if result.returncode != 0:
+            print(f'[oskm_collect] cli build exit={result.returncode} '
+                  '(non-fatal)')
+        else:
+            print(f'[oskm_collect] cli built: {output_dir / "oskm-cli.pyz"}')
+    except Exception as exc:
+        print(f'[oskm_collect] cli build failed (non-fatal): {exc}')
 
 
 def __build_lsp_index(out_path):
