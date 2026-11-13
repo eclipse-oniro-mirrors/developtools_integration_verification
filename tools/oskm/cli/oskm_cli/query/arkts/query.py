@@ -189,10 +189,8 @@ class ArktsQuery:
         self.run, self.scope = dict(run), json.loads(run['scope'])
 
 
-    # 表的判别一律按 `name`，不按对象身份。同一份 schema 一旦以两个模块名
-    # 被加载（软链、vendored 副本都会导致），`is` 恒为 False 而且不报错，
-    # 分支静默失效。按名字比较对这种情况免疫。
     def _decode_page_token(self, page_token, state):
+        """Validate a page token by table name rather than object identity."""
         if page_token is None:
             return None
         try:

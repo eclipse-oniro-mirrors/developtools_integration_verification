@@ -13,6 +13,3 @@
 
 from .query import ArktsQuery
 from .export import export_document
-
-
-__all__ = ['ArktsQuery', 'export_document']

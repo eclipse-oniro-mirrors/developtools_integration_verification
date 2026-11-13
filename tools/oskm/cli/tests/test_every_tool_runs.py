@@ -74,12 +74,17 @@ def _static_probes():
     }
 
 
-def _component_probes():
-    component = sample_component(DB)
+def _repo_probes():
     repo = sample_repo(DB)
     return {
         'get_repo': {'name': repo[0]} if repo else None,
         'git_url': {'path': repo[1]} if repo else None,
+    }
+
+
+def _component_probes():
+    component = sample_component(DB)
+    return {
         'get_component': {'name': component} if component else None,
         'search_components': {'query': _fragment(component)} if component else None,
         'component_attached': {'name': component} if component else None,
@@ -111,6 +116,7 @@ def _service_install_gn_args_probes():
 def _basic_probes():
     probes = {}
     probes.update(_static_probes())
+    probes.update(_repo_probes())
     probes.update(_component_probes())
     probes.update(_service_install_gn_args_probes())
     return probes

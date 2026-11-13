@@ -51,8 +51,6 @@ class SkillBundleTests(unittest.TestCase):
         cls.temp.cleanup()
 
 
-    # ---------------------------------------------------------------- 内容
-
     def test_archive_contains_the_skill_and_its_runtime(self):
         names = set(self._names())
         for required in (
@@ -223,8 +221,6 @@ class SkillBundleTests(unittest.TestCase):
                          hashlib.sha256(self.archive.read_bytes()).hexdigest())
         self.assertEqual(name, self.archive.name)
 
-
-    # ------------------------------------------------------------ 确定性
 
     def test_archive_build_is_reproducible(self):
         with tempfile.TemporaryDirectory(prefix='oskm-skill-rebuild-') as temp:

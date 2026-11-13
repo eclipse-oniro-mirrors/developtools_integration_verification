@@ -25,24 +25,14 @@ _NATIVE_HEADERS_OUT_DIR = re.compile(r"^(?:\$\{?native_headers_out_dir\}?/?)")
 
 def _gn_block_end(text, start):
     depth = 0
-    index = start
-    in_string = False
-    escaped = False
-    while index < len(text):
-        char = text[index]
-        if char == '"' and not escaped:
-            in_string = not in_string
-        if not in_string:
-            if char == '{':
-                depth += 1
-            elif char == '}':
-                depth -= 1
-                if depth == 0:
-                    return index
-        escaped = char == '\\' and not escaped
-        if char != '\\':
-            escaped = False
-        index += 1
+    for match in re.finditer(r'"(?:\\.|[^"\\])*"|[{}]', text[start:]):
+        token = match.group(0)
+        if token == '{':
+            depth += 1
+        elif token == '}':
+            depth -= 1
+            if depth == 0:
+                return start + match.start()
     return None
 
 
@@ -250,6 +240,47 @@ class NativeHeadersCollector(BaseCollector):
         return "elf_modules(category contains native) -> interface/sdk_c headers"
 
 
+    @staticmethod
+    def _header_outputs(source_path, resolved, dest, workspace):
+        source_name = Path(source_path).name
+        if not resolved.is_dir():
+            installed = (Path(dest) / source_name).as_posix() if dest else source_name
+            return [(installed, source_path)]
+        outputs = []
+        for file in sorted(resolved.rglob("*")):
+            if not file.is_file():
+                continue
+            relative = file.relative_to(resolved)
+            installed = ((Path(dest) / source_name / relative).as_posix()
+                         if dest else (source_name / relative).as_posix())
+            outputs.append((installed, file.relative_to(workspace).as_posix()))
+        return outputs
+
+
+    @staticmethod
+    def _record_outputs(outputs, source_headers):
+        for installed, source_path in outputs:
+            source_headers["by_output"][installed] = source_path
+            source_headers["by_name"][Path(source_path).name].append(source_path)
+
+
+    @staticmethod
+    def _declared_headers(declared, outputs):
+        headers = set()
+        for item in declared:
+            item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
+            match = next((source for output, source in outputs
+                          if output == item), None)
+            if match is not None:
+                headers.add(match)
+                continue
+            matches = [source for output, source in outputs
+                       if Path(output).name == Path(item).name]
+            if len(matches) == 1:
+                headers.add(matches[0])
+        return headers
+
+
     def _scan_headers(self, ctx, include):
         library_headers = defaultdict(set)
         for path in sorted(include.rglob("*.h")):
@@ -267,44 +298,6 @@ class NativeHeadersCollector(BaseCollector):
                     library_headers[library].add(relative)
         return library_headers
 
-
-    @staticmethod
-    def _header_outputs(source_path, resolved, dest, workspace):
-        source_name = Path(source_path).name
-        if not resolved.is_dir():
-            installed = (Path(dest) / source_name).as_posix() if dest else source_name
-            return [(installed, source_path)]
-        outputs = []
-        for file in sorted(resolved.rglob("*")):
-            if not file.is_file():
-                continue
-            relative = file.relative_to(resolved)
-            installed = ((Path(dest) / source_name / relative).as_posix()
-                         if dest else (source_name / relative).as_posix())
-            outputs.append((installed, file.relative_to(workspace).as_posix()))
-        return outputs
-
-    @staticmethod
-    def _record_outputs(outputs, source_headers):
-        for installed, source_path in outputs:
-            source_headers["by_output"][installed] = source_path
-            source_headers["by_name"][Path(source_path).name].append(source_path)
-
-    @staticmethod
-    def _declared_headers(declared, outputs):
-        headers = set()
-        for item in declared:
-            item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
-            match = next((source for output, source in outputs
-                          if output == item), None)
-            if match is not None:
-                headers.add(match)
-                continue
-            matches = [source for output, source in outputs
-                       if Path(output).name == Path(item).name]
-            if len(matches) == 1:
-                headers.add(matches[0])
-        return headers
 
     def _parse_build_gn(self, ctx):
         root = ctx.workspace / "interface/sdk_c"
@@ -334,6 +327,7 @@ class NativeHeadersCollector(BaseCollector):
                 mappings[so_name] = tuple(sorted(
                     self._declared_headers(declared, outputs)))
         return mappings, source_headers
+
 
     def _collect_header_outputs(self, ctx, path, text):
         outputs = []

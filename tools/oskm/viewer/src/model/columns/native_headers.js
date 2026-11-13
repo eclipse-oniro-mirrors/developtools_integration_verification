@@ -5,10 +5,10 @@
 export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属']
 
 export const MATCH_STRATEGIES = {
-  build_gn: 'BUILD.gn',
+  'build_gn': 'BUILD.gn',
   'header_library': '@library',
   symbol: '符号匹配',
-}
+};
 
 export const COLUMNS = [
   { key: 'header_path', label: '源码头文件', group: '头文件', type: 'path', min: 360,
