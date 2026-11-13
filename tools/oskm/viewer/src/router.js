@@ -28,7 +28,7 @@ const routes = [
   { path: '/sdk/modules', component: () => import('./views/list/Modules.vue') },
   { path: '/sdk/kits', component: () => import('./views/list/Kits.vue') },
   { path: '/sdk/declarations', component: () => import('./views/list/Declarations.vue') },
-  { path: '/sdk/native-headers', component: () => import('./views/list/NativeHeaders.vue') },
+  { path: '/sdk/native-headers', component: () => import('./views/list/NativeHeaders') },
 
   { path: '/lookup', name: 'lookup', component: () => import('./views/Lookup.vue') },
   { path: '/findings', name: 'findings', component: () => import('./views/Findings.vue') },

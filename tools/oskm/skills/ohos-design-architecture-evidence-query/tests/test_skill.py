@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """SKILL.md 的门禁：命令真跑、结构真校、索引真生成。
 
 命令尽量在合成库上执行，只验证命令形态、运行成本和输出契约；真实知识库会随扫描
@@ -9,17 +8,8 @@ AGENTS.md 曾经推荐 `elf_dependencies(max_distance=3)`，工具名没错、�
 但那是一次 90 秒、1.27 MB 的调用——只有真跑才看得出来。
 所以这里把 SKILL.md 里的每条命令都执行一遍，并盯住耗时与响应大小。
 """
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM)):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import io
 import json
 import os
@@ -32,10 +22,17 @@ import time
 import contextlib
 import unittest
 from pathlib import Path
-
 from oskm_cli import cli
 from oskm_runtime import bootstrap
 from oskm_testing.fixture import create_fixture_db
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
 
 SKILL_ROOT = _SKILL
 OSKM = _OSKM

@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 产物的门禁：固定名、可复现、可独立运行、产物落在 cli/ 内部。
 
 四条断言各自拦一类真实故障：
@@ -17,14 +16,8 @@
 > 它抓过一次真漂移，但 pin 机制本身已于 2026-11-12 删除——CLI 不再记版本，
 > 完整性改由 skill 侧的结构校验（`cli_install.verify_pyz`）负责。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import hashlib
 import json
 import os
@@ -34,11 +27,15 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+import build_cli  # noqa: E402
+from oskm_cli import __version__  # noqa: E402
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
 
 sys.path.insert(0, str(_HERE.parents[0] / 'scripts'))
-import build_cli  # noqa: E402
 
-from oskm_cli import __version__  # noqa: E402
 
 CLI_ROOT = _HERE.parents[0]
 OSKM = _HERE.parents[1]

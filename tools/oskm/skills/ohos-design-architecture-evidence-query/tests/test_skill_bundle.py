@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """skill 发布归档的门禁。
 
 拆分之后归档的性质变了，所以断言也变了。旧 `test_standalone_bundle.py`
@@ -9,18 +8,8 @@
 它在子进程里、清空 `PYTHONPATH`、用 `OSKM_CLI` 指向一个单独构建的 pyz，
 真跑一次查询。这条过了，才说明"两个独立产物"不是文档里的说法。
 """
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM),
-           str(_OSKM / 'cli' / 'scripts'), str(_SKILL / 'scripts')):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import hashlib
 import json
 import os
@@ -31,10 +20,17 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
-
 import build_cli
 import build_skill
 from oskm_testing.fixture import create_fixture_db
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
 
 SKILL_NAME = 'ohos-design-architecture-evidence-query'
 

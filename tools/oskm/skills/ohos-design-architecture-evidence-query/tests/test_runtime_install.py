@@ -1,15 +1,4 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM)):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+import _path_setup
 import contextlib
 import io
 import json
@@ -20,7 +9,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-
 from oskm_runtime import cli_install, install, state
 from oskm_runtime.db_download import DownloadError
 from oskm_runtime.environment import (
@@ -30,6 +18,14 @@ from oskm_runtime.environment import (
     SOURCE_ENV,
 )
 from oskm_testing.fixture import create_schema, write_minimal_pyz
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
 
 
 class RuntimeInstallTests(unittest.TestCase):
@@ -60,27 +56,6 @@ class RuntimeInstallTests(unittest.TestCase):
         return download
 
 
-    def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='oskm runtime ')
-        self.root = (Path(self.temp.name) / 'runtime').resolve()
-        self.root.mkdir()
-        self.cwd = mock.patch.object(
-            install.Path, 'cwd', return_value=Path(self.temp.name))
-        self.cwd.start()
-        self.addCleanup(self.cwd.stop)
-        self.environment = mock.patch.dict(install.os.environ, {
-            SOURCE_ENV: OPENHARMONY_CI,
-            ENDPOINT_ENV:
-                'https://ci.example.invalid/download',
-        })
-        self.environment.start()
-        self.addCleanup(self.environment.stop)
-
-
-    def tearDown(self):
-        self.temp.cleanup()
-
-
     @classmethod
     def write_db(cls, path, *, compatible=True, cpu_arch=True):
         path.unlink(missing_ok=True)
@@ -102,6 +77,27 @@ class RuntimeInstallTests(unittest.TestCase):
         connection.close()
         if compatible and not cpu_arch:
             cls.drop_scan_cpu_arch(path)
+
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='oskm runtime ')
+        self.root = (Path(self.temp.name) / 'runtime').resolve()
+        self.root.mkdir()
+        self.cwd = mock.patch.object(
+            install.Path, 'cwd', return_value=Path(self.temp.name))
+        self.cwd.start()
+        self.addCleanup(self.cwd.stop)
+        self.environment = mock.patch.dict(install.os.environ, {
+            SOURCE_ENV: OPENHARMONY_CI,
+            ENDPOINT_ENV:
+                'https://ci.example.invalid/download',
+        })
+        self.environment.start()
+        self.addCleanup(self.environment.stop)
+
+
+    def tearDown(self):
+        self.temp.cleanup()
 
 
     def write_bundle(
@@ -524,6 +520,7 @@ class RuntimeInstallTests(unittest.TestCase):
             old_sdk)
         self.assertEqual(json.loads(state_file.read_text(encoding='utf-8')),
                          old_document)
+
 
 
     # `test_ensure_runtime_refreshes_from_bundle` 与

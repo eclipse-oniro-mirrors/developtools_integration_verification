@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Native SDK 头文件映射工具。
 
 **参数全部从库里现取。** 原来这个文件钉的是 `libOpenSLES.so` / `'OpenSLES'` /
@@ -11,20 +10,19 @@
 以及**跨工具自洽**（search 与 get 对同一个 dest 给出同一个 component）。
 Native SDK 表为空的库（采集降级）直接 skipTest，不算失败。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+from pathlib import Path
+import _path_setup
 import os
 import unittest
-
 from oskm_cli.query.tools import dispatch
 from oskm_cli.query.session import SessionManager
 from oskm_testing.testdb import DB, native_strategies, sample_native_mapping
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 
 def _fragment(text, minimum=3):

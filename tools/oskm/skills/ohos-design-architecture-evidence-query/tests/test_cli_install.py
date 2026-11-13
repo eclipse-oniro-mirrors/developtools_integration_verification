@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 产物的三级定位、结构校验与载入。
 
 **CLI 与 `knowledge.db` 同类：固定文件名 `oskm-cli.pyz`，不记版本、不锁摘要。**
@@ -8,18 +7,8 @@
 CRC 完好），与 DB 那侧的 `verify_sqlite`（文件头 + `PRAGMA integrity_check`）
 同一思路：校"它是不是一个能用的产物"，不校"它是不是某一次构建的那一份"。
 """
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM),
-           str(_OSKM / 'cli' / 'scripts')):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import hashlib
 import io
 import json
@@ -30,11 +19,18 @@ import unittest
 import zipfile
 from pathlib import Path
 from unittest import mock
-
 import build_cli
-
 from oskm_runtime import cli_install, state
 from oskm_runtime.environment import CLI_PATH_ENV
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
+
 
 
 def fake_pyz(path: Path, payload: bytes = b'not really a zipapp') -> Path:

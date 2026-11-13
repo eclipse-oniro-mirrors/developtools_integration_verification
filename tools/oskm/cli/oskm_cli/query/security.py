@@ -89,17 +89,17 @@ def _readonly_authorizer(allowed_by_db):
 def _sql_error(exc, allowed_by_db):
     message = str(exc)
     if 'interrupted' in message.lower():
-        raise SecurityError('TIMEOUT', 'SQL execution exceeded 5 seconds') from exc
+        return SecurityError('TIMEOUT', 'SQL execution exceeded 5 seconds')
     if 'no such table' in message.lower():
         table = message.split(':', 1)[-1].strip().strip('"`[]')
         database, separator, _ = table.partition('.')
         if separator and database not in allowed_by_db:
-            raise SecurityError(
-                'ALIAS_NOT_ATTACHED', f'alias "{database}" is not attached') from exc
-        raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
+            return SecurityError(
+                'ALIAS_NOT_ATTACHED', f'alias "{database}" is not attached')
+        return SecurityError('TABLE_NOT_ALLOWED', message)
     if 'not authorized' in message.lower():
-        raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
-    raise SecurityError('SQL_ERROR', message) from exc
+        return SecurityError('TABLE_NOT_ALLOWED', message)
+    return SecurityError('SQL_ERROR', message)
 
 
 def execute_readonly_sql(sources, sql: str, params=(), *, limit: int = 1000,
@@ -126,7 +126,7 @@ def execute_readonly_sql(sources, sql: str, params=(), *, limit: int = 1000,
         rows = connection.execute(stripped, tuple(params)).fetchmany(limit + 1)
         return [dict(row) for row in rows[:limit]], len(rows) > limit
     except sqlite3.OperationalError as exc:
-        _sql_error(exc, allowed_by_db)
+        raise _sql_error(exc, allowed_by_db) from exc
     except sqlite3.Error as exc:
         raise SecurityError('SQL_ERROR', str(exc)) from exc
     finally:

@@ -206,7 +206,7 @@ SDK 接口）用 **`ohos-design-architecture-evidence-query` skill**，它会按
 
 skill 与查询 CLI 是两个独立产物：skill 负责下载 DB / SDK / CLI 并教 Agent
 怎么问；`oskm-cli`（pyz）只读封装 `knowledge.db`，自己不下载任何数据。
-首次使用先配端点再安装：
+初次使用先配端点再安装：
 
 ```bash
 cd tools/oskm/skills/ohos-design-architecture-evidence-query

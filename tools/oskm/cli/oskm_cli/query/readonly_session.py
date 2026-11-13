@@ -261,16 +261,6 @@ class ReadOnlyScanSession:
         return 'degraded' if any(status == 'degraded' for status in rows) else 'complete'
 
 
-    def scan_row(self):
-        row = self.connection.execute(
-            'SELECT product, cpu_arch, workspace_root, started_at, finished_at '
-            'FROM scans WHERE id = ?', (self.scan_id,)).fetchone()
-        if row is None:
-            raise QueryError(
-                'SCAN_NOT_FOUND', f'scan {self.scan_id} does not exist')
-        return row
-
-
     @classmethod
     def open(cls, db_path, *, scan_id=None, product=None):
         path = Path(db_path).expanduser().resolve()
@@ -314,6 +304,16 @@ class ReadOnlyScanSession:
         except Exception:
             connection.close()
             raise
+
+
+    def scan_row(self):
+        row = self.connection.execute(
+            'SELECT product, cpu_arch, workspace_root, started_at, finished_at '
+            'FROM scans WHERE id = ?', (self.scan_id,)).fetchone()
+        if row is None:
+            raise QueryError(
+                'SCAN_NOT_FOUND', f'scan {self.scan_id} does not exist')
+        return row
 
 
     def close(self):

@@ -18,9 +18,9 @@ const libraryCount = computed(() => new Set(all.value.map(r => `${r.elf_module_i
 const rows = computed(() => all.value
   .filter(r => !strategy.value || r.match_strategy === strategy.value)
   .filter(r => !subsystem.value || r.subsystem === subsystem.value))
-const tag = computed(() => [strategy.value, subsystem.value].filter(Boolean).join('_'))
+const tag = computed(() => [strategy.value, subsystem.value].filter(Boolean).join('_'));
 
-watch(() => store.scanId, id => { all.value = loadNativeHeaders(id) }, { immediate: true })
+watch(() => store.scanId, id => { all.value = loadNativeHeaders(id) }, { immediate: true });
 </script>
 
 <template>

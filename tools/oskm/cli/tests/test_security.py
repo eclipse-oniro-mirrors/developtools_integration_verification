@@ -1,17 +1,15 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Security tests for sql_query escape hatch."""
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
-import unittest
 
+from pathlib import Path
+import _path_setup
+import unittest
 from oskm_cli.query import security
 from oskm_cli.query.security import check_sql, SecurityError
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 ALLOWED = {'components', 'services', 'gn_args', 'repos', 'innerapis', 'features',
            'syscaps', 'install_modules', 'install_targets', 'install_module_tags',

@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """End-to-end tests for the query tools against a real knowledge.db.
 
 Run: python3 -m unittest discover -s cli/tests -p "test_*.py"
@@ -10,22 +9,27 @@ Requires: OSKM_TEST_DB (否则整组 skip)。
 的做法，换一个库、甚至同一个库重扫一次就会红——而产品并没有坏。
 库的采集是允许降级的，所以选择器返回 None 时用例 `skipTest` 而不是失败。
 """
+
+from pathlib import Path
+import _path_setup
+import os
+import sys
+import unittest
+from oskm_cli.query.session import SessionManager
+from oskm_cli.query.tools import REGISTRY
+from oskm_cli.query.tools import dispatch
+from oskm_testing.testdb import DB
+from oskm_testing.testdb import latest_scan
+from oskm_testing.testdb import sample_arkts_kit
+from oskm_testing.testdb import sample_component
+from oskm_testing.testdb import sample_gn_arg
+from oskm_testing.testdb import sample_service
+
 # cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
 # `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
-import os
-import unittest
 
-import sys
-from oskm_cli.query.tools import dispatch, REGISTRY
-from oskm_cli.query.session import SessionManager
-from oskm_testing.testdb import DB, latest_scan, sample_component, sample_gn_arg
-from oskm_testing.testdb import sample_service, sample_arkts_kit
+_HERE = Path(__file__).resolve().parent
+
 
 
 
@@ -181,13 +185,13 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn(name, [item['name'] for item in r['results']] or [name])
 
     # Q14: "某个部件有哪些 syscap？"
-    def test_14_component_syscaps(self):
-        name = sample_component(DB, with_syscaps=True)
+    def test_14_componentsyscaps(self):
+        name = sample_component(DB, withsyscaps=True)
         if not name:
             self.skipTest('selected database has no component with syscaps')
         comp = dispatch('get_component', {'name': name}, self.mgr)
         self.assert_no_error(comp)
-        r = dispatch('component_syscaps', {'component_id': comp['id']}, self.mgr)
+        r = dispatch('componentsyscaps', {'component_id': comp['id']}, self.mgr)
         self.assert_no_error(r)
         self.assertIn('syscaps', r)
         self.assertGreater(len(r['syscaps']), 0)

@@ -1,8 +1,10 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """Tool registry, error types, and JSON Schema helpers."""
+
 import json
 from dataclasses import dataclass, field
 from typing import Any, Callable
+import importlib as _il
+
 
 REGISTRY: list['Tool'] = []
 
@@ -75,7 +77,6 @@ def dispatch(name: str, params: dict, manager) -> dict:
 # Auto-import all tool modules to trigger @register decorators.
 # Placed at the end to avoid circular imports: REGISTRY and register are
 # already defined above when these modules import from .. (this package).
-import importlib as _il
 for _mod in ('session', 'repos', 'component', 'service', 'install',
              'gn_args', 'elf', 'native', 'sa', 'hdi', 'query', 'issues', 'schema', 'arkts'):
     _il.import_module(f'.{_mod}', package=__name__)

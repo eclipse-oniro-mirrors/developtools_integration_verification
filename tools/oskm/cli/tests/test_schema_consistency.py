@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """查询 CLI 的 SQL 只许引用 oskm_schema 里真实存在的表。
 
 **为什么是门禁而不是结构性改造**：本想把 SQL 里的表名字面量换成
@@ -19,22 +18,20 @@
 与 f-string 方案的差别只是"测试期发现"而不是"导入期发现"——
 两者都在到达使用者之前。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import ast
 import os
 import re
 import sys
 import unittest
 from pathlib import Path
-
 from oskm_testing.testdb import DB
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 # cli/tests -> cli -> packages/oskm
 CLI = Path(__file__).resolve().parents[1] / 'oskm_cli'

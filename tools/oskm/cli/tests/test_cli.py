@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """CLI 的验收：ask / arch / diff / sql。
 
 `oskm ask` 的子命令是**生成的**，所以这里不逐个断言 50 个命令长什么样——
@@ -9,14 +8,8 @@
 test_arch_writes_no_sql）。这条约束不检查的话，`arch` 迟早会长成
 第二套绕过工具层的查询 API。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import io
 import json
 import os
@@ -28,12 +21,16 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
-
 from oskm_cli import cli
 from oskm_cli.query.tools import REGISTRY
 from oskm_testing.testdb import DB, count, elf_dest, sample_component
 from oskm_testing.testdb import sample_elf, sample_gn_arg, sample_names
 from oskm_testing.testdb import sample_service_with_sa
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 
 

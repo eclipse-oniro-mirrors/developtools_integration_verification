@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """`bootstrap.py` 的门禁：**只负责装，不负责查**。
 
 2026-11-12 删掉了查询透传（`ask/arch/diff/sql` 转发给 CLI + 自动注入 `--db`）。
@@ -15,17 +14,8 @@
 doctor / install 的命令行用例是从旧 `test_runtime_install.py` 搬过来的，
 断言按新入口重写。
 """
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM)):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import contextlib
 import importlib
 import io
@@ -34,7 +24,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
-
 from oskm_runtime import bootstrap, cli_install, doctor, install, state
 from oskm_runtime.db_download import DownloadError
 from oskm_runtime.environment import (
@@ -45,6 +34,14 @@ from oskm_runtime.environment import (
     SOURCE_ENV,
 )
 from oskm_testing.fixture import create_fixture_db, create_schema
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
 
 
 def capture(argv, **environ):

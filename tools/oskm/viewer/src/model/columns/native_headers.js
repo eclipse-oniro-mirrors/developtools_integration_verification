@@ -6,7 +6,7 @@ export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属']
 
 export const MATCH_STRATEGIES = {
   build_gn: 'BUILD.gn',
-  header_library: '@library',
+  'header_library': '@library',
   symbol: '符号匹配',
 }
 
@@ -53,4 +53,4 @@ export const COLUMNS = [
     link: r => (r.install_module_id ? { entity: 'install_modules', id: r.install_module_id } : null),
     meaning: '装出这个 ELF 的 GN target。',
     reading: '点链接可查看同模块安装出的其它文件。' },
-]
+];

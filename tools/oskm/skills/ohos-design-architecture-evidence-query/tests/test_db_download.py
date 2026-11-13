@@ -1,12 +1,4 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parent), str(_HERE.parents[2])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+import _path_setup
 import io
 import json
 import sqlite3
@@ -17,9 +9,13 @@ import zipfile
 from pathlib import Path
 from unittest import mock
 from urllib.error import HTTPError, URLError
-
 from oskm_runtime import db_download
 from oskm_testing.fixture import write_minimal_pyz
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 
 class FakeResponse(io.BytesIO):

@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """托管运行时的刷新判定：什么时候算过期。
 
 2026-11-12 拆分之后，`needs_refresh()` **只做廉价检查**（状态结构、日期、
@@ -21,27 +20,25 @@
 失败不破坏已有运行时这件事由 `_install_artifacts` 的回滚保证
 （见 `test_runtime_install.py`）。
 """
-# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
-# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
-# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-_SKILL = _HERE.parent
-_OSKM = _HERE.parents[2]
-for _p in (str(_SKILL), str(_OSKM / 'cli'), str(_OSKM)):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import json
 import re
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-
 from oskm_runtime import cli_install, install, state
 from oskm_runtime.environment import OPENHARMONY_CI
 from oskm_testing.fixture import create_schema
+
+# tests -> skill root（oskm_runtime）-> skills -> packages/oskm
+# （oskm_schema、oskm_testing）-> packages/oskm/cli（oskm_cli）。
+# `unittest discover` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+_SKILL = _HERE.parent
+_OSKM = _HERE.parents[2]
+
 
 
 class RuntimeRefreshPolicy(unittest.TestCase):

@@ -1,21 +1,18 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+from pathlib import Path
+import _path_setup
 import sqlite3
 import unittest
-
 from oskm_cli.query.tools import ToolError
 from oskm_cli.query.tools.elf import (
     elf_dependencies,
     elf_dependents,
     search_elf_modules,
 )
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 
 _ELF_SCHEMA_SQL = '''

@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """52 个工具每一个都至少被真调一次。
 
 两条断言，各拦一类故障：
@@ -16,17 +15,11 @@
 **登记表本身是静态的**（`SKIPPED` + `probe_params()` 的键集），所以
 "新加了工具却忘了登记探针"仍然会被立刻抓到，这一条不依赖库内容。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+from pathlib import Path
+import _path_setup
 import os
 import unittest
-
 from oskm_cli.query.tools import dispatch, REGISTRY
 from oskm_cli.query.session import SessionManager
 from oskm_testing.testdb import DB, count, sample_component, sample_elf
@@ -34,6 +27,11 @@ from oskm_testing.testdb import sample_gn_arg, sample_arkts_kit, sample_arkts_mo
 from oskm_testing.testdb import sample_native_mapping, sample_names, sample_repo
 from oskm_testing.testdb import sample_install_dest, sample_install_label
 from oskm_testing.testdb import sample_service, sample_service_with_sa
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 # 值为 None 表示**刻意**跳过（需要第二个库、或会破坏后续调用）。
 # 理由必须写在值里——不写理由就是漏测。
@@ -55,13 +53,7 @@ def _first(values):
     return values[0] if values else None
 
 
-def _basic_probes():
-    component = sample_component(DB)
-    repo = sample_repo(DB)
-    service = sample_service(DB)
-    service_id = _first(sample_names('services', 1, 'id', DB))
-    label = _first(sample_names('install_modules', 1, 'label', DB))
-    gn_arg = sample_gn_arg(DB)
+def _static_probes():
     return {
         'list_sessions': {},
         'list_scans': {},
@@ -79,6 +71,13 @@ def _basic_probes():
         'aggregate': {'table': 'components', 'group_by': ['subsystem']},
         'sql_query': {'sql': 'SELECT COUNT(*) AS n FROM components'},
         'get_schema': {'table': 'components'},
+    }
+
+
+def _component_probes():
+    component = sample_component(DB)
+    repo = sample_repo(DB)
+    return {
         'get_repo': {'name': repo[0]} if repo else None,
         'git_url': {'path': repo[1]} if repo else None,
         'get_component': {'name': component} if component else None,
@@ -89,6 +88,15 @@ def _basic_probes():
         'component_features': {'name': component} if component else None,
         'component_syscaps': {'name': component} if component else None,
         'component_innerapis': {'name': component} if component else None,
+    }
+
+
+def _service_install_gn_args_probes():
+    service = sample_service(DB)
+    service_id = _first(sample_names('services', 1, 'id', DB))
+    label = _first(sample_names('install_modules', 1, 'label', DB))
+    gn_arg = sample_gn_arg(DB)
+    return {
         'get_service': {'name': service} if service else None,
         'search_services': {'query': _fragment(service)} if service else None,
         'service_hosted': {'service_id': service_id} if service_id else None,
@@ -98,6 +106,14 @@ def _basic_probes():
         'get_gn_arg': {'name': gn_arg} if gn_arg else None,
         'search_gn_args': {'query': _fragment(gn_arg)} if gn_arg else None,
     }
+
+
+def _basic_probes():
+    probes = {}
+    probes.update(_static_probes())
+    probes.update(_component_probes())
+    probes.update(_service_install_gn_args_probes())
+    return probes
 
 
 def _runtime_probes():
@@ -166,7 +182,7 @@ PROBE_SOURCES = {
     'get_repo': 'repos', 'git_url': 'repos', 'list_repos': 'repos',
     'get_component': 'components', 'component_attached': 'components',
     'component_dependencies': 'components', 'component_dependents': 'components',
-    'component_features': 'features', 'component_syscaps': 'syscaps',
+    'component_features': 'features', 'componentsyscaps': 'syscaps',
     'component_innerapis': 'innerapis',
     'get_service': 'services', 'service_hosted': 'services',
     'get_install_module': 'install_modules', 'installed_at': 'install_modules',

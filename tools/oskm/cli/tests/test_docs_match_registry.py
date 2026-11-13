@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """文档里的工具清单必须与 REGISTRY 一致。
 
 这组断言的由来：工具数在四个地方被手抄过，实测全部过期——
@@ -15,21 +14,19 @@
 相对链接是否悬空由 skill 侧的 `tests/test_docs_links.py` 负责——那组断言跨
 两个产物与仓库文档，放在任何一侧都不合适，就跟着「文档主要归 skill 管」放过去了。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import os
 import re
 import sys
 import unittest
 from pathlib import Path
-
 from oskm_cli.query.tools import REGISTRY, export
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 # cli/tests -> cli -> packages/oskm -> packages -> KnowledgeBase/
 OSKM = Path(__file__).resolve().parents[2]

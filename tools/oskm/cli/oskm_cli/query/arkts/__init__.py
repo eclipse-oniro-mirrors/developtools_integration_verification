@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """ArkTS 的查询侧。
 
 原先住在 `oskm/collectors/arkts/`——那是采集器包，而这三个文件
@@ -11,7 +10,9 @@
 **一个模块名、一份 Table 实例**——这正是不用软链的原因，见
 `docs/architecture/standalone-packaging.md` §5。
 """
+
 from .query import ArktsQuery
 from .export import export_document
+
 
 __all__ = ['ArktsQuery', 'export_document']

@@ -1,4 +1,3 @@
-# pylint: disable=wrong-import-position  # tests adjust sys.path before local imports
 """两个产物的依赖边界——这是它们能各自独立发布的前提。
 
 三条边界，都有静态 + 动态双查：
@@ -12,14 +11,8 @@
 静态检查覆盖所有源文件；动态探针在子进程里跑，避免 `sys.modules` 被前一条
 用例污染。实体 API 用小型合成库验证，不依赖本机是否存在 wukong100 DB。
 """
-# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
-# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
-import sys as _sys
-from pathlib import Path as _Path
-_HERE = _Path(__file__).resolve().parent
-for _p in (str(_HERE.parents[0]), str(_HERE.parents[1])):
-    if _p not in _sys.path:
-        _sys.path.insert(0, _p)
+
+import _path_setup
 import json
 import re
 import subprocess
@@ -27,9 +20,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-
 from oskm_testing.fixture import create_fixture_db
 from oskm_testing.testdb import DB, sample_arkts_module
+
+# cli/tests -> cli (oskm_cli) / packages/oskm (oskm_schema, oskm_testing)。
+# `unittest discover -s cli/tests` 把测试模块当顶层加载，所以这里手工补路径。
+_HERE = Path(__file__).resolve().parent
+
 
 # cli/tests -> cli -> packages/oskm
 CLI = _HERE.parents[0]

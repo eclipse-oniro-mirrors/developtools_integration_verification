@@ -23,30 +23,37 @@ _LIBRARY_TAG = re.compile(r"^\s*\*\s*@library\s+([A-Za-z0-9_.+-]+)", re.MULTILIN
 _NATIVE_HEADERS_OUT_DIR = re.compile(r"^(?:\$\{?native_headers_out_dir\}?/?)")
 
 
+def _gn_block_end(text, start):
+    depth = 0
+    index = start
+    in_string = False
+    escaped = False
+    while index < len(text):
+        char = text[index]
+        if char == '"' and not escaped:
+            in_string = not in_string
+        if not in_string:
+            if char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return index
+        escaped = char == '\\' and not escaped
+        if char != '\\':
+            escaped = False
+        index += 1
+    return None
+
+
 def _gn_blocks(text, keyword):
     blocks = []
-    for match in re.finditer(rf'{keyword}\s*\(\s*"([^"]+)"\s*\)\s*\{{', text):
+    pattern = rf'{keyword}\s*\(\s*"([^"]+)"\s*\)\s*\{{'
+    for match in re.finditer(pattern, text):
         start = match.end() - 1
-        depth = 0
-        index = start
-        in_string = False
-        escaped = False
-        while index < len(text):
-            char = text[index]
-            if char == '"' and not escaped:
-                in_string = not in_string
-            if not in_string:
-                if char == '{':
-                    depth += 1
-                elif char == '}':
-                    depth -= 1
-                    if depth == 0:
-                        blocks.append((match.group(1), text[start + 1:index - 1]))
-                        break
-            escaped = char == '\\' and not escaped
-            if char != '\\':
-                escaped = False
-            index += 1
+        end = _gn_block_end(text, start)
+        if end is not None:
+            blocks.append((match.group(1), text[start + 1:end - 1]))
     return blocks
 
 
@@ -70,6 +77,16 @@ class NativeHeadersContext(ScanContext):
 
     def setup(self):
         pass
+
+
+    @staticmethod
+    def _version_key(path: Path):
+        version = path.parent.name
+        parts = version.split(".")
+        if parts and all(part.isdigit() for part in parts):
+            return (1, tuple(int(part) for part in parts), path.name)
+        return (0, version, path.name)
+
 
     def sdk_native_root(self) -> Path | None:
         configured = self.request.option("native_headers", "sdk_native_root")
@@ -110,13 +127,6 @@ class NativeHeadersContext(ScanContext):
             return None
         return best
 
-    @staticmethod
-    def _version_key(path: Path):
-        version = path.parent.name
-        parts = version.split(".")
-        if parts and all(part.isdigit() for part in parts):
-            return (1, tuple(int(part) for part in parts), path.name)
-        return (0, version, path.name)
 
     def read_sdk_elf(self, path: Path):
         self.check()
@@ -142,6 +152,7 @@ class NativeHeadersContext(ScanContext):
         finally:
             self.used_bytes = reader.used
             handle.close()
+
 
 
 @register
@@ -216,6 +227,29 @@ class NativeHeadersCollector(BaseCollector):
                       details={"libraries": sorted(set(unresolved))[:100],
                                "total_count": len(set(unresolved))})
 
+
+    @staticmethod
+    def _gn_source_path(build_dir, source, workspace):
+        if source.startswith("//"):
+            path = (workspace / source[2:]).resolve()
+        else:
+            path = (build_dir / source).resolve()
+        return path.relative_to(workspace).as_posix()
+
+
+    @staticmethod
+    def _source_header(source_headers, installed):
+        exact = source_headers["by_output"].get(installed)
+        if exact is not None:
+            return exact
+        matches = source_headers["by_name"].get(Path(installed).name, [])
+        return matches[0] if len(matches) == 1 else None
+
+
+    def scope(self, ctx):
+        return "elf_modules(category contains native) -> interface/sdk_c headers"
+
+
     def _scan_headers(self, ctx, include):
         library_headers = defaultdict(set)
         for path in sorted(include.rglob("*.h")):
@@ -233,6 +267,45 @@ class NativeHeadersCollector(BaseCollector):
                     library_headers[library].add(relative)
         return library_headers
 
+
+    @staticmethod
+    def _header_outputs(source_path, resolved, dest, workspace):
+        source_name = Path(source_path).name
+        if not resolved.is_dir():
+            installed = (Path(dest) / source_name).as_posix() if dest else source_name
+            return [(installed, source_path)]
+        outputs = []
+        for file in sorted(resolved.rglob("*")):
+            if not file.is_file():
+                continue
+            relative = file.relative_to(resolved)
+            installed = ((Path(dest) / source_name / relative).as_posix()
+                         if dest else (source_name / relative).as_posix())
+            outputs.append((installed, file.relative_to(workspace).as_posix()))
+        return outputs
+
+    @staticmethod
+    def _record_outputs(outputs, source_headers):
+        for installed, source_path in outputs:
+            source_headers["by_output"][installed] = source_path
+            source_headers["by_name"][Path(source_path).name].append(source_path)
+
+    @staticmethod
+    def _declared_headers(declared, outputs):
+        headers = set()
+        for item in declared:
+            item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
+            match = next((source for output, source in outputs
+                          if output == item), None)
+            if match is not None:
+                headers.add(match)
+                continue
+            matches = [source for output, source in outputs
+                       if Path(output).name == Path(item).name]
+            if len(matches) == 1:
+                headers.add(matches[0])
+        return headers
+
     def _parse_build_gn(self, ctx):
         root = ctx.workspace / "interface/sdk_c"
         mappings = {}
@@ -240,7 +313,6 @@ class NativeHeadersCollector(BaseCollector):
         if not root.is_dir():
             ctx.issue(root, "Native SDK_BUILD_GN_ROOT_UNAVAILABLE", advisory=True)
             return mappings, source_headers
-
         for path in sorted(root.rglob("BUILD.gn")):
             try:
                 text = ctx.read_bytes(path, ctx.workspace).decode("utf-8")
@@ -250,70 +322,30 @@ class NativeHeadersCollector(BaseCollector):
                 continue
             ctx.scan_directories.add(str(path.parent))
             text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
-
-            outputs = []
-            for _, body in _gn_blocks(text, "ohos_native_headers"):
-                dest = _normalize_dest_dir(_gn_scalar(body, "dest_dir"))
-                for source in _gn_strings(body, "sources"):
-                    source_path = self._gn_source_path(path.parent, source, ctx.workspace)
-                    resolved = ctx.workspace / source_path
-                    if resolved.is_dir():
-                        for file in sorted(resolved.rglob("*")):
-                            if not file.is_file():
-                                continue
-                            relative = file.relative_to(resolved)
-                            installed = ((Path(dest) / Path(source).name / relative)
-                                         .as_posix() if dest else
-                                         (Path(source).name / relative).as_posix())
-                            file_path = file.relative_to(ctx.workspace).as_posix()
-                            outputs.append((installed, file_path))
-                            source_headers["by_output"][installed] = file_path
-                            source_headers["by_name"][file.name].append(file_path)
-                    else:
-                        installed = ((Path(dest) / Path(source).name).as_posix()
-                                     if dest else Path(source).name)
-                        outputs.append((installed, source_path))
-                        source_headers["by_output"][installed] = source_path
-                        source_headers["by_name"][Path(source).name].append(source_path)
-
+            outputs = self._collect_header_outputs(ctx, path, text)
+            self._record_outputs(outputs, source_headers)
             for target, body in _gn_blocks(text, "ohos_native_library"):
-                output_name = _gn_scalar(body, "output_name") or target
-                output_extension = _gn_scalar(body, "output_extension") or "z.so"
-                so_name = f"lib{output_name}.{output_extension}"
                 declared = _gn_strings(body, "system_capability_headers")
                 if not declared:
                     continue
-
-                headers = set()
-                for item in declared:
-                    item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
-                    match = next((source for output, source in outputs
-                                  if output == item), None)
-                    if match is not None:
-                        headers.add(match)
-                        continue
-                    matches = [source for output, source in outputs
-                               if Path(output).name == Path(item).name]
-                    if len(matches) == 1:
-                        headers.add(matches[0])
-                mappings[so_name] = tuple(sorted(headers))
+                output_name = _gn_scalar(body, "output_name") or target
+                output_extension = _gn_scalar(body, "output_extension") or "z.so"
+                so_name = f"lib{output_name}.{output_extension}"
+                mappings[so_name] = tuple(sorted(
+                    self._declared_headers(declared, outputs)))
         return mappings, source_headers
 
-    @staticmethod
-    def _gn_source_path(build_dir, source, workspace):
-        if source.startswith("//"):
-            path = (workspace / source[2:]).resolve()
-        else:
-            path = (build_dir / source).resolve()
-        return path.relative_to(workspace).as_posix()
+    def _collect_header_outputs(self, ctx, path, text):
+        outputs = []
+        for _, body in _gn_blocks(text, "ohos_native_headers"):
+            dest = _normalize_dest_dir(_gn_scalar(body, "dest_dir"))
+            for source in _gn_strings(body, "sources"):
+                source_path = self._gn_source_path(path.parent, source, ctx.workspace)
+                resolved = ctx.workspace / source_path
+                outputs.extend(self._header_outputs(
+                    source_path, resolved, dest, ctx.workspace))
+        return outputs
 
-    @staticmethod
-    def _source_header(source_headers, installed):
-        exact = source_headers["by_output"].get(installed)
-        if exact is not None:
-            return exact
-        matches = source_headers["by_name"].get(Path(installed).name, [])
-        return matches[0] if len(matches) == 1 else None
 
     def _symbol_headers(self, ctx, sdk_root, include, so_name):
         library = sdk_root / "sysroot/usr/lib/x86_64-linux-ohos" / so_name
@@ -356,7 +388,11 @@ class NativeHeadersCollector(BaseCollector):
                                "headers": sorted(path.as_posix() for path in best)[:20]})
             return (), symbols
         selected = next(iter(best))
-        return (selected,), matched_by_header[selected]
+        selected_headers = matched_by_header.get(selected)
+        if selected_headers is None:
+            return (), symbols
+        return (selected,), selected_headers
+
 
     def _emit(self, ctx, elf_module_id, headers, strategy):
         for header in sorted(headers):
@@ -366,7 +402,3 @@ class NativeHeadersCollector(BaseCollector):
                 "match_strategy": strategy,
             }
             ctx.emit("native_headers", row)
-
-    def scope(self, ctx):
-        return "elf_modules(category contains native) -> interface/sdk_c headers"
-
