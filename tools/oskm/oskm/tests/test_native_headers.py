@@ -110,6 +110,31 @@ ohos_native_library("libGLESv3_native") {
         self.assertEqual(records[0]["match_strategy"], "build_gn")
         self.assertEqual(records[0]["header_path"].endswith("GLES3/gl3.h"), True)
 
+    def test_current_ndk_templates_are_parsed(self):
+        self.write(self.sdk / "sysroot/usr/include/bundle/native_interface_bundle.h",
+                   "/* @library libbundle_ndk.z.so */\n")
+        self.write(self.root / "interface/sdk_c/bundlemanager/BUILD.gn", """
+ohos_ndk_headers("bundle_header") {
+  dest_dir = "$ndk_headers_out_dir/bundle/"
+  sources = [ "include/native_interface_bundle.h" ]
+}
+
+ohos_ndk_library("libbundle_ndk") {
+  output_name = "bundle_ndk"
+  output_extension = "z.so"
+  system_capability_headers = [ "bundle/native_interface_bundle.h" ]
+}
+""")
+        self.write(self.root / "interface/sdk_c/bundlemanager/include/native_interface_bundle.h",
+                   "/* @library libbundle_ndk.z.so */\n")
+        ctx = self.context("libbundle_ndk.z.so")
+        records = self.collect(ctx)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["header_path"],
+                         "interface/sdk_c/bundlemanager/include/native_interface_bundle.h")
+        self.assertEqual(records[0]["match_strategy"], "build_gn")
+
     def test_exported_symbols_are_last_resort(self):
         self.write(self.sdk / "sysroot/usr/include/uv.h",
                    "void uv_close(void *handle);\nvoid uv_run(void *loop);\n")

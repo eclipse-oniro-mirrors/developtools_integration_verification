@@ -14,6 +14,7 @@ question is “which headers describe this library.” `match_strategy` preserve
 the source quality, while SysCap and symbol evidence are not mapping attributes.
 
 `header_path` is the workspace-relative source path under `interface/sdk_c`.
-The collector uses `ohos_native_headers.sources` to translate installed SDK paths
-such as `hilog/log.h` back to their source paths.
+The collector uses `ohos_ndk_headers.sources` to translate installed SDK paths
+such as `hilog/log.h` back to their source paths; the legacy `ohos_native_*`
+template spelling remains supported.
 

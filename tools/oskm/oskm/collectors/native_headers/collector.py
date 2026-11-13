@@ -20,7 +20,10 @@ from .models import NativeHeaderResult, NativeHeaderScanRequest
 
 
 _LIBRARY_TAG = re.compile(r"^\s*\*\s*@library\s+([A-Za-z0-9_.+-]+)", re.MULTILINE)
-_NATIVE_HEADERS_OUT_DIR = re.compile(r"^(?:\$\{?native_headers_out_dir\}?/?)")
+_SDK_HEADERS_OUT_DIR = re.compile(
+    r"^(?:\$\{?(?:ndk|native)_headers_out_dir\}?/?)")
+_LIBRARY_TEMPLATES = ("ohos_ndk_library", "ohos_native_library")
+_HEADER_TEMPLATES = ("ohos_ndk_headers", "ohos_native_headers")
 
 
 def _gn_block_end(text, start):
@@ -59,7 +62,7 @@ def _gn_strings(body, key):
 
 
 def _normalize_dest_dir(value):
-    return _NATIVE_HEADERS_OUT_DIR.sub('', value or '').strip('/')
+    return _SDK_HEADERS_OUT_DIR.sub('', value or '').strip('/')
 
 
 class NativeHeadersContext(ScanContext):
@@ -268,7 +271,7 @@ class NativeHeadersCollector(BaseCollector):
     def _declared_headers(declared, outputs):
         headers = set()
         for item in declared:
-            item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
+            item = _SDK_HEADERS_OUT_DIR.sub('', item)
             match = next((source for output, source in outputs
                           if output == item), None)
             if match is not None:
@@ -317,27 +320,31 @@ class NativeHeadersCollector(BaseCollector):
             text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
             outputs = self._collect_header_outputs(ctx, path, text)
             self._record_outputs(outputs, source_headers)
-            for target, body in _gn_blocks(text, "ohos_native_library"):
-                declared = _gn_strings(body, "system_capability_headers")
-                if not declared:
-                    continue
-                output_name = _gn_scalar(body, "output_name") or target
-                output_extension = _gn_scalar(body, "output_extension") or "z.so"
-                so_name = f"lib{output_name}.{output_extension}"
-                mappings[so_name] = tuple(sorted(
-                    self._declared_headers(declared, outputs)))
+            for template in _LIBRARY_TEMPLATES:
+                for target, body in _gn_blocks(text, template):
+                    declared = _gn_strings(body, "system_capability_headers")
+                    if not declared:
+                        continue
+                    output_name = _gn_scalar(body, "output_name") or target
+                    output_extension = (
+                        _gn_scalar(body, "output_extension") or "z.so")
+                    so_name = f"lib{output_name}.{output_extension}"
+                    mappings[so_name] = tuple(sorted(
+                        self._declared_headers(declared, outputs)))
         return mappings, source_headers
 
 
     def _collect_header_outputs(self, ctx, path, text):
         outputs = []
-        for _, body in _gn_blocks(text, "ohos_native_headers"):
-            dest = _normalize_dest_dir(_gn_scalar(body, "dest_dir"))
-            for source in _gn_strings(body, "sources"):
-                source_path = self._gn_source_path(path.parent, source, ctx.workspace)
-                resolved = ctx.workspace / source_path
-                outputs.extend(self._header_outputs(
-                    source_path, resolved, dest, ctx.workspace))
+        for template in _HEADER_TEMPLATES:
+            for _, body in _gn_blocks(text, template):
+                dest = _normalize_dest_dir(_gn_scalar(body, "dest_dir"))
+                for source in _gn_strings(body, "sources"):
+                    source_path = self._gn_source_path(path.parent, source,
+                                                       ctx.workspace)
+                    resolved = ctx.workspace / source_path
+                    outputs.extend(self._header_outputs(
+                        source_path, resolved, dest, ctx.workspace))
         return outputs
 
 
