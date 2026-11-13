@@ -14,7 +14,7 @@ const subsystem = useQueryState('subsystem', '')
 
 const subsystems = computed(() =>
   [...new Set(all.value.map(r => r.subsystem).filter(Boolean))].sort())
-const libraryCount = computed(() => new Set(all.value.map(r => `${r.elf_module_id}/${r.dest}`)).size)
+const libraryCount = computed(() => new Set(all.value.map(r => `${r.elf_module_id}/${r.dest}`)).size);
 const rows = computed(() => all.value
   .filter(r => !strategy.value || r.match_strategy === strategy.value)
   .filter(r => !subsystem.value || r.subsystem === subsystem.value));

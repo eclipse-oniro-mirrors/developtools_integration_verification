@@ -2,7 +2,7 @@
 
    一行只表达“这个 ELF 提供这个头文件”，不是“这个头文件属于这个部件”。
    部件、安装模块等归属字段都经 ELF JOIN 得到，避免在映射表里冗余存储。 */
-export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属']
+export const GROUPS = ['头文件', 'Native SDK 库', '匹配方式', '归属'];
 
 export const MATCH_STRATEGIES = {
   'build_gn': 'BUILD.gn',
