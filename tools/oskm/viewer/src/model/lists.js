@@ -72,7 +72,7 @@ export function loadNativeHeaders(scanId) {
      ORDER BY n.header_path, t.dest`, [scanId])
     /* fileSource 统一处理各托管站的文件链接：codehub 开源仓用 files 格式
        （ref 用分支名），公开托管仓保持 blob + 扫描提交号。 */
-    .map(r => ({ ...r, source_url: fileSource(scanId, r.header_path)?.url || null }))
+    .map(r => ({ ...r, sourceUrl: fileSource(scanId, r.header_path)?.url || null }))
 }
 
 /* ------------------------------------------------------------ 1.2 SA服务 */

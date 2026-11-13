@@ -15,9 +15,9 @@ export const COLUMNS = [
     fixed: true, show: true, primary: true, full: 64,
     meaning: 'interface/sdk_c 里的源码头文件，相对工程根目录。',
     reading: 'GN 的 sources 声明会把它安装进 SDK sysroot；这里保留源路径，方便回代码仓。' },
-  { key: 'source_url', label: '源码', group: '头文件', type: 'text', width: 90, show: true,
-    value: r => (r.source_url ? '查看 ↗' : ''),
-    href: r => r.source_url || null,
+  { key: 'sourceUrl', label: '源码', group: '头文件', type: 'text', width: 90, show: true,
+    value: r => (r.sourceUrl ? '查看 ↗' : ''),
+    href: r => r.sourceUrl || null,
     meaning: '在代码仓里打开这份头文件。',
     reading: '公开托管仓用扫描当时的提交号拼 blob 链接；codehub 开源仓用分支名拼 files 链接。未做内容比对。' },
 
