@@ -31,7 +31,7 @@
   "kits": [
     {
       "test-file-name": [
-        "ace/resource/common/hap/uiAssertTest_01.hap"
+        "ace/resource/common/hap/uiAssertTest.hap"
       ],
       "type": "AppInstallKit",
       "cleanup-apps": true
