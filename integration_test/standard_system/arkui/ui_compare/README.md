@@ -2,14 +2,14 @@
 
 本目录为 OpenHarmony **UI 截图对比 / 非截图断言** 样本工程集合。开发约定与流水线见 skill **ohxtsuicompare**。
 
-## 工程角色
+## 工程角色（最终双工程）
 
 | 工程 | 角色 | 是否接受新业务 Suite |
 |------|------|----------------------|
-| **uiCompareTest_12** | **活跃模板**（RichEditor 族最全；`createWindow` + 具名 `snapShot` + base/dark） | 仅作克隆源，一般不在此堆新需求 |
-| **uiCompareTest_01～_11** | 历史样本 | **冻结**：不新增业务 Suite；仅允许注释统一、对比 json 补齐等卫生改动 |
-| **uiCompareTest_13** | **0803 截图对比新工程** | 适合视觉 golden 的新需求 |
-| **uiAssertTest_01** | **0803 非截图断言新工程** | TDD/日志/UEC/外设等不适合截图的用例 |
+| **uiCompareTest_all** | **截图对比唯一载体**（`test/component|scenario` 分目录；可按文件夹或整工程跑测） | 是（视觉 golden / windowSnap） |
+| **uiAssertTest** | **非截图断言唯一载体**（同样按 component/scenario 分目录） | 是（Hypium expect / 日志 / UEC 等） |
+
+历史 `uiCompareTest_01`～`_12`、`uiAssertTest_01` 已迁入上述双工程并删除。
 
 ## 用例注释规范（强制）
 
@@ -32,14 +32,14 @@
 
 ## 对比配置
 
-- 工程根须有 `uiCompareTest_XX.json` 或 `.json5`，含 DeviceTest `driver` / `kits` / **`extra`** 成对 webp。
-- **`snapShot()` 无参**：无法可靠登记 `extra`；历史工程保留现状；**新工程禁止无参**，必须 `snapShot("测试号_01")`。
+- `uiCompareTest_all` 工程根须有 `uiCompareTest_all.json`（或 `.json5`），含 DeviceTest `driver` / `kits` / **`extra`** 成对 webp。
+- **`snapShot()` 无参**：新用例禁止；必须 `snapShot("测试号_01")`。
 
 ## Agent / 开发禁改
 
 - 勿改 `ets/testability/pages/test/` 下孤儿副本（以 `ets/test/` 为准）。
 - 勿整目录覆盖 `model/`；勿提交 `autosign/`、`hypium/`、`build/`。
-- 新需求只进 **uiCompareTest_13** / **uiAssertTest_01**。
+- 截图新需求只进 **uiCompareTest_all**；断言新需求只进 **uiAssertTest**。
 
 ## 需求分流文档
 
