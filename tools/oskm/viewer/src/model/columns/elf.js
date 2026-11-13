@@ -5,7 +5,7 @@ export const GROUPS = ['文件', 'API', 'ELF 事实', '依赖', '归属']
 export const API_TYPES = ['public_api', 'inner_api', 'internal_api']
 
 export const ELF_CATEGORIES = [
-  'napi', 'ndk', 'ani', 'cangjie', 'extension',
+  'napi', 'native', 'ani', 'cangjie', 'extension',
   'platform_sdk', 'platform_sdk_indirect',
   'chipset_sdk', 'chipset_sdk_indirect',
   'sa', 'hdi', 'hdi_proxy', 'hdi_stub', 'anco', 'other',

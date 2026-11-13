@@ -15,9 +15,23 @@
 ## 2. 验证命令与结果
 
 ```bash
-python3 -m unittest discover -s KnowledgeBase/packages/oskm/tests -q
-python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
+python3 -m unittest discover -s packages/oskm/oskm/tests -q
 ```
+
+> `verify_rk3568.py` 已于 2026-11-12 删除（rk3568 不再是验收基线，改用
+> wukong100）。当时的产品级回归等价于跑一次全量扫描再看各域的
+> `collector_runs` / `issues`：
+>
+> ```bash
+> cd packages/oskm
+> python3.12 -m oskm.cli scan --workspace-root /path/to/code --product wukong100 \
+>     --db ../../artifacts/wukong100/knowledge.db
+> # 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+> export PYTHONPATH=cli
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db \
+>     ask get_scan_info        # 各采集器 status / record_count / error
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db ask list_issues
+> ```
 
 **73 项测试通过：24 项 HDI、24 项 services、25 项 SA。**
 
@@ -52,7 +66,7 @@ API/持久化测试验证只读结果、组合筛选、非法查询、聚合、�
 
 | 格式 | 字节数 | 文件 |
 | --- | ---: | --- |
-| 格式化 JSON | 42275 | [hdis.json](../../../../../../../../KnowledgeBase/artifacts/hdi/rk3568/hdis.json) |
+| 格式化 JSON | 42275 | `hdis.json`（`artifacts/hdi/rk3568/hdis.json`） |
 
 同一内容的内存、JSON：57 条详情与宿主引用、过滤、按进程/部件/子系统/服务/预加载聚合及游标均一致。JSON 文件与 API重复写入，CLI 再扫描覆盖 JSON，离线验证通过。目录只有上述两个文件，产物由 Git 忽略。
 
@@ -67,4 +81,4 @@ API/持久化测试验证只读结果、组合筛选、非法查询、聚合、�
 
 ## 6. 边界
 
-这是当前 rk3568 静态产物验收，不证明缺库声明对应运行失败，也不证明唯一文件就是运行时加载文件。HDI IDL、接口版本、完整 linker namespace、其他 HCB 版本和运行态分析未实施。离线产物校验验证结构，不重新访问工作区核实来源。
+这是当前 rk3568 静态产物验收，不证明缺库声明对应运行失败，也不证明唯一文件就是运行时加载文件。HDI IDL、接口版本、完整 linker namespace、其余 HCB 版本和运行态分析未实施。离线产物校验验证结构，不重新访问工作区核实来源。

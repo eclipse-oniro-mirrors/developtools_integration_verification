@@ -151,7 +151,7 @@ SELECT e.*, …, COALESCE(i.n, 0) AS dependents, COALESCE(u.n, 0) AS unresolved
 ## 7. 复现
 
 ```bash
-cd code/developtools/integration_verification/tools/oskm/viewer
+cd packages/oskm/viewer
 npm run dev &                     # 5173
 npm run perf                      # 含 #/files/elf 的预算
 node tools/smoke.mjs              # ELF 列表计数 / 默认排序 / 档案登记 等 23 条

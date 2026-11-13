@@ -20,9 +20,19 @@
 从 OpenHarmony 工程根执行：
 
 ```bash
-python3 -m unittest discover -s KnowledgeBase/packages/oskm/tests -q
+python3 -m unittest discover -s packages/oskm/oskm/tests -q
 
-python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
+# 产品级验收（需要真实 OpenHarmony 代码树）：跑一次全量扫描，
+# 再按域看 collector_runs / issues。原 verify_rk3568.py 已于 2026-11-12 删除，
+# 验收基线从 rk3568 换成 wukong100。
+cd packages/oskm
+python3.12 -m oskm.cli scan --workspace-root "$PWD"/<OH源码根> --product wukong100 \
+    --db ../../artifacts/wukong100/knowledge.db
+# 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+DB=../../artifacts/wukong100/knowledge.db
+export PYTHONPATH=cli
+python3.12 -m oskm_cli --db "$DB" ask get_scan_info  # 各采集器 status/record_count/error
+python3.12 -m oskm_cli --db "$DB" ask list_issues
 ```
 
 合成测试 **24 项通过**。覆盖 path 拆分、空参数、异常 path 保留、拆分布局校验、原字段可逆布局、元数据同名冲突、精确小数、大整数、缺省/null、数组及重复声明、未知分区/嵌套目录、空根、读取限制和符号链接边界、目录读取失败、进程分类、工具链合并、安装歧义、残缺索引、最近 bundle 与归属冲突、字段查询、位置句柄、分页、聚合分母、JSON 结构校验、JSON 两空格缩进及精度保持、JSON 文件与 API默认原子覆盖、失败保留旧文件、取消清理、回调错误和 CLI 退出码。

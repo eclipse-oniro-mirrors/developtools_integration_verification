@@ -46,9 +46,8 @@ class Projection:
 
     def __init__(self, ctx, files):
         self.ctx = ctx
-        zone = getattr(ctx.request, 'zone', 'blue')
-        self.cpu_arch = getattr(ctx.request, 'cpu_arch', 'arm64' if zone == 'yellow' else 'arm')
-        self.arkui_engine_so = arkui_engine_so(zone, self.cpu_arch)
+        self.cpu_arch = getattr(ctx.request, 'cpu_arch', None) or 'arm64'
+        self.arkui_engine_so = arkui_engine_so(self.cpu_arch)
         self.modules, self.kits, self.sources, self.relations = {}, {}, {}, []
         # 逐文件摘要只用于算 files_digest，不落库：入库一份 1,568 行的 sha256
         # 并不能证明"现在的文件还是当时那份"，而 scope 里的总摘要已经锁住了输入身份。

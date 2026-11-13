@@ -293,7 +293,7 @@ SELECT count(*) FROM arkts_kit_relations
   `linking.py` 的 `resolve()`、`tables.py` 的 CHECK 约束，
   确认哪些等式是代码里的常量赋值、哪些只是本输入未触发别的分支
 - **读者清点**：对每个候选列 grep `query.py`、`records.py`、`export.py`、
-  `viewer/src/model/lists.js`、`agentic/query/tools/arkts.py`，
+  `viewer/src/model/lists.js`、`cli/oskm_cli/query/tools/arkts.py`，
   **没有读者的列删起来才是真便宜**
 - **框架约束**：grep `primary_key` 确认 `runner.py`/`framework.py` 只取 `[0]`，
   据此判定复合键改动的影响面

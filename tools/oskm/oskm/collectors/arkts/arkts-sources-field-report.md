@@ -44,7 +44,7 @@
 .d.ts         → dynamic   （ArkTS 1.1）
 ```
 
-**它永远是单值，不会"static + dynamic 同时"。** 一份文件只有一个后缀。
+**它始终是单值，不会"static + dynamic 同时"。** 一份文件只有一个后缀。
 
 "两个版本都有"是**模块**的属性，不是文件的：`arkts_modules.language_coverage`
 取 `dynamic`(908) / `static`(213) / **`both`(198)**。那 198 个模块各有两份声明文件，
@@ -158,7 +158,7 @@ JSON 数组，记录**找到了哪些标记、在第几个字节**。实测五�
 | 删除 | 原因 | 失去了什么 |
 |---|---|---|
 | `kind` + `napi-map.json` 行 | 映射表是**采集过程用的参考数据**，不是 sdk-js 仓里的文件，混进"声明文件"清单会误导 | 实现关系不再有指向输入文件的外键。映射表的摘要改记在 `collector_runs.scope.napi_map`，复现性不受影响 |
-| `sha256` | 逐文件摘要入库 1,567 行，而输入身份已由 `scope.files_digest` 一个总摘要锁住 | **失去逐文件的内容校验**：按 `header_span` 回源码切片时，无法判断这份文件是否已经变过。总摘要只能告诉你"整体变了"，指不出是哪一份。如果将来要做"证据原文可离线复算"，这一列得加回来 |
+| `sha256` | 逐文件摘要入库 1,567 行，而输入身份已由 `scope.files_digest` 一个总摘要锁住 | **失去逐文件的内容校验**：按 `header_span` 回源码切片时，无法判断这份文件是否已经变过。总摘要只能告诉用户"整体变了"，指不出是哪一份。如果将来要做"证据原文可离线复算"，这一列得加回来 |
 | `references_status` | 它完全是 `coverage['kit.references']` 的投射（0 反例） | 没有损失。查询改读 coverage |
 | `coverage` 里的 `extractor_version` | 全库一个值，已在 `scope.backend.capabilities` | 没有损失 |
 | `repo_id` | 取值恒为单值（arkts 只扫 `interface/sdk-js` 一个根）；源码 URL 按路径前缀匹配，不读它 | arkts 失去到 `repos` 的外键边，档案页的关联区不再显示"所属仓"。源码链接不受影响 |

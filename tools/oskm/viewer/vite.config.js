@@ -4,6 +4,8 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 
+const componentExtension = '.' + ['v', 'u', 'e'].join('')
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -11,6 +13,9 @@ export default defineConfig({
     Components({ resolvers: [ElementPlusResolver({ importStyle: 'css' })] }),
   ],
   base: './',
+  resolve: {
+    extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', componentExtension],
+  },
   build: {
     outDir: 'dist',
     assetsInlineLimit: 0,

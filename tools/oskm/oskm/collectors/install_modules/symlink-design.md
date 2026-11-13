@@ -121,7 +121,7 @@ v1.0 的理由是"`kind` 是声明、`link_target` 是观测，两个轴不能�
 1. **声明已经在 `record` 里了。** 全部 94 个模块的 `record` 都逐字带着
    `symlink_file` 与 `symlink_path`（已验证）。再加一个 `kind` 列，
    正是上一轮删 `components.features` 时反对的"同一事实的第三份拷贝"——
-   我自己刚立的规矩，转头就要破。
+   本文自己刚立的规矩，转头就要破。
 
 2. **`link_target` 已经能回答唯一需要回答的问题。** 它是观测值
    （`readlink` 的结果），所以 `link_target IS NOT NULL` ⟺ **这个条目在镜像里
@@ -164,7 +164,7 @@ v1.0 的理由是"`kind` 是声明、`link_target` 是观测，两个轴不能�
 四条规矩，都来自实测：
 
 1. **`symlink_file` 也要走 `normalize_dest()`**。当前 776 条路径全都干净
-   （无绝对路径、无 `..`、无反斜杠、无尾部 `/`），但 `dest` 里**有 8 条带 `/./`**
+   （无完整路径、无 `..`、无反斜杠、无尾部 `/`），但 `dest` 里**有 8 条带 `/./`**
    （`system/etc/./telephony/operator_config.json`），说明这份文件的路径
    并不总是规范的。不能因为 `symlink_file` 这次碰巧干净就跳过规范化。
 
@@ -176,8 +176,8 @@ v1.0 的理由是"`kind` 是声明、`link_target` 是观测，两个轴不能�
    和 `symlink_file` 里——两个键指的是同一个位置，不是两样东西。
    `dest` 那一行已经代表了它，`link_target` 的观测也已记下"这里是个链接"。
    再发一行会让 `modules_at()` 对同一路径返回两条，是纯伤害。
-   去重用**规范化之后**的路径比较——否则 `system/lib/./ndk/x.so`
-   和 `system/lib/ndk/x.so` 会被当成两个。
+   去重用**规范化之后**的路径比较——否则 `system/lib/./native/x.so`
+   和 `system/lib/native/x.so` 会被当成两个。
 
 4. **`size` / `link_target` 沿用上一轮的 `measure()`**，不新写一套。
    链接行的 `size` 自然就是链接自身的几十字节，`link_target` 自然就是
@@ -224,7 +224,7 @@ v1.0 的理由是"`kind` 是声明、`link_target` 是观测，两个轴不能�
   建议拆成两个数，或在 ⓘ 里写明包含链接
 - **安装目标页的导语要改**：「5804 个文件」变成「6580 个条目：
   5804 个文件 + 776 个软链接」
-- **镜像树**（`Image.vue`）会多出 776 个节点，`platformsdk` 这类目录
+- **镜像树**（`Image` 组件）会多出 776 个节点，`platformsdk` 这类目录
   第一次有内容——这正是收益：以前点进去是空的
 
 ### 性能
@@ -242,7 +242,7 @@ v1.0 的理由是"`kind` 是声明、`link_target` 是观测，两个轴不能�
 | `targets.py` | `expand()` 增一轮 `symlink_file` 遍历；`dest_index` 连续编号；去重；新 issue 码 |
 | `model/issues.js` | `SYMLINK_NOT_A_LINK` 的人话解释 |
 | `model/columns/targets.js` | 「类型」列（由 `link_target` 推导）+ 「同模块文件」的 ⓘ 改口径 |
-| `views/list/Targets.vue` | 导语改成「文件 + 软链接」 |
+| `views/list/Targets` 组件 | 导语改成「文件 + 软链接」 |
 | `tests/test_install_modules.py` | 链接行、同路径去重、声明为链接却是普通文件 |
 
 回归要钉住的四条：

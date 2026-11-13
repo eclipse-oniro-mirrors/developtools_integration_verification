@@ -132,7 +132,7 @@ flowchart LR
 
 | 列 | 说明 |
 |---|---|
-| `source_path` | 主列，workspace 相对路径；带 git 链接（复用 `gitlink.js` 的通用文件链接规则，与 NDK 头文件一致） |
+| `source_path` | 主列，workspace 相对路径；带 git 链接（复用 `gitlink.js` 的通用文件链接规则，与 Native SDK 头文件一致） |
 | `role` | 模块声明(1,517) / Kit 入口(50)，列表顶部给一键分面 |
 | `module_key` / `kit_key` | 它声明的实体，链接过去 |
 | `declaration_format` / `language_variant` | d.ts / d.ets / static.d.ets；dynamic / static |

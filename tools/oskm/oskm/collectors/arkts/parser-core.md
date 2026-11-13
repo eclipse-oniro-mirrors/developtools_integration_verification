@@ -52,11 +52,11 @@ flowchart LR
    文件或打包裁剪脚本。
 5. **后端失败显式报告。** 不自动回退标准 TypeScript、逐行正则或 Python 轻量解析——
    同一 schema 下隐藏解析行为变化比失败更糟。
-6. **核心面向能力，采集器面向投射。** `module_kit_v1` 是首个配置，不把 module/kit
+6. **核心面向能力，采集器面向投射。** `module_kit_v1` 是第一个配置，不把 module/kit
    写成核心仅有的两条永久分支；协议不暴露 TS 节点对象或 SyntaxKind 数值。
 
 Python 主包仍只用标准库。**Node 与 ohos-typescript 是 arkts 独有的外部运行时依赖**，
-仅在执行 arkts 扫描时加载；其他采集器的注册、扫描和查询都不要求安装 Node，
+仅在执行 arkts 扫描时加载；其余采集器的注册、扫描和查询都不要求安装 Node，
 已生成的知识库也可以纯 Python 查询和导出。
 
 ---
@@ -104,7 +104,7 @@ Python 主包仍只用标准库。**Node 与 ohos-typescript 是 arkts 独有的
 `package_name`、`package_version`、`entry_sha256` 及**完整包文件摘要清单**（102 项）。
 Python 启动前逐项核对，Node 加载后再报告实际身份、入口路径和摘要，双向校验。
 
-加载用显式绝对路径，不用会被父级 `node_modules` 改变的裸 `require('typescript')`。
+加载用显式完整路径，不用会被父级 `node_modules` 改变的裸 `require('typescript')`。
 启动时清除 `NODE_OPTIONS`、`NODE_PATH`，用 argv 数组而非 `shell=True`。adapter 用 `.cjs`
 明确 CommonJS，不依赖外层 `package.json` 的 `type`。
 
@@ -255,7 +255,7 @@ ts.createScanner(ts.ScriptTarget.Latest, false /* 不跳过 trivia */,
 ```
 
 从文件起始消费 BOM、空白、单行/多行注释、JSDoc 和 `'use static'` 指令及可选分号。
-遇到首个实际声明或 import/export token 即停止，**后续正文不扫描、不建 AST**。
+遇到第一个实际声明或 import/export token 即停止，**后续正文不扫描、不建 AST**。
 
 提取规则：
 
@@ -266,7 +266,7 @@ ts.createScanner(ts.ScriptTarget.Latest, false /* 不跳过 trivia */,
 4. value 去首尾空白，保留内部空格和大小写；重复标签保留不同跨度，不覆盖。
 5. 整个头部返回 span，标签分别返回精确证据 span。
 
-不依赖 `ts.getJSDocTags()` 对首个声明的挂接结果判断文件归属——那会把声明注释与多段
+不依赖 `ts.getJSDocTags()` 对第一个声明的挂接结果判断文件归属——那会把声明注释与多段
 文件头混在一起。
 
 `header_status` 为 `ok`（读完且有 confirmed 标签）/ `no_tag`（读完且无归属候选）/
@@ -308,7 +308,7 @@ ts.createSourceFile(logicalPath, text, ts.ScriptTarget.Latest, true, ts.ScriptKi
 
 **语法诊断策略：文件级拒收。** 只要 `parseDiagnostics` 非空，该 Kit 入口的
 `coverage['kit.references']` 即为 `failed`，不把错误恢复 AST 中的任何引用当作 confirmed 关系写库。
-已独立读到的头部与来源记录保留，问题附原始 TS code 和转换后的字节位置，继续其他文件。
+已独立读到的头部与来源记录保留，问题附原始 TS code 和转换后的字节位置，继续其余文件。
 
 这比逐节点猜测诊断影响范围更易验证。若未来确需部分接受，需新增独立策略与测试，
 不能偷偷改变当前行为。该策略属于 `kit.references` 提取器，**不固化为核心对所有能力的统一策略**。
@@ -336,7 +336,7 @@ ts.createSourceFile(logicalPath, text, ts.ScriptTarget.Latest, true, ts.ScriptKi
 
 已识别的 import/export 语句**内部**也检查标记，以发现条件穿越语句的问题：若语句内部存在
 if/endif，报 `CONDITION_CROSSES_STATEMENT`，该语句条件为 `unknown`，
-**不把一条语句按文本切成多个分支**。其他不透明声明块内部的注释不参与顶层关系条件。
+**不把一条语句按文本切成多个分支**。其余不透明声明块内部的注释不参与顶层关系条件。
 
 状态机支持 `if arkts dynamic|static|dynamic&static` 与 `endif`，用候选集合加显式证据标志
 表示。节点起始位置落在哪些有效区间就继承其交集；文件后缀、文件指令与块条件合并时
@@ -385,7 +385,7 @@ SHA-256 始终对原始 bytes 求值。
 |---|---|---|
 | SourceInput | 相对路径、原始 bytes、sha256、文件角色、受控配置 | 不依赖数据库行号或产品安装路径 |
 | FrontendAdapter | 声明能力矩阵；提供头部扫描、语法树句柄、注释范围与诊断 | 不建立 Kit/部件关联，不把编译器节点输出到协议 |
-| Extractor | 读取前端上下文及已声明依赖的结果；输出自己命名空间内的事实、诊断和覆盖率 | 不读文件、不联网、不写库，不隐式调用其他提取器 |
+| Extractor | 读取前端上下文及已声明依赖的结果；输出自己命名空间内的事实、诊断和覆盖率 | 不读文件、不联网、不写库，不隐式调用其余提取器 |
 | Engine | 校验 profile，依赖拓扑排序，共享单次解析上下文，汇总 IR | 不按 API 类名或 Kit 名硬编码业务分支 |
 | Projection | 把 IR 映射到 oskm 领域记录 | 不绕过 IR 读 TS Node，不用正则补造语法事实 |
 
@@ -485,13 +485,13 @@ P1 数据库不存正文，因此**无法离线还原未采集的 API**：后续
 
 ## 12. 本地依据
 
-- 后端：[package.json](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/package.json)、
-  [类型声明](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.d.ts)、
-  [实现入口](../../../../../../../interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.js)
+- 后端 `interface/sdk-js/build-tools/node_modules/typescript/package.json`、
+  类型声明 `interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.d.ts`、
+  实现入口 `interface/sdk-js/build-tools/node_modules/typescript/lib/typescript.js`
   （依赖当前工作区已安装包，正式分发由锁定清单替代机器路径）
-- 样本：[ArkTS lang](../../../../../../../interface/sdk-js/arkts/@arkts.lang.d.ets)、
-  [ArkUI static](../../../../../../../interface/sdk-js/kits/@kit.ArkUI.static.d.ets)、
-  [DrmKit](../../../../../../../interface/sdk-js/kits/@kit.DrmKit.d.ts)、
-  [index](../../../../../../../interface/sdk-js/api/@internal/ets/index.d.ts)
+- 样本 `interface/sdk-js/arkts/@arkts.lang.d.ets`、
+  `interface/sdk-js/kits/@kit.ArkUI.static.d.ets`、
+  `interface/sdk-js/kits/@kit.DrmKit.d.ts`、
+  `interface/sdk-js/api/@internal/ets/index.d.ts`
 - 框架：[framework.py](../../core/framework.py)、[runner.py](../../core/runner.py)、
   [有界读取](../../core/io.py)

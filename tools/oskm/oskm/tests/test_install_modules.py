@@ -339,7 +339,7 @@ class InstallModulesTest(unittest.TestCase):
     # -- tags and queries -----------------------------------------------------
 
     def test_tags_are_expanded_and_queryable(self):
-        self.manifest([self.row(innerapi_tags=['platformsdk', 'ndk']),
+        self.manifest([self.row(innerapi_tags=['platformsdk', 'native']),
                        self.row(label='//component/z:z', dest=['system/lib/z.so'])])
         self.components()
         db = str(self.root / 'k.db')
@@ -349,13 +349,13 @@ class InstallModulesTest(unittest.TestCase):
         with ScanSession.open(Database(db)) as session:
             self.assertEqual([(t['source_index'], t['value']) for t in
                               session.sql('SELECT * FROM install_module_tags ORDER BY source_index')],
-                             [(0, 'platformsdk'), (1, 'ndk')])
+                             [(0, 'platformsdk'), (1, 'native')])
             module = session.install_module('//component/x:y')
-            self.assertEqual(module.tags(), ('platformsdk', 'ndk'))
+            self.assertEqual(module.tags(), ('platformsdk', 'native'))
             self.assertEqual(module.targets(), ('system/lib/liby.z.so',))
 
     def test_query_by_label_dest_tag_component_and_partition(self):
-        self.manifest([self.row(innerapi_tags=['ndk']),
+        self.manifest([self.row(innerapi_tags=['native']),
                        self.row(label='//component/z:z', type='bin',
                                 dest=['vendor/bin/z', 'system/bin/z'])])
         self.components()
@@ -363,7 +363,7 @@ class InstallModulesTest(unittest.TestCase):
             by = lambda **kw: query.list_modules(InstallModuleFilter(**kw)).total
             self.assertEqual(by(labels=('//component/x:y',)), 1)
             self.assertEqual(by(dests=('vendor/bin/z',)), 1)
-            self.assertEqual(by(tags=('ndk',)), 1)
+            self.assertEqual(by(tags=('native',)), 1)
             self.assertEqual(by(components=('part',)), 2)
             self.assertEqual(by(subsystems=('sub',)), 2)
             self.assertEqual(by(partitions=('vendor',)), 1)

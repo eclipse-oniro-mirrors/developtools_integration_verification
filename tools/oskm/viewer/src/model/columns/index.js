@@ -14,7 +14,7 @@ import { COLUMNS as elf, GROUPS as gElf,
 import { COLUMNS as arktsModules, GROUPS as gArktsModules } from './arkts_modules.js'
 import { COLUMNS as arktsKits, GROUPS as gArktsKits } from './arkts_kits.js'
 import { COLUMNS as arktsSources, GROUPS as gArktsSources } from './arkts_sources.js'
-import { COLUMNS as ndkHeaders, GROUPS as gNdkHeaders } from './ndk_headers.js'
+import { COLUMNS as nativeHeaders, GROUPS as gNativeHeaders } from './native_headers.js'
 
 const BY_TABLE = {
   services, sas, hdis, repos, components, install_targets: targets,
@@ -22,14 +22,14 @@ const BY_TABLE = {
   /* 安装模块没有自己的列表视图，但它的字段在安装产物的目录里写过了 */
   install_modules: targets,
   arkts_modules: arktsModules, arkts_kits: arktsKits, arkts_sources: arktsSources,
-  ndk_headers: ndkHeaders,
+  native_headers: nativeHeaders,
 }
 const GROUPS_BY_TABLE = {
   services: gServices, sas: gSas, hdis: gHdis, repos: gRepos,
   components: gComponents, install_targets: gTargets, install_modules: gTargets,
   elf_modules: gElf,
   arkts_modules: gArktsModules, arkts_kits: gArktsKits, arkts_sources: gArktsSources,
-  ndk_headers: gNdkHeaders,
+  native_headers: gNativeHeaders,
 }
 
 /** 该表的字段分组顺序。档案页按它给属性区分段——

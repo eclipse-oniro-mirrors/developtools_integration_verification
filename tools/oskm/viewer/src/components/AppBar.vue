@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
       <button class="db" :class="{ empty: !store.dbLoaded }" :aria-expanded="dbOpen"
               @click="dbOpen = !dbOpen">
         <template v-if="scan">{{ scan.product }}
-          <span class="dim">{{ scan.zone }}/{{ scan.cpu_arch || '?' }} #{{ scan.id }}</span>
+          <span class="dim">#{{ scan.id }}</span>
         </template>
         <template v-else>选择 .db</template>
         <span class="caret" aria-hidden="true">▾</span>
@@ -145,8 +145,7 @@ onBeforeUnmount(() => {
                   :class="{ on: s.id === store.scanId }"
                   @click="pickScan(s.id)">
             <span class="mono">#{{ s.id }} {{ s.product }}</span>
-            <span class="n">{{ s.zone }}/{{ s.cpu_arch || '?' }} ·
-              {{ (s.started_at || '').slice(0, 10) }}</span>
+            <span class="n">{{ (s.started_at || '').slice(0, 10) }}</span>
           </button>
         </template>
       </div>

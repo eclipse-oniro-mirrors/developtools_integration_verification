@@ -60,7 +60,7 @@ test('syntax recovery nodes are rejected while header survives', () => {
   assert.equal(result.coverage['condition.top_level'].status, 'failed');
 });
 test('an escaped unpaired surrogate is unsupported source evidence, not broken transport', () => {
-  const result = parse(String.raw`import x from './\uD800'; import y from 'y';`);
+  const result = parse(String.raw`import x from './\uD-800'; import y from 'y';`);
   assert.equal(result.coverage['kit.references'].status,'partial');
   assert.equal(result.facts['kit.references'][0].specifier,null);
   assert.equal(result.facts['kit.references'][1].specifier,'y');

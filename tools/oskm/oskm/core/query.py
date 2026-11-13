@@ -130,16 +130,16 @@ def paginate(rows, page, context, result_fingerprint):
         raise QueryError('INVALID_PAGE_LIMIT')
     fingerprint = digest(canonical([result_fingerprint, context]))
     offset = 0
-    if page.cursor is not None:
+    if page.page_token is not None:
         try:
-            cursor, duplicates = parse_json(base64.b64decode(page.cursor, altchars=b'-_', validate=True))
-            if duplicates or not isinstance(cursor, dict) or cursor.get('query') != fingerprint or type(
-                    cursor.get('offset')) is not int or not 0 <= cursor['offset'] <= len(rows):
+            page_token, duplicates = parse_json(base64.b64decode(page.page_token, altchars=b'-_', validate=True))
+            if duplicates or not isinstance(page_token, dict) or page_token.get('query') != fingerprint or type(
+                    page_token.get('offset')) is not int or not 0 <= page_token['offset'] <= len(rows):
                 raise ValueError()
-            offset = cursor['offset']
+            offset = page_token['offset']
         except (ValueError, TypeError, binascii.Error, UnicodeError):
-            raise QueryError('INVALID_CURSOR') from None
+            raise QueryError('INVALID_PAGE_TOKEN') from None
     end = offset + page.limit
-    cursor = base64.urlsafe_b64encode(canonical(dict(query=fingerprint, offset=end))
+    page_token = base64.urlsafe_b64encode(canonical(dict(query=fingerprint, offset=end))
                                       ).decode() if end < len(rows) else None
-    return rows[offset:end], cursor
+    return rows[offset:end], page_token

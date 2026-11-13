@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Read-only HDI queries, with the same predicate and cursor semantics as services."""
+"""Read-only HDI queries, with the same predicate and page_token semantics as services."""
 from collections.abc import Mapping
 from decimal import Decimal
 from .models import HDIFilter, HDIAggregatePage
@@ -59,8 +59,8 @@ class HDIQuery(BaseQuery):
 
     def list_hdis(self, filters=HDIFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(method='hdis', filters=filter_key(filters)), self._fingerprint)
-        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), cursor)
+        selected, page_token = paginate(rows, page, dict(method='hdis', filters=filter_key(filters)), self._fingerprint)
+        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), page_token)
 
     def aggregate_hdis(self, group_by=('component',), *, filters=HDIFilter(), page=PageRequest()):
         if not isinstance(
@@ -106,6 +106,6 @@ class HDIQuery(BaseQuery):
             group = groups.setdefault(canonical(identity), dict(key=keys, count=0))
             group['count'] += 1
         ordered = [freeze(group) for _, group in sorted(groups.items())]
-        selected, cursor = paginate(ordered, page, dict(method='hdis-aggregate',
+        selected, page_token = paginate(ordered, page, dict(method='hdis-aggregate',
                                     filters=filter_key(filters), dimensions=group_by), self._fingerprint)
-        return HDIAggregatePage(tuple(selected), len(rows), len(rows), len(groups), cursor)
+        return HDIAggregatePage(tuple(selected), len(rows), len(rows), len(groups), page_token)

@@ -116,7 +116,7 @@ arkts_kits            51   逻辑 Kit
 
 模块有两个分类列，职责单一，**不能合成一个**：
 
-`declaration_scope` —— 声明在哪，纯路径规则，永远可判定：
+`declaration_scope` —— 声明在哪，纯路径规则，始终可判定：
 
 ```
 arkts/builtin/                   → arkts_builtin       (106)
@@ -192,7 +192,7 @@ erDiagram
 | `declaration_scope` | TEXT! | 声明在哪，见 §3.2 |
 | `implementation_kind` | TEXT! | 怎么实现，见 §3.2 |
 | `language_coverage` | TEXT! | dynamic / static / both |
-| `impl_so_path` | TEXT | 本次扫描按 `cpu_arch` 构造的镜像路径：arm 为 `system/lib/…`，arm64 为 `system/lib64/…` |
+| `impl_so_path` | TEXT | 本次扫描按 `ScanRequest.cpu_arch` 构造的镜像路径（默认 `arm64`）：`arm` 为 `system/lib/…`，`arm64` 为 `system/lib64/…`；ArkUI 唯一安装证据优先 |
 | `impl_napi_name` | TEXT | NAPI 运行时注册名；19 例与模块名不一致，不可推导 |
 | `impl_match` | TEXT | module_name / declaration_path / name_suffix / arkui_engine |
 | `impl_elf_id` | FK | 镜像中的 ELF 行，**由 arkts_links 回填**，见 §3.8.4 |
@@ -297,7 +297,7 @@ specifier → 逻辑模块，不再 → 文件：
 | `@ohos.X` / `@system.X` / `@arkts.X` | `module_name` 精确匹配，`named_exact` |
 | `./x`、`../x` | 相对入口目录规范化；带完整后缀时先去后缀，`relative_exact` |
 | `@kit.X` | `target_kind=kit`，`out_of_scope`，不展开 Kit 图 |
-| 其他包名、URL、绝对路径 | 外部包 `out_of_scope`；非法路径 `unsupported` |
+| 其余包名、URL、完整路径 | 外部包 `out_of_scope`；非法路径 `unsupported` |
 
 - 1 个候选：`resolved`，保存 `module_id`
 - 多个候选：`ambiguous`，`module_id=NULL`，`candidate_keys` 保存排序后的全部模块键
@@ -422,7 +422,7 @@ elf_modules 排最后**，给 arkts 加 `DEPENDS_ON=('elf_modules',)` 会直接�
 #### 3.8.5 架构段归一
 
 `napi-map.json` 以 64 位镜像书写，但它是参考数据，不是本次产品的路径事实。投影模块在
-落库前读取 `ScanRequest.cpu_arch`（未显式提供时由 zone 默认：blue=arm、yellow=arm64），
+落库前读取 `ScanRequest.cpu_arch`（未显式提供时所有来源默认 `arm64`），
 并用 `arch_library_path()` 改写库根：
 
 - `arm`：`system/lib64/...` → `system/lib/...`
@@ -591,7 +591,7 @@ label_only、明确的外部引用、无标签三种情况**不发 issue**——
 | 情况 | 要求 | 完整性影响 |
 |---|---|---|
 | 根不存在/越界 | `RequestError`，不输出"完整空库" | 请求失败 |
-| 文件不可读、编码错误、超限 | 保留文件行和原因，继续其他文件 | 对应项 partial |
+| 文件不可读、编码错误、超限 | 保留文件行和原因，继续其余文件 | 对应项 partial |
 | 正文含未知 API 语法 | 不解释正文，正常保留头部 | 不影响 |
 | 无 `@kit` | `no_tag`，不猜归属 | 正常结果 |
 | 标签无入口 | `label_only`，统计可见 | advisory |
@@ -612,10 +612,10 @@ label_only、明确的外部引用、无标签三种情况**不发 issue**——
 构造时检查 `collector_runs`、`schema_version` 和四张实际表；未扫描返回 `COLLECTOR_NOT_RUN`，
 历史 failed 返回 `COLLECTOR_FAILED`，版本不兼容返回 `SCHEMA_UNSUPPORTED`。
 
-七个接口（含 MCP 同名工具）：`list_kits`、`list_modules`、`list_declarations`、
+七个查询接口：`list_kits`、`list_modules`、`list_declarations`、
 `get_kit`、`get_module`、`kit_modules`、`module_kits`。`get_module` 的返回里
 `implementations` 给出实现它的 .so 及其在镜像中的位置。参数见
-[工具规格](../../../agentic/docs/spec/arkts.md)。
+[工具规格](../../../skills/ohos-design-architecture-evidence-query/references/spec/arkts.md)。
 
 所有值参数绑定；表/列/排序来自内部固定映射，**不把用户给的标识符插进语句**。
 `query` 是普通子串，`%`、`_` 不作通配符。
@@ -636,10 +636,10 @@ ORDER BY t.module_key LIMIT :limit_plus_one;
 证据详情对本页 id 批量二次查询，不做每模块一次的 N+1。
 
 游标是业务键 keyset pagination（`module_key` / `kit_key` / `source_path` / `evidence_key`），
-取 `limit+1` 判断下一页，不用 ROWID/OFFSET。cursor 是 URL-safe Base64 的 canonical JSON，
+取 `limit+1` 判断下一页，不用 ROWID/OFFSET。page_token 是 URL-safe Base64 的 canonical JSON，
 含 `version`、`scan_id`、`input_digest`、`filters_hash`、`last_key`、`view`，最大 4 KiB。
 它不是安全凭证，但必须拒绝跨 scan、过滤条件不同或重扫后摘要改变的游标，分别返回
-`STALE_CURSOR` / `INVALID_CURSOR`。
+`STALE_PAGE_TOKEN` / `INVALID_PAGE_TOKEN`。
 
 ### 7.3 两种出口
 
@@ -653,7 +653,7 @@ ORDER BY t.module_key LIMIT :limit_plus_one;
 
 关系行已有自己的 `source_path` 列，与 `source_id` 指向的业务键同值，因此不重复输出。
 
-固定输入、后端与规则时，canonical 导出字节一致；不含扫描时间、绝对机器路径和数据库 id。
+固定输入、后端与规则时，canonical 导出字节一致；不含扫描时间、明确机器路径和数据库 id。
 导出在一个只读事务里完成，避免并发重扫读到不同代的四张表。
 
 ### 7.4 scope 与可复现性
@@ -706,10 +706,9 @@ ORDER BY t.module_key LIMIT :limit_plus_one;
   [统一模型](../../../docs/architecture/unified-model.md)、
   [framework.py](../../core/framework.py)、[runner.py](../../core/runner.py)、
   [schema.py](../../../oskm_schema/base.py)、[export.py](../../core/export.py)
-- 源码：[sdk-js README](../../../../../../../interface/sdk-js/README_zh.md)、
-  [JSDoc 规则](../../../../../../../interface/sdk-js/docs/AGENTS-jsdoc-rules.md)
-- 样本：[UIAbility](../../../../../../../interface/sdk-js/api/@ohos.app.ability.UIAbility.d.ts)、
-  [AbilityKit](../../../../../../../interface/sdk-js/kits/@kit.AbilityKit.d.ts)、
-  [ArkUI static](../../../../../../../interface/sdk-js/kits/@kit.ArkUI.static.d.ets)、
-  [DrmKit](../../../../../../../interface/sdk-js/kits/@kit.DrmKit.d.ts)、
-  [无标签 index](../../../../../../../interface/sdk-js/api/@internal/ets/index.d.ts)
+- 源码：`interface/sdk-js/README_zh.md`、`interface/sdk-js/docs/AGENTS-jsdoc-rules.md`
+- 样本：`interface/sdk-js/api/@ohos.app.ability.UIAbility.d.ts`、
+  `interface/sdk-js/kits/@kit.AbilityKit.d.ts`、
+  `interface/sdk-js/kits/@kit.ArkUI.static.d.ets`、
+  `interface/sdk-js/kits/@kit.DrmKit.d.ts`、
+  `interface/sdk-js/api/@internal/ets/index.d.ts`

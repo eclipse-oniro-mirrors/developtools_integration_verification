@@ -50,4 +50,4 @@ class SAAggregatePage:
     denominator: int
     matched_sa_count: int
     total_groups: int
-    next_cursor: str | None
+    next_page_token: str | None

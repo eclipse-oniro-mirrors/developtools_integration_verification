@@ -97,7 +97,7 @@ class ManifestTest(unittest.TestCase):
             self.assertEqual(projects['kernel']['clone-depth'], '1')
 
     def test_fallback_to_manifest_xml_when_default_missing(self):
-        """Yellow-zone workspaces have no default.xml; parse() must fall back to
+        """Internal platform workspaces may have no default.xml; parse() must fall back to
         the .repo/manifest.xml symlink target instead of failing."""
         with tempfile.TemporaryDirectory() as tmp:
             workspace = Path(tmp)

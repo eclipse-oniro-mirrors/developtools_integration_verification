@@ -430,7 +430,7 @@ class ServicesTest(unittest.TestCase):
         with self.assertRaises(QueryError):
             query.list_services(page=PageRequest(limit=True))
         with self.assertRaises(QueryError):
-            query.list_services(page=PageRequest(cursor='[]'))
+            query.list_services(page=PageRequest(page_token='[]'))
         with self.assertRaises(QueryError):
             query.aggregate_services(ServiceAggregateRequest(group_by=('bad',)))
         query.close()
@@ -450,14 +450,14 @@ class ServicesTest(unittest.TestCase):
         with self.assertRaises(QueryError):
             query.aggregate_services(ServiceAggregateRequest(group_by=('field:env',)))
 
-    def test_cursor_binds_to_content_not_to_the_result_object(self):
+    def test_page_token_binds_to_content_not_to_the_result_object(self):
         self.cfg([{'name': 'a', 'value': Decimal('1.1234567890123456789')}, {}, {}])
         result = self.scan()
-        cursor = result.query().list_services(page=PageRequest(limit=1)).next_cursor
+        page_token = result.query().list_services(page=PageRequest(limit=1)).next_page_token
         rescan = self.scan()
         self.assertEqual(canonical(rescan.to_dict()), canonical(result.to_dict()))
         with rescan.query() as query:
-            page = query.list_services(page=PageRequest(cursor=cursor))
+            page = query.list_services(page=PageRequest(page_token=page_token))
             self.assertEqual(page.positions, (1, 2))
             self.assertEqual(query.aggregate_services().denominator, 3)
 
@@ -512,7 +512,7 @@ class ServicesTest(unittest.TestCase):
             self.assertEqual(session.records('services')[0]['name'], 'replacement')
         scan_parser = parser()._subparsers._group_actions[0].choices['scan']
         self.assertEqual({a.dest for a in scan_parser._actions} - {'help'}, {'workspace_root',
-                         'product', 'zone', 'cpu_arch', 'db', 'only', 'without', 'scan_id',
+                         'product', 'cpu_arch', 'db', 'only', 'without', 'scan_id',
                          'reuse_upstream', 'fail_on'})
         for flag in ('--fields', '--partition', '--progress', '--module-info', '--output'):
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):

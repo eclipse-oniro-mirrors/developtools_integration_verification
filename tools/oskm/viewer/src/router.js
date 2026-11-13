@@ -28,7 +28,7 @@ const routes = [
   { path: '/sdk/modules', component: () => import('./views/list/Modules.vue') },
   { path: '/sdk/kits', component: () => import('./views/list/Kits.vue') },
   { path: '/sdk/declarations', component: () => import('./views/list/Declarations.vue') },
-  { path: '/sdk/ndk-headers', component: () => import('./views/list/NdkHeaders.vue') },
+  { path: '/sdk/native-headers', component: () => import('./views/list/NativeHeaders') },
 
   { path: '/lookup', name: 'lookup', component: () => import('./views/Lookup.vue') },
   { path: '/findings', name: 'findings', component: () => import('./views/Findings.vue') },
@@ -78,7 +78,7 @@ const routes = [
   { path: '/data/install_modules', redirect: '/files/targets' },
   { path: '/data/elf_modules', redirect: '/files/elf' },
   { path: '/data/elf_module_dependencies', redirect: '/files/elf' },
-  { path: '/data/ndk_headers', redirect: '/sdk/ndk-headers' },
+  { path: '/data/native_headers', redirect: '/sdk/native-headers' },
   { path: '/data/issues', redirect: '/findings' },
 
   { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('./views/NotFound.vue') },

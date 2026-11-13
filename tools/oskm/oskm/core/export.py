@@ -142,9 +142,9 @@ def snapshot(connection, scan_id, collector):
     if run is None:
         raise LookupError(f'NO_RUN: {collector.NAME}@{scan_id}')
     scan = connection.execute(
-        'SELECT product, zone, cpu_arch FROM scans WHERE id = ?', (scan_id,)).fetchone()
+        'SELECT product, cpu_arch FROM scans WHERE id = ?', (scan_id,)).fetchone()
     document = dict(schema_version=run['schema_version'], product=scan['product'],
-                    zone=scan['zone'], cpu_arch=scan['cpu_arch'],
+                    cpu_arch=scan['cpu_arch'],
                     scope=parse_json(run['scope'].encode())[0], status=run['status'])
     published = issues(connection, scan_id, collector)
     if published:

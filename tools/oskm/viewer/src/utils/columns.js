@@ -94,7 +94,7 @@ export const TABLE_CONFIG = {
         filterKey: 'api_type', filterOptions: ['public_api', 'inner_api', 'internal_api'] },
       { key: 'category', label: 'Category', sort: true,
         type: 'tags', filterKey: 'category', filterMode: 'json-array',
-        filterOptions: ['napi', 'ndk', 'ani', 'cangjie', 'extension',
+        filterOptions: ['napi', 'native', 'ani', 'cangjie', 'extension',
           'platform_sdk', 'platform_sdk_indirect', 'chipset_sdk',
           'chipset_sdk_indirect', 'sa', 'hdi', 'hdi_proxy', 'hdi_stub',
           'anco', 'other'] },

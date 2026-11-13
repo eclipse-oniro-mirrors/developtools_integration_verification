@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Read-only install-manifest queries, same predicate and cursor semantics as
+"""Read-only install-manifest queries, same predicate and page_token semantics as
 the other domains.
 
 `components` / `subsystems` filter the *joined* component, never SMI's own
@@ -120,11 +120,11 @@ class InstallModuleQuery(BaseQuery):
 
     def list_modules(self, filters=InstallModuleFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(method='install-modules',
+        selected, page_token = paginate(rows, page, dict(method='install-modules',
                                                      filters=filter_key(filters)),
                                     self._fingerprint)
         return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected),
-                    len(rows), cursor)
+                    len(rows), page_token)
 
     def aggregate_modules(self, group_by=('component',), *,
                           filters=InstallModuleFilter(), page=PageRequest()):
@@ -165,9 +165,9 @@ class InstallModuleQuery(BaseQuery):
                 group['count'] += 1
                 denominator += 1
         ordered = [freeze(group) for _, group in sorted(groups.items())]
-        selected, cursor = paginate(ordered, page,
+        selected, page_token = paginate(ordered, page,
                                     dict(method='install-modules-aggregate',
                                          filters=filter_key(filters), dimensions=group_by),
                                     self._fingerprint)
         return InstallModuleAggregatePage(tuple(selected), denominator, len(rows),
-                                          len(groups), cursor)
+                                          len(groups), page_token)

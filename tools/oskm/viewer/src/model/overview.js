@@ -52,8 +52,8 @@ export function overview(scanId) {
     arktsModules: c('SELECT COUNT(*) c FROM arkts_modules WHERE scan_id = ?'),
     arktsKits: c('SELECT COUNT(*) c FROM arkts_kits WHERE scan_id = ?'),
     arktsSources: c('SELECT COUNT(*) c FROM arkts_sources WHERE scan_id = ?'),
-    ndkHeaders: c('SELECT COUNT(*) c FROM ndk_headers WHERE scan_id = ?'),
-    ndkLibraries: c('SELECT COUNT(DISTINCT elf_module_id) c FROM ndk_headers WHERE scan_id = ?'),
+    nativeHeaders: c('SELECT COUNT(*) c FROM native_headers WHERE scan_id = ?'),
+    nativeLibraries: c('SELECT COUNT(DISTINCT elf_module_id) c FROM native_headers WHERE scan_id = ?'),
     mixed,
   }
 }

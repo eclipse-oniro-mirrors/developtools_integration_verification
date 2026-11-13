@@ -22,7 +22,9 @@ const rows = (sql, id) => (id ? useDatabase().rawQuery(sql, [id]) : [])
 /* 度数不能写成 SELECT 列表里的相关子查询：那会让每行 ELF 各回表一次。
    先按 callee 聚合成派生表再 JOIN，计划与统计信息无关。 */
 export function loadElfModules(scanId) {
-  if (!scanId) return []
+  if (!scanId) {
+    return []
+  }
   return useDatabase().rawQuery(`
     WITH in_degree AS (
            SELECT callee_id AS id, COUNT(*) AS n
@@ -45,17 +47,19 @@ export function loadElfModules(scanId) {
      ORDER BY dependents DESC`, [scanId, scanId])
 }
 
-/* ------------------------------------------------------------ NDK 头文件 */
+/* ------------------------------------------------------------ Native SDK 头文件 */
 /* 映射表本身只有库外键和头文件路径；所有可读字段都经 ELF 一次 JOIN 出来。 */
-export function loadNdkHeaders(scanId) {
-  if (!scanId) return []
+export function loadNativeHeaders(scanId) {
+  if (!scanId) {
+    return []
+  }
   return useDatabase().rawQuery(`
     SELECT n.id, n.elf_module_id, n.header_path, n.match_strategy,
            e.soname, e.file_name, e.partition,
            e.install_module_id, e.component_id,
            t.dest, c.name AS component, c.subsystem,
            m.label
-      FROM ndk_headers n
+      FROM native_headers n
       JOIN elf_modules e
              ON e.scan_id = n.scan_id AND e.id = n.elf_module_id
       JOIN install_targets t
@@ -66,9 +70,9 @@ export function loadNdkHeaders(scanId) {
              ON m.scan_id = e.scan_id AND m.id = e.install_module_id
      WHERE n.scan_id = ?
      ORDER BY n.header_path, t.dest`, [scanId])
-    /* fileSource 统一处理各托管站的文件链接：yellow 区 codehub 开源仓用 files 格式
-       （ref 用分支名），blue 区保持 blob + 扫描提交号。 */
-    .map(r => ({ ...r, source_url: fileSource(scanId, r.header_path)?.url || null }))
+    /* fileSource 统一处理各托管站的文件链接：codehub 开源仓用 files 格式
+       （ref 用分支名），公开托管仓保持 blob + 扫描提交号。 */
+    .map(r => ({ ...r, sourceUrl: fileSource(scanId, r.header_path)?.url || null }))
 }
 
 /* ------------------------------------------------------------ 1.2 SA服务 */
@@ -111,7 +115,9 @@ export function loadHdis(scanId) {
    在 sql.js 上偏慢。改为 8 个独立 GROUP BY 聚合查询 + JS 端合并，
    每个查询只做一次全表扫描，总计 9 次 prepare+execute。 */
 export function loadRepos(scanId) {
-  if (!scanId) return []
+  if (!scanId) {
+    return []
+  }
   const { rawQuery } = useDatabase()
 
   const repos = rawQuery(
@@ -355,7 +361,9 @@ export function loadInnerApiDetail(scanId, innerapiId) {
 
 /* ------------------------------------------------------------ InnerAPI 列表 */
 export function loadInnerApis(scanId) {
-  if (!scanId) return []
+  if (!scanId) {
+    return []
+  }
   const { rawQuery } = useDatabase()
 
   const innerapis = rawQuery(`

@@ -19,6 +19,10 @@
 from oskm.core.io import canonical
 from oskm.core import framework
 from oskm.core.api import scan as scan_one
+from oskm.core.db import Database
+from oskm.core.models import ScanRequest
+from oskm.core.runner import run
+from oskm.core.session import ScanSession
 from oskm.collectors.elf_modules.resolution import candidate_index, resolve_needed
 from oskm.collectors.elf_modules.elf import read_elf
 from oskm.collectors.elf_modules.models import (
@@ -44,7 +48,7 @@ class ElfModulesTest(unittest.TestCase):
         (self.package / 'system/profile').mkdir(parents=True)
         self.write('system/etc/hdfconfig/hdf_default.hcb', self.empty_hcb())
         self.write('prebuilts/ohos-sdk/linux/26.0.1/native/sysroot/'
-                   'usr/lib/x86_64-linux-ohos/libndk.so', b'', workspace=True)
+                   'usr/lib/x86_64-linux-ohos/libnative.so', b'', workspace=True)
 
     @staticmethod
     def empty_hcb():
@@ -200,7 +204,7 @@ class ElfModulesTest(unittest.TestCase):
             self.row('system/lib/module/libpublicinner.z.so', 'publicinner'),
             self.row('system/lib/platformsdk/libindirect.z.so', 'indirect'),
             self.row('system/lib/platformsdk/libinner.z.so', 'inner'),
-            self.row('system/lib/platformsdk/libndk.so', 'ndk'),
+            self.row('system/lib/platformsdk/libnative.so', 'native'),
             self.row('system/lib/platformsdk/libplatform.z.so', 'platform'),
             self.row('system/lib/extensionability/libext.z.so', 'ext'),
             self.row('system/lib/libhdi.z.so', 'hdi', shlib_type='hdi_proxy'),
@@ -221,7 +225,7 @@ class ElfModulesTest(unittest.TestCase):
         self.elf('system/lib/platformsdk/libindirect.z.so',
                  'libindirect.z.so', [])
         self.elf('system/lib/platformsdk/libinner.z.so', 'libinner.z.so', [])
-        self.elf('system/lib/platformsdk/libndk.so', 'libndk.so', [])
+        self.elf('system/lib/platformsdk/libnative.so', 'libnative.so', [])
         self.elf('system/lib/platformsdk/libplatform.z.so', 'libplatform.z.so',
                  ['libindirect.z.so'])
         self.elf('system/lib/extensionability/libext.z.so', 'libext.z.so', [])
@@ -236,7 +240,7 @@ class ElfModulesTest(unittest.TestCase):
             'system/lib/platformsdk/libindirect.z.so':
                 (('platform_sdk_indirect',), 'internal_api'),
             'system/lib/platformsdk/libinner.z.so': (('other',), 'inner_api'),
-            'system/lib/platformsdk/libndk.so': (('ndk',), 'public_api'),
+            'system/lib/platformsdk/libnative.so': (('native',), 'public_api'),
             'system/lib/platformsdk/libplatform.z.so':
                 (('platform_sdk',), 'internal_api'),
             'system/lib/extensionability/libext.z.so':
@@ -255,7 +259,7 @@ class ElfModulesTest(unittest.TestCase):
             self.assertEqual({row['dest'] for row in page.items},
                              {'system/lib/module/libnapi.z.so',
                               'system/lib/module/libpublicinner.z.so',
-                              'system/lib/platformsdk/libndk.so',
+                              'system/lib/platformsdk/libnative.so',
                               'system/lib/extensionability/libext.z.so'})
 
     def test_chipset_dependencies_are_propagated(self):
@@ -298,7 +302,7 @@ class ElfModulesTest(unittest.TestCase):
                           'system/lib/libcangjie.z.so':
                               (('cangjie',), 'public_api')})
 
-    def test_ndk_suppresses_other_public_categories(self):
+    def test_native_suppresses_other_public_categories(self):
         self.write('prebuilts/ohos-sdk/linux/26.0.1/native/sysroot/'
                    'usr/lib/x86_64-linux-ohos/libhid.z.so', b'', workspace=True)
         self.manifest([
@@ -310,21 +314,21 @@ class ElfModulesTest(unittest.TestCase):
         result = self.scan()
         self.assertEqual(
             [(row['category'], row['api_type']) for row in result.elf_modules],
-            [(('ndk',), 'public_api')])
+            [(('native',), 'public_api')])
 
     def test_sdk_version_directory_is_selected_numerically(self):
         self.write('prebuilts/ohos-sdk/linux/9.0.0/native/sysroot/'
                    'usr/lib/x86_64-linux-ohos/libold.so', b'', workspace=True)
         self.manifest([
-            self.row('system/lib/libndk.so', 'ndk'),
+            self.row('system/lib/libnative.so', 'native'),
             self.row('system/lib/libold.so', 'old'),
         ])
-        self.elf('system/lib/libndk.so', 'libndk.so', [])
+        self.elf('system/lib/libnative.so', 'libnative.so', [])
         self.elf('system/lib/libold.so', 'libold.so', [])
 
         result = self.scan()
         self.assertEqual({row['dest']: row['api_type'] for row in result.elf_modules},
-                         {'system/lib/libndk.so': 'public_api',
+                         {'system/lib/libnative.so': 'public_api',
                           'system/lib/libold.so': 'internal_api'})
 
     def test_collector_hits_and_anco_are_direct_categories(self):
@@ -546,6 +550,24 @@ class ElfModulesTest(unittest.TestCase):
         self.assertEqual(result.elf_modules, ())
         self.assertEqual(result.snapshot['status'], 'degraded')
         self.assertIn('INSTALL_INDEX_NOT_SELECTED', result.snapshot['issues'][0]['code'])
+
+    def test_missing_hcb_degrades_hdi_without_blocking_elf_discovery(self):
+        self.manifest([self.row('system/lib/liba.z.so', 'liba')])
+        self.elf('system/lib/liba.z.so', 'liba.z.so', [])
+        (self.package / 'system/etc/hdfconfig/hdf_default.hcb').unlink()
+        database = Database(self.root / 'knowledge.db')
+        result = run(database, ScanRequest(self.root, 'test'), only=('elf_modules',))
+        with ScanSession.open(database, scan_id=result.scan_id) as session:
+            connection = session.connection
+            hdi_status = connection.execute(
+                "SELECT status FROM collector_runs WHERE collector='hdi'").fetchone()['status']
+            hdi_issue = connection.execute(
+                "SELECT code FROM issues WHERE collector='hdi'").fetchone()['code']
+            elf_count = connection.execute(
+                'SELECT COUNT(*) AS count FROM elf_modules').fetchone()['count']
+        self.assertEqual(hdi_status, 'degraded')
+        self.assertEqual(hdi_issue, 'HCB_INPUT_MISSING')
+        self.assertEqual(elf_count, 1)
 
 
 if __name__ == '__main__':

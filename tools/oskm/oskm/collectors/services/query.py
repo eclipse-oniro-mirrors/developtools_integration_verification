@@ -70,8 +70,8 @@ class ServiceQuery(BaseQuery):
 
     def list_services(self, filters=ServiceFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = self._page(rows, page, dict(method='services', filters=filter_key(filters)))
-        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), cursor)
+        selected, page_token = self._page(rows, page, dict(method='services', filters=filter_key(filters)))
+        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), page_token)
 
     def aggregate_services(self, request=ServiceAggregateRequest()):
         _validate_aggregate_request(request)
@@ -109,8 +109,8 @@ class ServiceQuery(BaseQuery):
         ordered = [freeze(g) for _, g in sorted(groups.items())]
         context = dict(method='aggregate', filters=filter_key(request.filters), dimensions=request.group_by,
                        grain=request.grain, resource_field=request.resource_field)
-        selected, cursor = self._page(ordered, request.page, context)
-        return ServiceAggregatePage(tuple(selected), denominator, len(rows), len(groups), cursor)
+        selected, page_token = self._page(ordered, request.page, context)
+        return ServiceAggregatePage(tuple(selected), denominator, len(rows), len(groups), page_token)
 
 def _validate_aggregate_request(request):
     """Validate the aggregate request parameters."""

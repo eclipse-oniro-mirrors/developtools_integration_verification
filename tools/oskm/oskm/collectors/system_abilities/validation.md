@@ -18,12 +18,23 @@
 从 OpenHarmony 工程根执行：
 
 ```bash
-python3 -m unittest discover -s KnowledgeBase/packages/oskm/tests -q
-
-python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
-
-python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PWD"
+python3 -m unittest discover -s packages/oskm/oskm/tests -q
 ```
+
+> `verify_rk3568.py` 已于 2026-11-12 删除（rk3568 不再是验收基线，改用
+> wukong100）。当时的产品级回归等价于跑一次全量扫描再看各域的
+> `collector_runs` / `issues`：
+>
+> ```bash
+> cd packages/oskm
+> python3.12 -m oskm.cli scan --workspace-root /path/to/code --product wukong100 \
+>     --db ../../artifacts/wukong100/knowledge.db
+> # 查询侧是**另一个入口**（两个产物没有共同命令）；源树里不用先构建：
+> export PYTHONPATH=cli
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db \
+>     ask get_scan_info        # 各采集器 status / record_count / error
+> python3.12 -m oskm_cli --db ../../artifacts/wukong100/knowledge.db ask list_issues
+> ```
 
 **49 项测试通过：25 项 SA 测试、24 项既有 services 测试。** SA 测试覆盖：
 
@@ -41,7 +52,7 @@ python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PW
 
 | 项目 | 结果 |
 | --- | ---: |
-| SA profile / 正常排除的其他 JSON | 104 / 10 |
+| SA profile / 正常排除的其余 JSON | 104 / 10 |
 | SA 声明 / 不同 ID | 165 / 165 |
 | 原始 SA 字段种类 | 18 |
 | 不同声明进程 / init 宿主服务 | 104 / 104 |
@@ -61,7 +72,7 @@ python3 KnowledgeBase/packages/oskm/tests/verify_rk3568.py --workspace-root "$PW
 
 | 格式 | 大小（字节） | 文件 |
 | --- | ---: | --- |
-| JSON，两空格缩进 | 121692 | [sas.json](../../../../../../../../KnowledgeBase/artifacts/system-abilities/rk3568/sas.json) |
+| JSON，两空格缩进 | 121692 | `sas.json`（`artifacts/system-abilities/rk3568/sas.json`） |
 
 JSON 文件与 API均验证默认覆盖；CLI 再次扫描并覆盖 JSON 后校验有效。目录只有上述两个文件，无必要旁车或 journal。本地产品产物被 Git 忽略，测试可在原路径重复运行。
 
@@ -75,6 +86,6 @@ services 回归产物在临时目录执行并清理，未增加工作区快照�
 
 ## 6. 范围限制
 
-本次验证的是当前编译产物中的静态声明和构建元数据关联，不证明 SA 已运行或已注册，不保证未测试产品与其他构建形态的覆盖率。
+本次验证的是当前编译产物中的静态声明和构建元数据关联，不证明 SA 已运行或已注册，不保证未测试产品与其余构建形态的覆盖率。
 
 无源码包、非 sa_main 启动器、构建链不完整或源/安装对象不同会报告缺失或冲突，不用宿主或库归属代填。产物离线校验不重新访问工作区，也不检测所有语义篡改。API 仍完整加载内存，MCP 传输和运行态分析未实施。

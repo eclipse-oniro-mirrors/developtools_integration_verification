@@ -21,9 +21,6 @@ NAPI_MAP = 'napi-map.json'
 # constants keep the reference-data layout; the scan projection rewrites the
 # architecture root to match the target cpu_arch before persisting the path.
 ARKUI_ENGINE_SO = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
-# The yellow zone installs the same artefact straight under lib64/ instead of
-# the platformsdk/ subdirectory the blue-zone reference data assumes.
-YELLOW_ARKUI_ENGINE_SO = 'system/lib64/libace_engine_pa_ark.z.so'
 
 _LIBRARY_ROOTS = {'arm': 'system/lib/', 'arm64': 'system/lib64/'}
 
@@ -45,10 +42,13 @@ def arch_library_path(path, cpu_arch):
     return path
 
 
-def arkui_engine_so(zone, cpu_arch):
-    """ArkUI engine path for the scan's zone layout and target architecture."""
-    path = YELLOW_ARKUI_ENGINE_SO if zone == 'yellow' else ARKUI_ENGINE_SO
-    return arch_library_path(path, cpu_arch)
+def arkui_engine_so(cpu_arch):
+    """Architecture-based ArkUI fallback path.
+
+    Installed targets are resolved later by ``arkts_links`` and take precedence
+    over this fallback.
+    """
+    return arch_library_path(ARKUI_ENGINE_SO, cpu_arch)
 
 
 @dataclass(frozen=True)

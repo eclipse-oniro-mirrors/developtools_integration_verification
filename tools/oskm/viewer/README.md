@@ -32,7 +32,7 @@ http://localhost:5173/?db=knowledge.db#/runtime
 - `#/runtime` 运行视图：164 个运行单元，混装进程一眼可见
 - `#/build` 构建视图：382 个部件，按入度排序
 - `#/image` 镜像视图：5804 个文件的路径树，标注归属
-- `#/sdk/ndk-headers` NDK 头文件：441 条库-头文件映射，带匹配策略与源码链接
+- `#/sdk/native-headers` Native SDK 头文件：441 条库-头文件映射，带匹配策略与源码链接
 - `#/lookup?q=` 反查：从 so 名 / 路径 / 进程名回到部件与仓
 - `#/findings` 质量：扫描层问题与数据一致性
 - `#/e/<table>/<id>` 实体档案：三镜头摘要 + 外键自动关联，**新表不改代码也能打开**
@@ -57,6 +57,6 @@ npm run shoot   # 逐视图截图到 shots/，抓控制台错误与空内容
 
 - [UX 设计 v3.1](./docs/ux-design.md)
 - [实施计划 v3.1](./docs/implementation-plan.md)
-- [NDK headers 视图设计](./docs/ndk-headers-view.md)
+- [Native SDK headers 视图设计](./docs/native-headers-view.md)
 - [备选方案与选型理由](./docs/ux-options.md)
 - [URL 规范](./docs/url-spec.md)（待按 ux-design §10 修订）

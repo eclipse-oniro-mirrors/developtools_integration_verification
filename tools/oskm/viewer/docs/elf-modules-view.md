@@ -52,7 +52,7 @@
 | 与运行镜头的连通性 | services.executable 命中 162/164；sas.libpath 命中 161/165；hdis.library 命中 46/46 | ELF 能接回"谁把这个 so 装进了进程" |
 
 目录分布（107 个目录，前 7）：`system/lib` 1,113 · `system/lib/platformsdk` 733 · `vendor/lib` 258 ·
-`system/lib/module` 149 · `system/lib/module/ani` 125 · `system/bin` 111 · `system/lib/ndk` 111。
+`system/lib/module` 149 · `system/lib/module/ani` 125 · `system/bin` 111 · `system/lib/native` 111。
 
 ---
 
@@ -122,7 +122,7 @@ musl 把 libc 合进了动态链接器本体，镜像里不存在名为 `libc.so
 | `libutils.z.so` | `system/lib/chipset-sdk-sp/` · 1000 · **1,906** · c_utils | `system/lib/module/arkts/` · 1000 · 0 · ets_utils |
 | `libconfiguration.z.so` | `system/lib/platformsdk/` · 6 · 108 · ability_base | `system/lib/module/` · 9 · 0 · ace_engine |
 | `libsms.z.so` | `system/lib/platformsdk/` · 6 · 3 · window_manager | `system/lib/module/telephony/` · 1000 · 0 · sms_mms |
-| `libhid.z.so` | `system/lib/ndk/` · 3 · 0 · external_device_manager | `system/lib/module/bluetooth/` · 1000 · 0 · bluetooth |
+| `libhid.z.so` | `system/lib/native/` · 3 · 0 · external_device_manager | `system/lib/module/bluetooth/` · 1000 · 0 · bluetooth |
 | `liboverlay.z.so` | `system/lib/module/` · 9 · 0 · ace_engine | `system/lib/module/bundle/` · 1000 · 0 · bundle_framework |
 | `libdeviceinfo.z.so` | `system/lib/module/` · 9 · 0 · init | `system/lib/module/enterprise/` · 1000 · 0 · enterprise_device_management |
 | `libbluetoothmanager.z.so` | `system/lib/module/` · 9 · 0 · bluetooth | `system/lib/module/enterprise/` · 1000 · 0 · enterprise_device_management |
@@ -320,7 +320,7 @@ planner 于是挑了只有两个取值的 `(scan_id, resolution)`，3,520 × 3,4
    后者也是事实，不留空。
 3. **复核命令**替代 `record` 区。这个域没有"原始声明"，但有可复核的物理事实：
    给出 `readelf -d <workspace>/out/<product>/packages/phone/<dest>`，让人能自己验一遍 SONAME 与 `DT_NEEDED`。
-   这与 `oskm/tests/verify_rk3568.py` 的 oracle 是同一条命令，"只陈述事实、可追溯"因此闭环。
+   这与当时 `oskm/tests/verify_rk3568.py`（已于 2026-11-12 删除）的 oracle 是同一条命令，"只陈述事实、可追溯"因此闭环。
 
 ### 5.4 反查（⌘K）加一级：SONAME
 
@@ -492,7 +492,7 @@ await go('#/findings?issue=elf_modules%2FELF_PARSE_FAILED')
 本文每个数字都可以这样复现（库：`viewer/knowledge.db`，`scan_id = 1`）：
 
 ```bash
-cd code/developtools/integration_verification/tools/oskm
+cd KnowledgeBase/packages/oskm
 # 计数、分区、format、soname、resolution
 sqlite3 viewer/knowledge.db "SELECT resolution, COUNT(*) FROM elf_module_dependencies WHERE scan_id=1 GROUP BY resolution"
 # 入度 / 出度 / 未解析

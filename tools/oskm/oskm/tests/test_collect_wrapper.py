@@ -25,7 +25,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import oskm.cli
-from oskm_collect import _run_scan, oskm_collect
+from oskm_collect import _resolve_params, _run_scan, oskm_collect
 
 
 class CollectWrapperTest(unittest.TestCase):
@@ -33,10 +33,9 @@ class CollectWrapperTest(unittest.TestCase):
         with patch('oskm.cli.main', return_value=0) as scan_main, \
                 contextlib.redirect_stdout(io.StringIO()):
             code = _run_scan(Path('/workspace'), 'abi/device', Path('/tmp/knowledge.db'),
-                             zone='yellow', cpu_arch='arm64')
+                             cpu_arch='arm64')
         self.assertEqual(code, 0)
         argv = scan_main.call_args.args[0]
-        self.assertEqual(argv[argv.index('--zone') + 1], 'yellow')
         self.assertEqual(argv[argv.index('--cpu-arch') + 1], 'arm64')
 
     def test_missing_target_cpu_does_not_add_an_empty_argument(self):
@@ -49,10 +48,43 @@ class CollectWrapperTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, \
                 patch('oskm_collect._run_scan', return_value=0) as run_scan, \
                 contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(oskm_collect(tmp, 'arm64', zone='yellow'), 0)
+            root = Path(tmp)
+            self.assertEqual(oskm_collect(root / 'out/test', 'arm64',
+                                          workspace_root=root, product='test'), 0)
         run_scan.assert_called_once()
-        self.assertEqual(run_scan.call_args.args[4], 'arm64')
-        self.assertEqual(run_scan.call_args.args[3], 'yellow')
+        self.assertEqual(run_scan.call_args.args[3], 'arm64')
+
+    def test_layout_is_detected_from_out_one_segment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workspace, product, db_path = _resolve_params(
+                root / 'out/test', None, None)
+            self.assertEqual(workspace, root)
+            self.assertEqual(product, 'test')
+            self.assertEqual(db_path, root / 'out/test/oskm/knowledge.db')
+
+    def test_layout_is_detected_from_out_two_segments(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workspace, product, db_path = _resolve_params(
+                root / 'out/abi/device', None, None)
+            self.assertEqual(workspace, root)
+            self.assertEqual(product, 'abi/device')
+            self.assertEqual(db_path, root / 'out/abi/device/oskm/knowledge.db')
+
+    def test_unrecognized_layout_requires_an_explicit_product(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, 'INPUT_LAYOUT_UNRECOGNIZED'):
+                _resolve_params(Path(tmp) / 'build/test', None, None)
+            with self.assertRaisesRegex(ValueError, 'WORKSPACE_ROOT_REQUIRED'):
+                _resolve_params(Path(tmp) / 'build/test', None, 'test')
+
+    def test_explicit_product_takes_priority_over_detected_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, product, _ = _resolve_params(
+                Path(tmp) / 'out/ignored', None, 'abi/device')
+            self.assertEqual(workspace, Path(tmp))
+            self.assertEqual(product, 'abi/device')
 
 
 if __name__ == '__main__':

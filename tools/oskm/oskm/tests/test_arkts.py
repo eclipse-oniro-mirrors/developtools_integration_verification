@@ -24,7 +24,14 @@ from oskm.core.io import canonical
 from oskm.core.models import QueryError, RequestError, ScanCancelled, ScanFatalError, ScanLimits, ScanRequest
 from oskm.core.runner import run
 from oskm.core.session import ScanSession
-from agentic.query.arkts import ArktsQuery, export_document
+# oskm/tests -> oskm -> packages/oskm（oskm、oskm_schema）与 packages/oskm/cli
+# （oskm_cli）。查询侧的 ArktsQuery 属于 CLI 产物，不在采集包里。
+_PACKAGE = Path(__file__).resolve().parents[2]
+for _entry in (str(_PACKAGE), str(_PACKAGE / 'cli')):
+    if _entry not in sys.path:
+        sys.path.insert(0, _entry)
+
+from oskm_cli.query.arkts import ArktsQuery, export_document
 from oskm.collectors.arkts.backend import Backend, validate_result
 from oskm.collectors.arkts.collector import ArktsCollector
 from oskm.collectors.arkts_links.collector import ArktsLinksCollector
@@ -40,14 +47,44 @@ HAS_BACKEND = BACKEND.is_dir() and WORKSPACE_NODE.is_file()
 
 
 class LinkingTest(unittest.TestCase):
-    def test_arkui_engine_so_is_zone_aware(self):
-        # The zone chooses the subdirectory layout; cpu_arch chooses lib vs lib64.
-        from oskm.collectors.arkts.models import (ARKUI_ENGINE_SO,
-                                                  YELLOW_ARKUI_ENGINE_SO,
-                                                  arkui_engine_so)
-        self.assertEqual(arkui_engine_so('blue', 'arm'),
-                         'system/lib/platformsdk/libace_engine_pa_ark.z.so')
-        self.assertEqual(arkui_engine_so('yellow', 'arm64'), YELLOW_ARKUI_ENGINE_SO)
+    def link_database(self):
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        connection.executescript('''
+            CREATE TABLE arkts_modules(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, module_key TEXT,
+                impl_so_path TEXT, impl_match TEXT, impl_elf_id INTEGER);
+            CREATE TABLE install_targets(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, dest TEXT);
+            CREATE TABLE elf_modules(
+                id INTEGER PRIMARY KEY, scan_id INTEGER, install_target_id INTEGER);
+            CREATE TABLE collector_runs(
+                scan_id INTEGER, collector TEXT, status TEXT);
+            INSERT INTO arkts_modules(
+                id, scan_id, module_key, impl_so_path, impl_match)
+            VALUES(
+                1, 7, 'api/@internal/ets/button',
+                'system/lib64/platformsdk/libace_engine_pa_ark.z.so',
+                'arkui_engine');
+        ''')
+        return connection
+
+    def add_installed_elf(self, connection, dest, position):
+        target_id = connection.execute(
+            'INSERT INTO install_targets(scan_id, dest) VALUES(?,?)',
+            (7, dest)).lastrowid
+        connection.execute(
+            'INSERT INTO elf_modules(scan_id, install_target_id) VALUES(?,?)',
+            (7, target_id))
+
+    def test_arkui_engine_so_depends_on_arch(self):
+        # The image layout is an installation fact. Until an installed target
+        # provides better evidence, use the architecture-based reference path.
+        from oskm.collectors.arkts.models import ARKUI_ENGINE_SO, arkui_engine_so
+        expected_arm = 'system/lib/platformsdk/libace_engine_pa_ark.z.so'
+        expected_arm64 = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
+        self.assertEqual(arkui_engine_so('arm'), expected_arm)
+        self.assertEqual(arkui_engine_so('arm64'), expected_arm64)
         self.assertEqual(ARKUI_ENGINE_SO,
                          'system/lib64/platformsdk/libace_engine_pa_ark.z.so')
 
@@ -57,6 +94,38 @@ class LinkingTest(unittest.TestCase):
         self.assertEqual(arch_library_path(reference, 'arm'),
                          'system/lib/module/multimedia/libimage.z.so')
         self.assertEqual(arch_library_path(reference, 'arm64'), reference)
+
+    def test_post_insert_without_link_tables_is_a_noop(self):
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        ArktsLinksCollector.post_insert(connection, 1)
+
+    def test_collect_resolves_arkui_path_before_reporting_links(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        connection = self.link_database()
+        self.add_installed_elf(connection, actual, 0)
+        connection.executemany(
+            'INSERT INTO collector_runs(scan_id, collector, status) VALUES(?,?,?)',
+            ((7, 'arkts', 'complete'), (7, 'elf_modules', 'complete')))
+        with tempfile.TemporaryDirectory() as tmp:
+            context = ArktsLinksCollector.CONTEXT_TYPE(
+                scan_id=7, connection=connection,
+                request=ScanRequest(Path(tmp), 'test'), collector='arkts_links')
+            ArktsLinksCollector().collect(context)
+        path = connection.execute(
+            'SELECT impl_so_path FROM arkts_modules WHERE id=1').fetchone()[0]
+        self.assertEqual(path, actual)
+        self.assertEqual(context.records['arkts_links_run'][0]['linked'], 1)
+
+    def test_duplicate_installed_targets_are_one_arkui_destination(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        connection = self.link_database()
+        self.add_installed_elf(connection, actual, 0)
+        self.add_installed_elf(connection, actual, 1)
+        ArktsLinksCollector.post_insert(connection, 7)
+        path = connection.execute(
+            'SELECT impl_so_path FROM arkts_modules WHERE id=1').fetchone()[0]
+        self.assertEqual(path, actual)
 
     def test_module_targets_paths_and_out_of_scope(self):
         # A module declared for both language versions is one target. Keying on
@@ -137,6 +206,7 @@ class TransportTest(unittest.TestCase):
 
 @unittest.skipUnless(HAS_BACKEND, 'locked Node/ohos-typescript integration dependency unavailable')
 class ArktsTest(unittest.TestCase):
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -166,18 +236,39 @@ class ArktsTest(unittest.TestCase):
         self.request = ScanRequest(self.root, 'sdk-source')
         self.scan_id = self.scan().scan_id
 
+
     def write(self, name, text):
         path = self.sdk/name; path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(text if isinstance(text, bytes) else text.encode())
         return path
 
+
+    def add_installed_elf(self, connection, dest, position=0):
+        module_id = connection.execute(
+            'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
+            (self.scan_id, position, '{}')).lastrowid
+        target_id = connection.execute(
+            'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
+            'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
+            (self.scan_id, module_id, 0, dest, 0, 'system',
+             dest.rsplit('/', 1)[-1])).lastrowid
+        connection.execute(
+            'INSERT INTO elf_modules(scan_id, position, install_target_id, '
+            'install_module_id, partition, file_name, api_type, category, '
+            'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
+            (self.scan_id, position, target_id, module_id, 'system',
+             dest.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
+
+
     def scan(self, **kwargs):
         return run(self.database, self.request, only=('arkts',), without=('repos',), **kwargs)
+
 
     def session(self):
         session = ScanSession.open(self.database, scan_id=self.scan_id)
         self.addCleanup(session.close)
         return session
+
 
     def test_inventory_failed_sources_and_no_api_entities(self):
         session = self.session(); q = ArktsQuery(session)
@@ -192,6 +283,7 @@ class ArktsTest(unittest.TestCase):
         self.assertFalse((self.root/'out').exists())
         self.assertFalse(any(r[0].startswith('api_') for r in session.connection.execute("SELECT name FROM sqlite_master")))
         self.assertEqual(session.connection.execute('PRAGMA foreign_key_check').fetchall(), [])
+
 
     def test_both_language_declarations_are_one_module(self):
         q = ArktsQuery(self.session())
@@ -209,6 +301,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(q.list_modules(language_coverage='both')['total'], 1)
         self.assertEqual(q.list_modules(declaration_format='static.d.ets')['total'], 1)
 
+
     def test_implementation_kind_and_arkui_engine_mapping(self):
         q = ArktsQuery(self.session())
         # The ArkUI engine serves every @internal declaration; the fixture's
@@ -218,7 +311,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(button['module']['implementation_kind'], 'arkui')
         self.assertEqual(button['module']['declaration_scope'], 'internal_ets')
         self.assertEqual(button['implementation']['impl_so_path'],
-                         'system/lib/platformsdk/libace_engine_pa_ark.z.so')
+                         'system/lib64/platformsdk/libace_engine_pa_ark.z.so')
         self.assertEqual(button['implementation']['impl_match'], 'arkui_engine')
         # 没解析到 ELF：这里没跑 arkts_links
         self.assertNotIn('installed_at', button['implementation'])
@@ -231,61 +324,95 @@ class ArktsTest(unittest.TestCase):
         self.assertTrue(all(p.startswith(SDK_PATH + '/') for p in paths), paths[:3])
         self.assertEqual(len(q.scope['napi_map']['sha256']), 64)
 
-    def _assert_napi_layout_and_exact_link(self, zone, cpu_arch, expected, wrong):
-        self.write('api/@ohos.multimedia.image.d.ts', 'declare class Image {}')
-        result = run(self.database, ScanRequest(self.root, 'sdk-source', zone=zone,
-                                                cpu_arch=cpu_arch),
-                     only=('arkts',), without=('repos',))
-        with ScanSession.open(self.database, scan_id=result.scan_id) as session:
+
+    def test_arkui_path_uses_unique_installed_target_and_links_its_elf(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
             connection = session.connection
-            module = connection.execute(
-                'SELECT id, impl_so_path, impl_elf_id FROM arkts_modules '
-                'WHERE scan_id=? AND module_key=?',
-                (result.scan_id, 'api/@ohos.multimedia.image')).fetchone()
-            self.assertEqual(module['impl_so_path'], expected)
-            self.assertIsNone(module['impl_elf_id'])
+            module_id = connection.execute(
+                'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
+                (self.scan_id, 0, '{}')).lastrowid
+            target_id = connection.execute(
+                'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
+                'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
+                (self.scan_id, module_id, 0, actual, 0, 'system',
+                 actual.rsplit('/', 1)[-1])).lastrowid
+            connection.execute(
+                'INSERT INTO elf_modules(scan_id, position, install_target_id, '
+                'install_module_id, partition, file_name, api_type, category, '
+                'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                (self.scan_id, 0, target_id, module_id, 'system',
+                 actual.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+            self.assertEqual(button['implementation']['installed_at'], actual)
 
-            def add_elf(dest):
-                cursor = connection.execute(
-                    'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
-                    (result.scan_id, 0, '{}'))
-                module_id = cursor.lastrowid
-                cursor = connection.execute(
-                    'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
-                    'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
-                    (result.scan_id, module_id, 0, dest, 0, 'system',
-                     dest.rsplit('/', 1)[-1]))
-                target_id = cursor.lastrowid
-                connection.execute(
-                    'INSERT INTO elf_modules(scan_id, position, install_target_id, '
-                    'install_module_id, partition, file_name, api_type, category, '
-                    'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
-                    (result.scan_id, 0, target_id, module_id, 'system',
-                     dest.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
 
-            # The opposite architecture root must not be accepted as an alias.
-            add_elf(wrong)
-            ArktsLinksCollector.post_insert(connection, result.scan_id)
-            self.assertIsNone(connection.execute(
-                'SELECT impl_elf_id FROM arkts_modules WHERE id=?',
-                (module['id'],)).fetchone()['impl_elf_id'])
+    def test_arkui_path_keeps_fallback_with_missing_or_ambiguous_install_evidence(self):
+        fallback = 'system/lib64/platformsdk/libace_engine_pa_ark.z.so'
+        actual = (
+            'system/lib64/libace_engine_pa_ark.z.so',
+            'system/lib/platformsdk/libace_engine_pa_ark.z.so',
+        )
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], fallback)
+            self.assertNotIn('installed_at', button['implementation'])
 
-            add_elf(expected)
-            ArktsLinksCollector.post_insert(connection, result.scan_id)
-            implementation = ArktsQuery(session).get_module(
-                'api/@ohos.multimedia.image')['implementation']
-            self.assertEqual(implementation['impl_so_path'], expected)
-            self.assertEqual(implementation['installed_at'], expected)
+            for position, dest in enumerate(actual):
+                self.add_installed_elf(connection, dest, position=position)
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], fallback)
+            self.assertNotIn('installed_at', button['implementation'])
 
-    def test_blue_arm_napi_path_and_link_use_lib(self):
+
+    def test_arkui_path_resolves_before_collect_reports_links(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            self.add_installed_elf(connection, actual)
+            connection.execute(
+                'INSERT INTO collector_runs(scan_id, collector, schema_version, '
+                'status, record_count) VALUES(?,?,?,?,?)',
+                (self.scan_id, 'elf_modules', 'test', 'complete', 1))
+            context = ArktsLinksCollector.CONTEXT_TYPE(
+                scan_id=self.scan_id, connection=connection, request=self.request,
+                collector='arkts_links')
+            ArktsLinksCollector().collect(context)
+            self.assertEqual(context.records['arkts_links_run'][0]['linked'], 1)
+
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+
+
+    def test_arkui_path_counts_distinct_destinations_not_duplicate_targets(self):
+        actual = 'system/lib64/libace_engine_pa_ark.z.so'
+        with ScanSession.open(self.database, scan_id=self.scan_id) as session:
+            connection = session.connection
+            self.add_installed_elf(connection, actual, position=0)
+            self.add_installed_elf(connection, actual, position=1)
+            ArktsLinksCollector.post_insert(connection, self.scan_id)
+            button = ArktsQuery(session).get_module('api/@internal/ets/button')
+            self.assertEqual(button['implementation']['impl_so_path'], actual)
+            self.assertNotIn('installed_at', button['implementation'])
+
+
+    def test_arm_napi_path_and_link_use_lib(self):
         self._assert_napi_layout_and_exact_link(
-            'blue', 'arm', 'system/lib/module/multimedia/libimage.z.so',
+            'arm', 'system/lib/module/multimedia/libimage.z.so',
             'system/lib64/module/multimedia/libimage.z.so')
 
-    def test_yellow_arm64_napi_path_and_link_use_lib64(self):
+
+    def test_arm64_napi_path_and_link_use_lib64(self):
         self._assert_napi_layout_and_exact_link(
-            'yellow', 'arm64', 'system/lib64/module/multimedia/libimage.z.so',
+            'arm64', 'system/lib64/module/multimedia/libimage.z.so',
             'system/lib/module/multimedia/libimage.z.so')
+
 
     def test_scope_does_not_repeat_the_per_file_hashes(self):
         q = ArktsQuery(self.session())
@@ -296,6 +423,7 @@ class ArktsTest(unittest.TestCase):
         self.write('api/@ohos.b.d.ts', 'declare class B2 {}')
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
         self.assertNotEqual(ArktsQuery(self.session()).scope['files_digest'], before)
+
 
     def test_bidirectional_queries_dedup_and_candidate_filter(self):
         q = ArktsQuery(self.session())
@@ -315,6 +443,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(q.get_module('api/@ohos.a')['evidence']['total'], 5)
         self.assertEqual(q.list_modules(query='%')['total'], 0)
         self.assertEqual(q.list_kits(query='Automatic Scene')['items'][0]['origin'], 'label_only')
+
 
     def test_member_routes_mentioned_in_and_reverse_lookup(self):
         """两条来路、label_only 的回答、以及从部件/.so 反查 SDK 模块。"""
@@ -344,22 +473,24 @@ class ArktsTest(unittest.TestCase):
             q.list_modules(component='ace_engine')
         # 游标与新筛选项绑定：换一个 implemented_by，旧游标必须失效。
         first = q.list_modules(limit=1)
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(implemented_by='libace_engine', limit=1, cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'INVALID_PAGE_TOKEN'):
+            q.list_modules(implemented_by='libace_engine', limit=1, page_token=first['next_page_token'])
 
-    def test_cursor_filter_binding_and_rescan_invalidation(self):
+
+    def test_page_token_filter_binding_and_rescan_invalidation(self):
         q = ArktsQuery(self.session()); first = q.list_modules(limit=2)
-        second = q.list_modules(limit=2, cursor=first['next_cursor'])
+        second = q.list_modules(limit=2, page_token=first['next_page_token'])
         self.assertFalse({m['module_key'] for m in first['items']} & {m['module_key'] for m in second['items']})
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(query='x', cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'INVALID_PAGE_TOKEN'):
+            q.list_modules(query='x', page_token=first['next_page_token'])
         for limit in (0, 201, True, '1'):
             with self.assertRaises(QueryError): q.list_modules(limit=limit)
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(q.list_modules(limit=2, cursor=first['next_cursor'])['items'], second['items'])
+        self.assertEqual(q.list_modules(limit=2, page_token=first['next_page_token'])['items'], second['items'])
         self.write('api/@ohos.new.d.ts', 'declare class New {}')
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=first['next_page_token'])
+
 
     def test_evidence_roundtrip_and_export_without_sources(self):
         session = self.session(); document = export_document(session)
@@ -379,6 +510,7 @@ class ArktsTest(unittest.TestCase):
         self.assertTrue(all('header_span' in d for d in document['sources']
                             if d['read_status'] == 'ok'))
 
+
     def test_scan_isolation_rescan_and_transaction_rollback(self):
         session = self.session(); before = canonical(export_document(session))
         new = self.scan().scan_id
@@ -391,6 +523,7 @@ class ArktsTest(unittest.TestCase):
         self.assertEqual(session.connection.execute('PRAGMA foreign_key_check').fetchall(), [])
         self.assertEqual(session.connection.execute('SELECT count(*) FROM arkts_kit_relations r JOIN arkts_modules m ON m.id=r.module_id WHERE m.scan_id!=r.scan_id').fetchone()[0], 0)
 
+
     def test_cancel_or_backend_failure_preserves_old_rows(self):
         session = self.session(); before = canonical(export_document(session))
         with self.assertRaises(ScanCancelled):
@@ -398,6 +531,7 @@ class ArktsTest(unittest.TestCase):
         with patch.object(Backend, 'parse', side_effect=ScanFatalError('injected')):
             with self.assertRaises(ScanFatalError): self.scan(scan_id=self.scan_id, reuse_upstream=True)
         self.assertEqual(canonical(export_document(session)), before)
+
 
     def test_roots_links_and_read_budgets(self):
         (self.sdk/'api/outside.d.ts').symlink_to(self.root/'missing')
@@ -417,6 +551,7 @@ class ArktsTest(unittest.TestCase):
             with self.assertRaisesRegex(RequestError, 'ROOT_OUTSIDE_WORKSPACE'):
                 run(self.database, self.request, only=('arkts',), without=('repos',))
 
+
     def test_invalid_kit_and_syntax_failure_do_not_hide_inventory(self):
         self.write('kits/invalid.d.ts', 'import x from "@ohos.a";')
         self.write('kits/@kit.Broken.d.ts', '/** @file Broken\n * @kit Broken\n */\nimport x from "a"; import {')
@@ -431,17 +566,22 @@ class ArktsTest(unittest.TestCase):
         self.assertTrue(any(d['source_path'] == invalid_path and 'kit_key' not in d
                             for d in document['sources']))
 
+
     def test_entry_script_derives_paths_without_extra_flags_or_path_node(self):
-        from agentic.query.session import SessionManager
-        from agentic.query.tools import dispatch
-        entry = Path(__file__).resolve().parents[2] / 'oskm.py'
-        env = dict(os.environ, PATH=str(self.root/'empty-path'))
-        completed = subprocess.run([sys.executable, str(entry), 'scan', '--workspace-root', str(self.root),
-            '--product', 'sdk-source', '--only', 'arkts', '--without', 'repos', '--db', str(self.root/'cli.db')],
+        from oskm_cli.query.session import SessionManager
+        from oskm_cli.query.tools import dispatch
+        # 采集侧的入口是 `python3 -m oskm.cli`（`packages/oskm/oskm.py` 已于
+        # 2026-11-12 删除）。cwd 是临时目录，所以要显式给 PYTHONPATH——
+        # 旧写法靠"脚本所在目录自动进 sys.path[0]"省掉了这一步。
+        package = Path(__file__).resolve().parents[2]
+        env = dict(os.environ, PATH=str(self.root / 'empty-path'),
+                   PYTHONPATH=str(package))
+        completed = subprocess.run([sys.executable, '-m', 'oskm.cli', 'scan', '--workspace-root', str(self.root),
+            '--product', 'sdk-source', '--only', 'arkts', '--without', 'repos', '--db', str(self.root / 'cli.db')],
             cwd=self.root, env=env, capture_output=True, text=True, timeout=30)
         self.assertEqual(completed.returncode, 4, completed.stderr)
         self.assertEqual(json.loads(completed.stdout)['collectors']['arkts']['records'], 5)
-        with ScanSession.open(Database(self.root/'cli.db')) as scanned:
+        with ScanSession.open(Database(self.root / 'cli.db')) as scanned:
             self.assertEqual(ArktsQuery(scanned).scope['backend']['node_version'], 'v18.20.1')
         manager = SessionManager(); manager.open(str(self.database.path)); self.addCleanup(manager.close)
         with patch('subprocess.Popen', side_effect=AssertionError('query started process')):
@@ -451,11 +591,13 @@ class ArktsTest(unittest.TestCase):
             self.assertEqual(dispatch('get_arkts_kit', {}, manager)['error']['code'], 'MISSING_PARAM')
             self.assertEqual(dispatch('list_arkts_kits', {'sql':'DROP TABLE x'}, manager)['error']['code'], 'INVALID_PARAM')
 
+
     def test_old_database_unrun_domain_is_not_empty_success(self):
         legacy = Database(self.root/'legacy.db')
         run(legacy, ScanRequest(self.root,'sdk-source'), only=('repos',))
         with ScanSession.open(legacy) as session:
             with self.assertRaisesRegex(QueryError, 'COLLECTOR_NOT_RUN'): ArktsQuery(session)
+
 
     def test_repo_snapshot_survives_upstream_replacement(self):
         session = self.session()
@@ -480,6 +622,7 @@ class ArktsTest(unittest.TestCase):
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
         self.assertEqual(ArktsQuery(session).list_modules()['total'], 5)
 
+
     def test_missing_capability_and_mismatched_backend_fail_before_source(self):
         backend = Backend(BACKEND, WORKSPACE_NODE)
         lock = backend.lock
@@ -496,6 +639,7 @@ class ArktsTest(unittest.TestCase):
         other.lock['files'] = {'lib/typescript.js': 'incorrect'}
         with self.assertRaisesRegex(ScanFatalError, 'IDENTITY_MISMATCH'): other.__enter__()
 
+
     def test_missing_workspace_node_does_not_fall_back_to_path(self):
         (self.root/NODE_PATH).unlink()
         with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'):
@@ -504,15 +648,17 @@ class ArktsTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             parser().parse_args(['scan', '--workspace-root', str(self.root), '--product', 'test', '--arkts-node', 'node'])
 
+
     def test_configuration_and_discovery_changes_invalidate_digest(self):
         q = ArktsQuery(self.session()); page = q.list_modules(limit=1)
         self.request = replace(self.request, options={'arkts': {'file_seconds':16}})
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=page['next_page_token'])
         page = q.list_modules(limit=1)
         (self.sdk/'api/skip').symlink_to(self.sdk/'api', target_is_directory=True)
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=page['next_page_token'])
+
 
     def test_protocol_integrity_rejects_future_fields_and_bad_evidence(self):
         data = '/** @file 中😀\n * @kit Demo\n */'.encode()
@@ -529,6 +675,54 @@ class ArktsTest(unittest.TestCase):
                 with self.assertRaises(ScanFatalError): validate_result(bad, request, data)
         missing = Backend(self.root/'absent', WORKSPACE_NODE)
         with self.assertRaisesRegex(ScanFatalError, 'BACKEND_UNAVAILABLE'): missing.__enter__()
+
+
+    def _assert_napi_layout_and_exact_link(self, cpu_arch, expected, wrong):
+        self.write('api/@ohos.multimedia.image.d.ts', 'declare class Image {}')
+        result = run(self.database, ScanRequest(self.root, 'sdk-source',
+                                                cpu_arch=cpu_arch),
+                     only=('arkts',), without=('repos',))
+        with ScanSession.open(self.database, scan_id=result.scan_id) as session:
+            connection = session.connection
+            module = connection.execute(
+                'SELECT id, impl_so_path, impl_elf_id FROM arkts_modules '
+                'WHERE scan_id=? AND module_key=?',
+                (result.scan_id, 'api/@ohos.multimedia.image')).fetchone()
+            self.assertEqual(module['impl_so_path'], expected)
+            self.assertIsNone(module['impl_elf_id'])
+
+            def add_elf(dest):
+                page_token = connection.execute(
+                    'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
+                    (result.scan_id, 0, '{}'))
+                module_id = page_token.lastrowid
+                page_token = connection.execute(
+                    'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
+                    'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
+                    (result.scan_id, module_id, 0, dest, 0, 'system',
+                     dest.rsplit('/', 1)[-1]))
+                target_id = page_token.lastrowid
+                connection.execute(
+                    'INSERT INTO elf_modules(scan_id, position, install_target_id, '
+                    'install_module_id, partition, file_name, api_type, category, '
+                    'dynamic, needed) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                    (result.scan_id, 0, target_id, module_id, 'system',
+                     dest.rsplit('/', 1)[-1], 'internal_api', '[]', 0, '[]'))
+
+            # The opposite architecture root must not be accepted as an alias.
+            add_elf(wrong)
+            ArktsLinksCollector.post_insert(connection, result.scan_id)
+            self.assertIsNone(connection.execute(
+                'SELECT impl_elf_id FROM arkts_modules WHERE id=?',
+                (module['id'],)).fetchone()['impl_elf_id'])
+
+            add_elf(expected)
+            ArktsLinksCollector.post_insert(connection, result.scan_id)
+            implementation = ArktsQuery(session).get_module(
+                'api/@ohos.multimedia.image')['implementation']
+            self.assertEqual(implementation['impl_so_path'], expected)
+            self.assertEqual(implementation['installed_at'], expected)
+
 
 
 if __name__ == '__main__': unittest.main()

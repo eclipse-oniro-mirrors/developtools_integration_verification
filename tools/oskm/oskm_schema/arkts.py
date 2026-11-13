@@ -40,8 +40,8 @@ MODULES = Table('arkts_modules', columns=(
 
     # -- 实现它的动态库。原先是一张 arkts_module_impls 表，实测 932 行对 932 个
     #    模块、严格一对一，折叠成列后少一张表、少一次 join。
-    # 本次扫描按 cpu_arch 构造的实现库镜像路径：arm 落 system/lib/，
-    # arm64 落 system/lib64/。即使路径不在本产品镜像里（impl_elf_id 为空），
+    # 本次扫描按 ScanRequest.cpu_arch 构造的实现库镜像路径：arm 落
+    # system/lib/，arm64 落 system/lib64/。即使路径不在本产品镜像里（impl_elf_id 为空），
     # 也保留下来说明扫描期望的实现产物是什么。
     C('impl_so_path'),
     # NAPI 运行时注册名。多数等于 module_name 去掉 @ohos.，但 19 例不是，

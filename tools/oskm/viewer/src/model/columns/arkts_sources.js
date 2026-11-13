@@ -17,7 +17,7 @@ export const COLUMNS = [
     value: r => (r.source_url ? '查看 ↗' : ''),
     href: r => r.source_url || null,
     meaning: '在代码仓里打开这份文件。',
-    reading: 'blue 区用扫描当时的提交号拼 blob 链接；yellow 区 codehub 开源镜像用分支名拼 '
+    reading: '公开托管仓用扫描当时的提交号拼 blob 链接；codehub 开源镜像用分支名拼 '
            + 'files 链接。内容未与扫描快照逐字节比对。' },
   { key: 'byte_size', label: '大小', group: '文件', type: 'bytes', width: 100, align: 'right',
     meaning: '这份文件实际读到了多少字节。',

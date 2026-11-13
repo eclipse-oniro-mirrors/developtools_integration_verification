@@ -20,7 +20,7 @@
 The store is the system of record; this is the convenience path for a caller who
 wants a single domain's result without managing a database file. It runs the
 registered collector into an in-memory store and wraps the rows in that domain's
-Result type, so the rich in-memory query API (predicates, cursors, aggregation)
+Result type, so the rich in-memory query API (predicates, page_tokens, aggregation)
 stays available.
 
 One function covers every domain: the Result type and record field come from the
@@ -76,7 +76,6 @@ def scan(collector, request, *, without=(), on_progress=None, on_diagnostic=None
     try:
         unified = ScanRequest(
             workspace_root=request.workspace_root, product=request.product,
-            zone=getattr(request, 'zone', 'blue'),
             package_root=getattr(request, 'package_root', None),
             limits=getattr(request, 'limits', None) or ScanLimits(),
             options=getattr(request, 'options', None) or {},

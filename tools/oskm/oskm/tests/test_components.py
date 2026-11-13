@@ -88,7 +88,7 @@ class ComponentTest(unittest.TestCase):
             with result.query() as query:
                 self.assertEqual(query.list_dependents('external').total, 1)
                 query.get_component('a')
-        self.assertEqual(opened, [self.index, manifest])
+        self.assertEqual(opened, [self.index.resolve(), manifest.resolve()])
         self.assertEqual(result.components[0]['deps']['components'], ('external', 'external'))
 
     def test_bundle_json_is_preserved_whole_not_truncated(self):
@@ -424,23 +424,23 @@ class ComponentTest(unittest.TestCase):
         with self.assertRaises(QueryError):
             query.get_component('a')
 
-    def test_cursor_roundtrip_and_foreign_cursor_rejected(self):
+    def test_page_token_roundtrip_and_foreign_page_token_rejected(self):
         for name in ('a', 'b', 'c'):
             self.bundle(name)
         result = self.scan()
         with result.query() as query:
             first = query.list_components(page=PageRequest(1))
             with self.assertRaises(QueryError):
-                query.list_components(ComponentFilter(names=('b',)), page=PageRequest(1, first.next_cursor))
-        # A cursor binds to result content, not to the object: an identical
+                query.list_components(ComponentFilter(names=('b',)), page=PageRequest(1, first.next_page_token))
+        # A page_token binds to result content, not to the object: an identical
         # rescan accepts it, a changed one does not.
         with self.scan().query() as query:
-            page = query.list_components(page=PageRequest(2, first.next_cursor))
+            page = query.list_components(page=PageRequest(2, first.next_page_token))
             self.assertEqual([row['name'] for row in page.items], ['b', 'c'])
             self.assertEqual(page.positions, (1, 2))
         self.bundle('d')
         with self.scan().query() as query, self.assertRaises(QueryError):
-            query.list_components(page=PageRequest(1, first.next_cursor))
+            query.list_components(page=PageRequest(1, first.next_page_token))
 
     def test_cli_scan_export_validate_and_degraded_exit(self):
         path = self.bundle()

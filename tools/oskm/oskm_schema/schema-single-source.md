@@ -24,7 +24,7 @@
 | 4 | spec 字段表由 Table 定义生成 | 结构性：不再手抄 | 未做 |
 
 **第 3 条是本文最想说清的一点**：直觉会想"写个检查器扫 SQL 里的
-`表.列` 对照 schema"。我写了一个，**266 处引用报出 17 处不符，逐条看全是假阳性**
+`表.列` 对照 schema"。本文写了一个，**266 处引用报出 17 处不符，逐条看全是假阳性**
 （单字母别名跨语句串了、`.ets` 是扩展名、`components.replace` 是 Python 方法）。
 正则解析 SQL 不可靠，而上一个真正抓到 bug 的机制是**把每个工具真调一次**。
 
@@ -60,7 +60,7 @@ component_links_run 1
 
 ### 1.3 spec 文档是第三份副本
 
-13 份 `agentic/docs/spec/*.md` 里有逐列字段表（component.md 21 行、elf.md 13 行…），
+13 份 `skills/ohos-design-architecture-evidence-query/references/spec/*.md` 里有逐列字段表（component.md 21 行、elf.md 13 行…），
 全部手写。表加一列，文档不会自己跟上。
 
 ### 1.4 元数据已经不重复了
@@ -92,7 +92,7 @@ oskm_schema/
 两侧都 `from oskm_schema.components import COMPONENTS, FEATURES`。
 
 **为什么是中立第三包，而不是软链或依赖倒置**：已在
-[agentic/docs/standalone-packaging.md §5](../agentic/docs/standalone-packaging.md) 实测过——
+[docs/architecture/standalone-packaging.md §5](../docs/architecture/standalone-packaging.md) 实测过——
 软链会让同一份 schema 以两个模块名加载，产生**两份 Table 实例**，
 而代码里有 `if table is KITS` 这类身份比较，跨模块恒为 `False`、**不报错**。
 中立包只有一个模块名，一份实例。
@@ -189,7 +189,7 @@ SQL 写错在 SQLite 的 prepare 阶段就抛，**执行一次胜过静态扫一
 13 份 spec 里的逐列表改为由 Table 定义生成，手写部分只保留**解释**
 （"这个字段为什么存在"、"空值的几种含义"）——那些是 schema 里没有的。
 
-做法与已落地的 `reference/tools.md` 相同：生成 + 比对门禁。
+做法与已落地的 skill `references/tools.md` 相同：生成 + 比对门禁。
 生成块用标记包起来，门禁重新生成后逐字比对。
 
 ```markdown

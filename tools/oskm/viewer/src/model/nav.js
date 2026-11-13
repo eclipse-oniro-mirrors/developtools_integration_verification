@@ -46,7 +46,7 @@ export const PRODUCT_NAV = [
       { route: '/sdk/modules',      label: '模块',     table: 'arkts_modules', needsTable: 'arkts_modules' },
       { route: '/sdk/kits',         label: 'Kit',      table: 'arkts_kits',    needsTable: 'arkts_kits' },
       { route: '/sdk/declarations', label: '声明文件', table: 'arkts_sources', needsTable: 'arkts_sources' },
-      { route: '/sdk/ndk-headers',  label: 'NDK 头文件', table: 'ndk_headers', needsTable: 'ndk_headers' },
+      { route: '/sdk/native-headers',  label: 'Native SDK 头文件', table: 'native_headers', needsTable: 'native_headers' },
     ],
   },
 ]
@@ -80,14 +80,14 @@ const VIEW_NAMES = [
   ['/files/targets', '安装产物'], ['/files/elf', 'ELF 模块'],
   ['/files/image', '镜像视图'],
   ['/runtime/services', '系统服务'], ['/runtime/sa', 'SA 服务'], ['/runtime/hdi', 'HDI 服务'],
-  ['/sdk/ndk-headers', 'NDK 头文件'],
+  ['/sdk/native-headers', 'Native SDK 头文件'],
   ['/runtime/unit', '运行单元'],
   ['/lookup', '反查结果'], ['/findings', '质量与治理'],
   ['/e/components', '部件'], ['/e/repos', '代码仓'], ['/e/innerapis', 'InnerAPI'],
   ['/e/features', '特性'], ['/e/syscaps', 'SysCap'], ['/e/gn_args', '编译参数'],
   ['/e/install_targets', '安装产物'],
   ['/e/services', '系统服务'], ['/e/sas', 'SA 服务'], ['/e/hdis', 'HDI 设备'],
-  ['/e/ndk_headers', 'NDK 头文件'],
+  ['/e/native_headers', 'Native SDK 头文件'],
   ['/e/', '档案'], ['/', '首页'],
 ]
 export function viewName(path) {

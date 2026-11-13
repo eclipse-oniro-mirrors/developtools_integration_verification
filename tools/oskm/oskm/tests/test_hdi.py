@@ -252,8 +252,10 @@ class HDITest(unittest.TestCase):
         self.assertIn('HCB_DEVICE_STRUCTURE', self.codes(r))
 
     def test_missing_input_invalid_request_and_budgets(self):
-        with self.assertRaises(ScanFatalError):
-            self.scan()
+        r = self.scan()
+        self.assertEqual(r.hdis, ())
+        self.assertIn('HCB_INPUT_MISSING', self.codes(r))
+        self.assertEqual(r.snapshot['status'], 'degraded')
         for request in (replace(self.request, product='../x'), replace(self.request,
                         limits=ScanLimits(tree_depth=0)), replace(self.request, package_root=Path('/tmp'))):
             with self.assertRaises(RequestError):
@@ -340,9 +342,10 @@ class HDITest(unittest.TestCase):
         self.full()
         import os
         real = os.scandir
+        unreadable = (self.package / 'vendor/lib64').resolve()
 
         def scandir(path):
-            if Path(path) == self.package / 'vendor/lib64':
+            if Path(path).resolve() == unreadable:
                 raise PermissionError()
             return real(path)
         with patch('os.scandir', side_effect=scandir):
@@ -400,20 +403,20 @@ class HDITest(unittest.TestCase):
         self.assertNotIn('component', r.hdis[0])
         self.assertEqual(r.hdis[0]['label'], '//drivers/example:driver')
 
-    def test_queries_persistence_cursor_and_aggregate(self):
+    def test_queries_persistence_page_token_and_aggregate(self):
         r = self.full([self.raw, dict(self.raw, serviceName='second', preload=2)])
         q = r.query()
         first = q.list_hdis(page=PageRequest(1))
         filters = HDIFilter(fields=(FieldPredicate('preload', 'eq', 2),))
         self.assertEqual(q.list_hdis(filters).total, 1)
         self.assertEqual(q.aggregate_hdis(('service', 'field:preload')).total_groups, 2)
-        # An identical rescan yields an equivalent result and accepts its cursors.
+        # An identical rescan yields an equivalent result and accepts its page_tokens.
         with self.scan().query() as again:
             self.assertEqual(again.list_hdis(), q.list_hdis())
             self.assertEqual(again.list_hdis(filters), q.list_hdis(filters))
             self.assertEqual(again.get_service_ref(0), q.get_service_ref(0))
-            self.assertEqual(again.list_hdis(page=PageRequest(cursor=first.next_cursor)),
-                             q.list_hdis(page=PageRequest(cursor=first.next_cursor)))
+            self.assertEqual(again.list_hdis(page=PageRequest(page_token=first.next_page_token)),
+                             q.list_hdis(page=PageRequest(page_token=first.next_page_token)))
             self.assertEqual(again.aggregate_hdis(), q.aggregate_hdis())
         self.assertEqual(q.get_hdi(100), None)
         q.close()

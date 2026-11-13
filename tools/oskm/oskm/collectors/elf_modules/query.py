@@ -64,11 +64,11 @@ class ElfModuleQuery(BaseQuery):
 
     def list_elf_modules(self, filters=ElfModuleFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(method='elf-modules',
+        selected, page_token = paginate(rows, page, dict(method='elf-modules',
                                                      filters=filter_key(filters)),
                                     self._fingerprint)
         return Page(tuple(record for _, record in selected),
-                    tuple(position for position, _ in selected), len(rows), cursor)
+                    tuple(position for position, _ in selected), len(rows), page_token)
 
     def direct_dependencies(self, dest):
         record = self.get_elf_module(dest)

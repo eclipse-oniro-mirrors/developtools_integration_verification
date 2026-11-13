@@ -63,7 +63,7 @@ const segments = computed(() => {
         { name: 'SDK 模块', n: d?.arktsModules, to: '/sdk/modules', desc: '@ohos.* / @arkts.* 声明', children: [] },
         { name: 'Kit', n: d?.arktsKits, to: '/sdk/kits', desc: '能力分组入口', children: [] },
         { name: '声明文件', n: d?.arktsSources, to: '/sdk/declarations', desc: '.d.ts / .d.ets', children: [] },
-        { name: 'NDK 头文件', n: d?.ndkHeaders, to: '/sdk/ndk-headers', desc: `${num(d?.ndkLibraries ?? 0)} 个库`, children: [] },
+        { name: 'Native SDK 头文件', n: d?.nativeHeaders, to: '/sdk/native-headers', desc: `${num(d?.nativeLibraries ?? 0)} 个库`, children: [] },
       ],
       note: d?.arktsModules ? `${num(d.arktsModules)} 个模块归入 ${num(d.arktsKits)} 个 Kit` : '',
     },
@@ -135,7 +135,7 @@ const EXAMPLES = ['libbase.z.so', 'sa_main', 'bundle_framework', 'system/bin/toy
 
   <section v-if="h" class="health" :class="{ warn: h.degraded }">
     <span class="who">
-      <b>{{ scan?.product }}</b> · {{ scan?.zone }}/{{ scan?.cpu_arch || '?' }} · 扫描 #{{ scan?.id }}
+      <b>{{ scan?.product }}</b> · 扫描 #{{ scan?.id }}
       <span class="dim">{{ (scan?.started_at || '').slice(0, 16).replace('T', ' ') }}</span>
     </span>
     <span class="runs">
