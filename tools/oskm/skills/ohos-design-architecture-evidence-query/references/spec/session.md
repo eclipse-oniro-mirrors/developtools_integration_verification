@@ -32,7 +32,7 @@
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `db_path` | string | ✓ | `knowledge.db` 文件绝对路径 |
+| `db_path` | string | ✓ | `knowledge.db` 文件完整路径 |
 | `scan_id` | int | | 复用指定扫描；省略则自动选最新已完成扫描 |
 | `product` | string | | 按产品名筛选最新扫描；与 `scan_id` 互斥 |
 
@@ -82,7 +82,7 @@
 {"closed": true, "session_id": 1}
 ```
 
-关闭 active 会话后，如果有其他会话，最近打开的成为新 active。如果没有会话，后续工具返回 `NO_SESSION`。DETACH 的别名随连接关闭自动释放。
+关闭 active 会话后，如果有其余会话，最近打开的成为新 active。如果没有会话，后续工具返回 `NO_SESSION`。DETACH 的别名随连接关闭自动释放。
 
 ---
 
@@ -229,7 +229,7 @@
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|:----:|------|
-| `db_path` | string | ✓ | 另一个 `knowledge.db` 的绝对路径 |
+| `db_path` | string | ✓ | 另一个 `knowledge.db` 的完整路径 |
 | `alias` | string | | 别名，默认 `"secondary"`。必须匹配 `^[A-Za-z_][A-Za-z0-9_]*$` |
 
 **返回**

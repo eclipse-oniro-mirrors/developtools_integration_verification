@@ -215,6 +215,21 @@ def write_checksums(output_dir, entries: dict) -> Path:
     return checksums
 
 
+def _write_archive(package, archive, root_name, epoch):
+    with archive.open('wb') as raw:
+        gz = gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=epoch)
+        try:
+            with tarfile.open(fileobj=gz, mode='w', format=tarfile.USTAR_FORMAT) as tar:
+                _add_package(tar, package, root_name, epoch)
+        finally:
+            gz.close()
+
+
+def _package_members(package):
+    return sorted(item.relative_to(package).as_posix()
+                  for item in package.rglob('*'))
+
+
 def build_bundle(output_dir=None) -> dict:
     """Build the tar.gz and write SHA256SUMS, returning release metadata."""
     root_name = skill_name()
@@ -223,30 +238,15 @@ def build_bundle(output_dir=None) -> dict:
     output = Path(output_dir) if output_dir else DEFAULT_OUTPUT
     output.mkdir(parents=True, exist_ok=True)
     archive = output / f'{root_name}-{version}.tar.gz'
-
     with tempfile.TemporaryDirectory(prefix='oskm-skill-build-') as temp:
         package = stage_bundle(temp)
-        with archive.open('wb') as raw:
-            gz = gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=epoch)
-            try:
-                with tarfile.open(fileobj=gz, mode='w',
-                                  format=tarfile.USTAR_FORMAT) as tar:
-                    _add_package(tar, package, root_name, epoch)
-            finally:
-                gz.close()
-        members = sorted(
-            item.relative_to(package).as_posix()
-            for item in package.rglob('*'))
-
+        _write_archive(package, archive, root_name, epoch)
+        members = _package_members(package)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     write_checksums(output, {archive.name: digest})
-    return {
-        'version': version,
-        'archive': archive.resolve(),
-        'sha256': digest,
-        'size': archive.stat().st_size,
-        'members': len(members),
-    }
+    return {'version': version, 'archive': archive.resolve(),
+            'sha256': digest, 'size': archive.stat().st_size,
+            'members': len(members)}
 
 
 def main(argv=None) -> int:

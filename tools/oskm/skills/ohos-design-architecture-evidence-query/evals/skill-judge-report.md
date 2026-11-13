@@ -25,7 +25,7 @@
 | D5: Progressive Disclosure | 13 | 15 | `SKILL.md` is 178 lines with clear routing and a `Do NOT load` rule. Deductions: `usage.md` is 635 lines and `session.md` is 352 lines, so conditional loading remains important but the reference set is heavy. |
 | D6: Freedom Calibration | 13 | 15 | Good distinction between heuristics in §4.5 and hard constraints in §5. Fragile installation and evidence interpretation use precise rules; query construction allows appropriate judgment. |
 | D7: Pattern Recognition | 8 | 10 | Uses a Navigation + Process hybrid: short routed entrypoint plus phased workflow. Minor deviation from a single canonical pattern because runtime installation and CLI query guidance are both substantial. |
-| D8: Practical Usability | 14 | 15 | Commands are actionable, help text is clear, exit codes are documented, examples avoid frozen database results, and failure paths route to installation or query diagnostics. |
+| D-8: Practical Usability | 14 | 15 | Commands are actionable, help text is clear, exit codes are documented, examples avoid frozen database results, and failure paths route to installation or query diagnostics. |
 
 ## Critical Issues
 

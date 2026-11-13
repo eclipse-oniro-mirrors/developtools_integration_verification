@@ -193,7 +193,7 @@ class ResolutionOrder(unittest.TestCase):
     def test_a_broken_env_override_is_reported_not_silently_skipped(self):
         """显式指了一个坏文件时，错误里要带上"是它坏了"，而不是只说"没找到"。
 
-        `$OSKM_CLI` 是**不做摘要校验**的（显式覆盖即"我知道我在干什么"），
+        `$OSKM_CLI` 是**不做摘要校验**的（显式覆盖即"本文知道本文在干什么"），
         但仍然要过结构校验——否则一个写错的路径会变成后面某处一句
         看不懂的 ImportError。
         """

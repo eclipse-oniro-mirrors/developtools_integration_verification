@@ -10,13 +10,13 @@ SQLite，不需要 Node；`interface/sdk-js` 是运行时源码输入，用来�
 
 | 工具 | 必填参数 | 可选参数 | 返回 |
 |---|---|---|---|
-| list_arkts_kits | 无 | query、origin、limit、cursor | Kit 列表，含来源数、去重模块数、未解析引用数 |
-| list_arkts_modules | 无 | query、declaration_scope、implementation_kind、declaration_format、language_coverage、membership、**component**、**implemented_by**、limit、cursor | 逻辑模块列表、声明文件数及证据计数 |
-| list_arkts_declarations | 无 | query、role、language_variant、read_status、limit、cursor | 声明文件列表，含读取状态与仓内位置 |
-| get_arkts_kit | kit_key | limit、source_cursor、evidence_cursor | Kit、summary、**member_routes**、sources 分页、evidence 分页、quality；无入口文件时另给 **mentioned_in** |
-| get_arkts_module | module_key | limit、declaration_cursor、evidence_cursor | module、declarations 分页（各带 source）、**implementation**（实现 so 及镜像位置，无实现时为 null）、**kit_routes**、issues 摘要、evidence 分页、quality |
-| arkts_kit_modules | kit_key | view、relation_type、condition、include_unspecified、include_candidates、limit、cursor | 去重模块或未解析引用分页 |
-| arkts_module_kits | module_key | relation_type、condition、include_unspecified、include_candidates、limit、cursor | 去重 Kit/标签分组分页 |
+| list_arkts_kits | 无 | query、origin、limit、page_token | Kit 列表，含来源数、去重模块数、未解析引用数 |
+| list_arkts_modules | 无 | query、declaration_scope、implementation_kind、declaration_format、language_coverage、membership、**component**、**implemented_by**、limit、page_token | 逻辑模块列表、声明文件数及证据计数 |
+| list_arkts_declarations | 无 | query、role、language_variant、read_status、limit、page_token | 声明文件列表，含读取状态与仓内位置 |
+| get_arkts_kit | kit_key | limit、source_page_token、evidence_page_token | Kit、summary、**member_routes**、sources 分页、evidence 分页、quality；无入口文件时另给 **mentioned_in** |
+| get_arkts_module | module_key | limit、declaration_page_token、evidence_page_token | module、declarations 分页（各带 source）、**implementation**（实现 so 及镜像位置，无实现时为 null）、**kit_routes**、issues 摘要、evidence 分页、quality |
+| arkts_kit_modules | kit_key | view、relation_type、condition、include_unspecified、include_candidates、limit、page_token | 去重模块或未解析引用分页 |
+| arkts_module_kits | module_key | relation_type、condition、include_unspecified、include_candidates、limit、page_token | 去重 Kit/标签分组分页 |
 
 业务键不使用数据库代理 id：kit_key 如 `@kit.AbilityKit` 或 `label:API10LessDeprecatedModules`；
 module_key 是**去掉语言后缀**的 SDK 相对路径，如 `api/@ohos.app.ability.UIAbility`（不带 `.d.ts`）；
@@ -28,7 +28,7 @@ source 的 `revision`、`content_match` 与 `source_metadata_stale`，不要把�
 说成扫描时的字节（`content_match` 恒为 `unverified`）。源码目录缺失或路径不存在时明确报告
 `SDK 源码缺失`，不要退化成“模块没有实现”或“Kit 没有成员”。
 
-列表分页返回 `scan_id/input_digest/items/total/next_cursor/quality`。limit 默认为 50，范围 1..200；cursor 不超过 4 KiB，与扫描、内容/解析配置、过滤参数和视图绑定。使用 next_cursor 时维持相同过滤参数，直到 next_cursor=null。扫描发生变化返回 STALE_CURSOR；过滤条件不一致返回 INVALID_CURSOR。
+列表分页返回 `scan_id/input_digest/items/total/next_page_token/quality`。limit 默认为 50，范围 1..200；page_token 不超过 4 KiB，与扫描、内容/解析配置、过滤参数和视图绑定。使用 next_page_token 时维持相同过滤参数，直到 next_page_token=null。扫描发生变化返回 STALE_PAGE_TOKEN；过滤条件不一致返回 INVALID_PAGE_TOKEN。
 
 query 是大小写敏感的普通子串，`%`、`_` 不作通配符。过滤值如下：
 
@@ -64,7 +64,7 @@ query 是大小写敏感的普通子串，`%`、`_` 不作通配符。过滤值�
 
 Kit 与模块之间的成员关系有两条**互不相同**的来路：
 
-- `declared_membership`——模块在自己文件头写了 `@kit X` 标签（模块的自我声明）
+- `declared_membership`——模块在自己文件头写了 `@kit X` 标签（模块的自本文声明）
 - `entry_reference`——`@kit.X` 的入口文件 import 了它（入口的实际组成）
 
 **两者会不一致，而且不一致是正常的。** 只给一个合计数就把"谁说的"抹掉了，
@@ -103,7 +103,7 @@ Kit→模块列表通过 EXISTS 去重，不据此宣称整个模块 API 均由 
 quality 分 discovery、headers、entry_references、target_resolution 四项。目标 resolved 只证明本次输入中目标模块唯一，不能证明类型检查成功或运行环境支持。source 的 content_match 为 unverified，仓数据重写时标记 source_metadata_stale，保留扫描时 revision。
 
 错误包括 COLLECTOR_NOT_RUN、COLLECTOR_FAILED、SCHEMA_UNSUPPORTED、NOT_FOUND、
-INVALID_PARAM、MISSING_PARAM、INVALID_CURSOR、STALE_CURSOR、CAPABILITY_UNAVAILABLE。
+INVALID_PARAM、MISSING_PARAM、INVALID_PAGE_TOKEN、STALE_PAGE_TOKEN、CAPABILITY_UNAVAILABLE。
 
 `component` 筛选要跨到 `elf_modules`/`components`，那次扫描没采 ELF 时返回
 **CAPABILITY_UNAVAILABLE**，不返回 0 条——"没采所以答不了"和"没有模块由这个部件实现"

@@ -44,7 +44,7 @@ class TestEndToEnd(unittest.TestCase):
     def tearDownClass(cls):
         cls.mgr.close()
 
-    def assertNoError(self, result, msg=''):
+    def assert_no_error(self, result, msg=''):
         self.assertNotIn('error', result, f'unexpected error: {result.get("error")} {msg}')
 
     # Q1: "这个文件属于哪个部件？"
@@ -52,10 +52,10 @@ class TestEndToEnd(unittest.TestCase):
         # Find a real path first
         paths = dispatch('sql_query', {
             'sql': 'SELECT dest FROM install_targets LIMIT 1'}, self.mgr)
-        self.assertNoError(paths)
+        self.assert_no_error(paths)
         dest = paths['rows'][0]['dest']
         r = dispatch('owner_of', {'dest': dest}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('component', r)
 
     # Q2: "某个部件有哪些 feature？"
@@ -64,9 +64,9 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no component with features')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('component_features', {'component_id': comp['id']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(len(r['features']), 0)
 
     # Q3: "某个进程跑哪些服务？"
@@ -75,7 +75,7 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no services')
         r = dispatch('search_services', {'query': name, 'limit': 5}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(r['total'], 0)
         self.assertIn(name, [item['name'] for item in r['results']])
 
@@ -85,7 +85,7 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no gn_args')
         r = dispatch('get_gn_arg', {'name': name}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertEqual(r['name'], name)
         self.assertIn('current_value', r)
 
@@ -95,9 +95,9 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no depended-on component')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('component_dependents', {'component_id': comp['id']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('dependents', r)
         self.assertGreater(len(r['dependents']), 0)
 
@@ -107,9 +107,9 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no component with innerapis')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('component_innerapis', {'component_id': comp['id']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(len(r['innerapis']), 0)
         self.assertIn('source_url', r['innerapis'][0])
 
@@ -119,9 +119,9 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no component with a repo')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('git_url', {'path': comp['manifest']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         # 公开仓与内部镜像仓均可，测试不绑定具体站点。
         # 也**不绑定 manifest 是不是 bundle.json**：那取决于采集到的部件声明形态，
         # 合成库里 manifest 就是一个目录，git_url 返回的是 tree URL 而非文件 URL。
@@ -131,25 +131,25 @@ class TestEndToEnd(unittest.TestCase):
             self.assertIn(key, r)
         if r['ref']:
             self.assertIn(r['ref'], r['url'])
-        self.assertNoError(dispatch('get_repo', {'name': r['repo']}, self.mgr))
+        self.assert_no_error(dispatch('get_repo', {'name': r['repo']}, self.mgr))
 
     # Q8: "数据库里有多少个部件？"
     def test_08_sql_query_count(self):
         r = dispatch('sql_query', {
             'sql': 'SELECT COUNT(*) AS n FROM components'}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(r['rows'][0]['n'], 0)
 
     # Q9: "扫描有哪些质量问题？"
     def test_09_list_issues(self):
         r = dispatch('list_issues', {'limit': 5}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('issues', r)
 
     # Q10: "feature 关联命中率是多少？"
     def test_10_get_link_stats(self):
         r = dispatch('get_link_stats', {}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('features', r)
         if r['features']:
             self.assertIn('hit_rate', r['features'])
@@ -157,13 +157,13 @@ class TestEndToEnd(unittest.TestCase):
     # Q11: "数据库有哪些表？"
     def test_11_get_tables(self):
         r = dispatch('get_tables', {}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('components', r['tables'])
 
     # Q12: "components 表有哪些列？"
     def test_12_get_schema(self):
         r = dispatch('get_schema', {'table': 'components'}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         col_names = [c['name'] for c in r['tables'][0]['columns']]
         self.assertIn('name', col_names)
 
@@ -176,7 +176,7 @@ class TestEndToEnd(unittest.TestCase):
         # 可能一个都搜不到。
         fragment = name[:max(3, len(name) // 2)]
         r = dispatch('search_components', {'query': fragment, 'limit': 10}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(r['total'], 0)
         self.assertIn(name, [item['name'] for item in r['results']] or [name])
 
@@ -186,16 +186,16 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no component with syscaps')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('component_syscaps', {'component_id': comp['id']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('syscaps', r)
         self.assertGreater(len(r['syscaps']), 0)
 
     # Q15: "列出所有仓"
     def test_15_list_repos(self):
         r = dispatch('list_repos', {'limit': 5}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(r['total'], 0)
         self.assertIn('url', r['repos'][0])
 
@@ -208,7 +208,7 @@ class TestEndToEnd(unittest.TestCase):
         base = dest.rsplit('/', 1)[-1]
         fragment = base.split('.')[0][:max(3, len(base.split('.')[0]) // 2)]
         r = dispatch('search_elf_modules', {'query': fragment, 'limit': 5}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertGreater(r['total'], 0)
 
     # Q17: "按 SA ID 查 SA"
@@ -218,7 +218,7 @@ class TestEndToEnd(unittest.TestCase):
             'sql': 'SELECT sa_id FROM sas LIMIT 1'}, self.mgr)
         if sas['rows']:
             r = dispatch('get_sa', {'sa_id': sas['rows'][0]['sa_id']}, self.mgr)
-            self.assertNoError(r)
+            self.assert_no_error(r)
 
     # Q18: "部件的各域记录"
     def test_18_component_attached(self):
@@ -226,14 +226,14 @@ class TestEndToEnd(unittest.TestCase):
         if not name:
             self.skipTest('selected database has no components')
         comp = dispatch('get_component', {'name': name}, self.mgr)
-        self.assertNoError(comp)
+        self.assert_no_error(comp)
         r = dispatch('component_attached', {'component_id': comp['id']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
 
     # Q19: "扫描元数据"
     def test_19_get_scan_info(self):
         r = dispatch('get_scan_info', {}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertEqual(r['scan_id'], self.scan_id)
         self.assertIn('collectors', r)
         # cpu_arch 从 scans 记录取，不写死 'arm64'：arm32 板型同样合法。
@@ -243,7 +243,7 @@ class TestEndToEnd(unittest.TestCase):
     def test_20_aggregate(self):
         r = dispatch('aggregate', {
             'table': 'components', 'group_by': ['subsystem']}, self.mgr)
-        self.assertNoError(r)
+        self.assert_no_error(r)
         self.assertIn('groups', r)
         self.assertGreater(len(r['groups']), 0)
 

@@ -14,7 +14,7 @@ oskm_schema/
   hdi.py               hdis
   install_modules.py   install_modules / install_targets / install_module_tags
   links.py             arkts_links_run / component_links_run
-  ndk.py               ndk_headers
+  native.py               native_headers
   repos.py             repos
   sas.py               sas
   services.py          services

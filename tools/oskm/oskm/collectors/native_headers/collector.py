@@ -1,4 +1,4 @@
-"""Map installed NDK ELF modules to SDK header files.
+"""Map installed Native SDK ELF modules to SDK header files.
 
 The preferred source is ``interface/sdk_c/**/BUILD.gn``. The GN template's
 ``system_capability_headers`` declaration is authoritative for the mapping.
@@ -15,12 +15,12 @@ import re
 from ..elf_modules.elf import BoundedReader, ElfFormatError, read_elf
 from ...core.framework import BaseCollector, ScanContext, register
 from ...core.io import InputFailure
-from oskm_schema.ndk import NDK_HEADERS
-from .models import NdkHeaderResult, NdkHeaderScanRequest
+from oskm_schema.native import NATIVE_HEADERS
+from .models import NativeHeaderResult, NativeHeaderScanRequest
 
 
 _LIBRARY_TAG = re.compile(r"^\s*\*\s*@library\s+([A-Za-z0-9_.+-]+)", re.MULTILINE)
-_NDK_HEADERS_OUT_DIR = re.compile(r"^(?:\$\{?ndk_headers_out_dir\}?/?)")
+_NATIVE_HEADERS_OUT_DIR = re.compile(r"^(?:\$\{?native_headers_out_dir\}?/?)")
 
 
 def _gn_blocks(text, keyword):
@@ -62,17 +62,17 @@ def _gn_strings(body, key):
 
 
 def _normalize_dest_dir(value):
-    return _NDK_HEADERS_OUT_DIR.sub('', value or '').strip('/')
+    return _NATIVE_HEADERS_OUT_DIR.sub('', value or '').strip('/')
 
 
-class NdkHeadersContext(ScanContext):
+class NativeHeadersContext(ScanContext):
     """No domain-specific state; roots are resolved on demand."""
 
     def setup(self):
         pass
 
     def sdk_native_root(self) -> Path | None:
-        configured = self.request.option("ndk_headers", "sdk_native_root")
+        configured = self.request.option("native_headers", "sdk_native_root")
         if configured is not None:
             path = Path(configured)
             if not path.is_absolute():
@@ -84,7 +84,7 @@ class NdkHeadersContext(ScanContext):
                 if not resolved.is_dir():
                     raise ValueError()
             except (TypeError, ValueError, OSError, RuntimeError):
-                self.issue(self.workspace, "NDK_SDK_ROOT_INVALID", advisory=True,
+                self.issue(self.workspace, "Native SDK_SDK_ROOT_INVALID", advisory=True,
                            details={"path": str(configured)})
                 return None
             return resolved
@@ -98,14 +98,14 @@ class NdkHeadersContext(ScanContext):
         except (OSError, RuntimeError):
             candidates = ()
         if not candidates:
-            self.issue(root, "NDK_SDK_ROOT_UNAVAILABLE", advisory=True)
+            self.issue(root, "Native SDK_SDK_ROOT_UNAVAILABLE", advisory=True)
             return None
         if len(candidates) == 1:
             return candidates[0]
         best = max(candidates, key=self._version_key)
         if sum(self._version_key(path) == self._version_key(best)
                for path in candidates) > 1:
-            self.issue(root, "NDK_SDK_ROOT_AMBIGUOUS", advisory=True,
+            self.issue(root, "Native SDK_SDK_ROOT_AMBIGUOUS", advisory=True,
                        details={"candidates": [str(path) for path in candidates]})
             return None
         return best
@@ -145,31 +145,31 @@ class NdkHeadersContext(ScanContext):
 
 
 @register
-class NdkHeadersCollector(BaseCollector):
-    NAME = "ndk_headers"
-    DESCRIPTION = "Map NDK ELF modules to SDK header files"
+class NativeHeadersCollector(BaseCollector):
+    NAME = "native_headers"
+    DESCRIPTION = "Map Native SDK ELF modules to SDK header files"
     DEPENDS_ON = ("elf_modules",)
     SCHEMA_VERSION = "1.2.0"
-    TABLES = (NDK_HEADERS,)
-    CONTEXT_TYPE = NdkHeadersContext
-    REQUEST_TYPE = NdkHeaderScanRequest
+    TABLES = (NATIVE_HEADERS,)
+    CONTEXT_TYPE = NativeHeadersContext
+    REQUEST_TYPE = NativeHeaderScanRequest
     REQUEST_TYPE_ERROR = "EXPECTED_SCAN_REQUEST"
-    RESULT_TYPE = NdkHeaderResult
-    RESULT_FIELD = "ndk_headers"
+    RESULT_TYPE = NativeHeaderResult
+    RESULT_FIELD = "native_headers"
     EXPORT_ORDER = "elf_module_id, header_path"
     ISSUE_FIELDS = ("path", "pointer", "code", "severity", "advisory", "details")
     ISSUE_ORDER = ("path", "pointer", "code")
 
     def collect(self, ctx):
         if ctx.upstream.failed("elf_modules"):
-            ctx.issue(ctx.workspace, "NDK_ELF_MODULES_UNAVAILABLE", advisory=True)
+            ctx.issue(ctx.workspace, "Native SDK_ELF_MODULES_UNAVAILABLE", advisory=True)
             return
         if not ctx.upstream.ran("elf_modules"):
             return
 
         rows = ctx.connection.execute(
             "SELECT id, file_name, soname FROM elf_modules "
-            "WHERE scan_id = ? AND json_extract(category, '$') LIKE '%ndk%' "
+            "WHERE scan_id = ? AND json_extract(category, '$') LIKE '%native%' "
             "ORDER BY id", (ctx.scan_id,)).fetchall()
         if not rows:
             return
@@ -179,7 +179,7 @@ class NdkHeadersCollector(BaseCollector):
             return
         include = sdk_root / "sysroot/usr/include"
         if not include.is_dir():
-            ctx.issue(sdk_root, "NDK_HEADER_ROOT_UNAVAILABLE", advisory=True)
+            ctx.issue(sdk_root, "Native SDK_HEADER_ROOT_UNAVAILABLE", advisory=True)
             return
 
         build_mappings, source_headers = self._parse_build_gn(ctx)
@@ -211,7 +211,7 @@ class NdkHeadersCollector(BaseCollector):
             unresolved.append(so_name)
 
         if unresolved:
-            ctx.issue(ctx.workspace, "NDK_HEADER_MAPPING_UNRESOLVED", advisory=True,
+            ctx.issue(ctx.workspace, "Native SDK_HEADER_MAPPING_UNRESOLVED", advisory=True,
                       severity="info",
                       details={"libraries": sorted(set(unresolved))[:100],
                                "total_count": len(set(unresolved))})
@@ -223,7 +223,7 @@ class NdkHeadersCollector(BaseCollector):
                 data = ctx.read_bytes(path, ctx.workspace)
                 text = data.decode("utf-8")
             except (InputFailure, UnicodeError) as exc:
-                ctx.issue(path, "NDK_HEADER_READ_FAILED", advisory=True,
+                ctx.issue(path, "Native SDK_HEADER_READ_FAILED", advisory=True,
                           details={"reason": str(exc)})
                 continue
             ctx.scan_directories.add(str(path.parent))
@@ -238,21 +238,21 @@ class NdkHeadersCollector(BaseCollector):
         mappings = {}
         source_headers = {"by_output": {}, "by_name": defaultdict(list)}
         if not root.is_dir():
-            ctx.issue(root, "NDK_BUILD_GN_ROOT_UNAVAILABLE", advisory=True)
+            ctx.issue(root, "Native SDK_BUILD_GN_ROOT_UNAVAILABLE", advisory=True)
             return mappings, source_headers
 
         for path in sorted(root.rglob("BUILD.gn")):
             try:
                 text = ctx.read_bytes(path, ctx.workspace).decode("utf-8")
             except (InputFailure, UnicodeError) as exc:
-                ctx.issue(path, "NDK_BUILD_GN_READ_FAILED", advisory=True,
+                ctx.issue(path, "Native SDK_BUILD_GN_READ_FAILED", advisory=True,
                           details={"reason": str(exc)})
                 continue
             ctx.scan_directories.add(str(path.parent))
             text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
 
             outputs = []
-            for _, body in _gn_blocks(text, "ohos_ndk_headers"):
+            for _, body in _gn_blocks(text, "ohos_native_headers"):
                 dest = _normalize_dest_dir(_gn_scalar(body, "dest_dir"))
                 for source in _gn_strings(body, "sources"):
                     source_path = self._gn_source_path(path.parent, source, ctx.workspace)
@@ -276,7 +276,7 @@ class NdkHeadersCollector(BaseCollector):
                         source_headers["by_output"][installed] = source_path
                         source_headers["by_name"][Path(source).name].append(source_path)
 
-            for target, body in _gn_blocks(text, "ohos_ndk_library"):
+            for target, body in _gn_blocks(text, "ohos_native_library"):
                 output_name = _gn_scalar(body, "output_name") or target
                 output_extension = _gn_scalar(body, "output_extension") or "z.so"
                 so_name = f"lib{output_name}.{output_extension}"
@@ -286,7 +286,7 @@ class NdkHeadersCollector(BaseCollector):
 
                 headers = set()
                 for item in declared:
-                    item = _NDK_HEADERS_OUT_DIR.sub('', item)
+                    item = _NATIVE_HEADERS_OUT_DIR.sub('', item)
                     match = next((source for output, source in outputs
                                   if output == item), None)
                     if match is not None:
@@ -322,7 +322,7 @@ class NdkHeadersCollector(BaseCollector):
         try:
             info = ctx.read_sdk_elf(library)
         except (ElfFormatError, InputFailure) as exc:
-            ctx.issue(library, "NDK_SYMBOL_SOURCE_READ_FAILED", advisory=True,
+            ctx.issue(library, "Native SDK_SYMBOL_SOURCE_READ_FAILED", advisory=True,
                       details={"reason": str(exc)})
             return (), ()
         symbols = tuple(dict.fromkeys(info.get("exported_symbols", ())))
@@ -351,7 +351,7 @@ class NdkHeadersCollector(BaseCollector):
         best = {path for path, score in scores.items() if score == best_score}
         minimum = min(3, len(symbols))
         if best_score < minimum or len(best) != 1:
-            ctx.issue(ctx.workspace, "NDK_SYMBOL_MATCH_AMBIGUOUS", advisory=True,
+            ctx.issue(ctx.workspace, "Native SDK_SYMBOL_MATCH_AMBIGUOUS", advisory=True,
                       details={"library": so_name, "score": best_score,
                                "headers": sorted(path.as_posix() for path in best)[:20]})
             return (), symbols
@@ -365,8 +365,8 @@ class NdkHeadersCollector(BaseCollector):
                 "header_path": header,
                 "match_strategy": strategy,
             }
-            ctx.emit("ndk_headers", row)
+            ctx.emit("native_headers", row)
 
     def scope(self, ctx):
-        return "elf_modules(category contains ndk) -> interface/sdk_c headers"
+        return "elf_modules(category contains native) -> interface/sdk_c headers"
 

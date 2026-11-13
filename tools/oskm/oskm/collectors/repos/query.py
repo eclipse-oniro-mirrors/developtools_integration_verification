@@ -53,6 +53,6 @@ class RepoQuery(BaseQuery):
 
     def list_repos(self, filters=RepoFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(method='repos', filters=filter_key(filters)),
+        selected, page_token = paginate(rows, page, dict(method='repos', filters=filter_key(filters)),
                                     self._fingerprint)
-        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), cursor)
+        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), page_token)

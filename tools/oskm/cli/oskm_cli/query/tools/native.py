@@ -1,7 +1,7 @@
-"""NDK headers: map installed native libraries to SDK source headers."""
+"""Native SDK headers: map installed native libraries to SDK source headers."""
 from __future__ import annotations
 
-from oskm_schema.ndk import NDK_HEADERS
+from oskm_schema.native import NATIVE_HEADERS
 from ..gitlink import git_url
 from ..tools import register, ToolError
 
@@ -26,7 +26,7 @@ def _strategy(params):
     return strategy
 
 
-@register('search_ndk_headers', '模糊搜索 NDK 库与头文件映射', {
+@register('search_native_headers', '模糊搜索 Native SDK 库与头文件映射', {
     'type': 'object',
     'properties': {
         'query': {'type': 'string',
@@ -37,7 +37,7 @@ def _strategy(params):
     },
     'required': ['query'],
 })
-def search_ndk_headers(params, manager):
+def search_native_headers(params, manager):
     session = manager.get_active()
     limit = _limit(params)
     strategy = _strategy(params)
@@ -56,7 +56,7 @@ def search_ndk_headers(params, manager):
         values.append(params['component'])
     total_rows = session.sql(
         'SELECT COUNT(*) AS total '
-        'FROM ndk_headers n '
+        'FROM native_headers n '
         'JOIN elf_modules e ON e.scan_id = n.scan_id AND e.id = n.elf_module_id '
         'JOIN install_targets t ON t.scan_id = e.scan_id AND t.id = e.install_target_id '
         'LEFT JOIN components c ON c.scan_id = e.scan_id AND c.id = e.component_id '
@@ -67,7 +67,7 @@ def search_ndk_headers(params, manager):
         'SELECT n.id, n.elf_module_id, n.header_path, n.match_strategy, '
         '       e.soname, e.file_name, e.partition, e.component_id, '
         '       t.dest, c.name AS component '
-        'FROM ndk_headers n '
+        'FROM native_headers n '
         'JOIN elf_modules e ON e.scan_id = n.scan_id AND e.id = n.elf_module_id '
         'JOIN install_targets t ON t.scan_id = e.scan_id AND t.id = e.install_target_id '
         'LEFT JOIN components c ON c.scan_id = e.scan_id AND c.id = e.component_id '
@@ -80,20 +80,20 @@ def search_ndk_headers(params, manager):
     }
 
 
-@register('get_ndk_headers', '按镜像库路径查 NDK 头文件清单', {
+@register('get_native_headers', '按镜像库路径查 Native SDK 头文件清单', {
     'type': 'object',
     'properties': {
         'dest': {'type': 'string', 'description': 'Image ELF file path'},
     },
     'required': ['dest'],
 })
-def get_ndk_headers(params, manager):
+def get_native_headers(params, manager):
     session = manager.get_active()
     rows = session.sql(
         'SELECT n.id, n.elf_module_id, n.header_path, n.match_strategy, '
         '       e.id AS elf_id, e.soname, e.file_name, e.partition, '
         '       e.component_id, c.name AS component '
-        'FROM ndk_headers n '
+        'FROM native_headers n '
         'JOIN elf_modules e ON e.scan_id = n.scan_id AND e.id = n.elf_module_id '
         'JOIN install_targets t ON t.scan_id = e.scan_id AND t.id = e.install_target_id '
         'LEFT JOIN components c ON c.scan_id = e.scan_id AND c.id = e.component_id '
@@ -101,7 +101,7 @@ def get_ndk_headers(params, manager):
         'ORDER BY n.header_path',
         (session.scan_id, params['dest']))
     if not rows:
-        raise ToolError('NOT_FOUND', f'NDK headers not found for dest: {params["dest"]}')
+        raise ToolError('NOT_FOUND', f'Native SDK headers not found for dest: {params["dest"]}')
     first = dict(rows[0])
     headers = []
     for row in rows:

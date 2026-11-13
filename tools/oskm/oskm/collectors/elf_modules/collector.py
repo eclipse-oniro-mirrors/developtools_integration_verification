@@ -69,8 +69,8 @@ class ElfModulesContext(ScanContext):
             handle.close()
 
     def sdk_library_names(self):
-        """Return NDK library basenames without pinning an SDK version."""
-        configured = self.request.option('elf_modules', 'ndk_sysroot_lib_dir')
+        """Return Native SDK library basenames without pinning an SDK version."""
+        configured = self.request.option('elf_modules', 'native_sysroot_lib_dir')
         if configured is not None:
             if not isinstance(configured, (str, Path)):
                 self.issue(self.workspace, 'SDK_INDEX_INVALID', advisory=True,
@@ -145,13 +145,13 @@ class ElfModulesCollector(BaseCollector):
     NON_ELF_MODULE_TYPES = frozenset({'app', 'etc'})
 
     CATEGORY_ORDER = (
-        'napi', 'ndk', 'ani', 'cangjie', 'extension',
+        'napi', 'native', 'ani', 'cangjie', 'extension',
         'platform_sdk', 'platform_sdk_indirect',
         'chipset_sdk', 'chipset_sdk_indirect',
         'sa', 'hdi', 'hdi_proxy', 'hdi_stub', 'anco', 'other',
     )
     PUBLIC_CATEGORY_TAGS = frozenset({
-        'napi', 'ndk', 'ani', 'cangjie', 'extension',
+        'napi', 'native', 'ani', 'cangjie', 'extension',
     })
 
     @classmethod
@@ -159,7 +159,7 @@ class ElfModulesCollector(BaseCollector):
                                    sdk_names, sa_modules, hdi_modules):
         categories = set()
         if module['file_name'] in sdk_names:
-            categories.add('ndk')
+            categories.add('native')
         else:
             if (not info['ani_constructor']
                     and dest.startswith(('system/lib/module/', 'system/lib64/module/'))

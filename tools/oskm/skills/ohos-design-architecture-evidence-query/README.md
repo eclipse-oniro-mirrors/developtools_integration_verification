@@ -14,9 +14,9 @@ OpenHarmony 架构证据**运行时分发与 CLI 使用 skill**。核心职责�
 
 - Python 3.10+（本次发布验收使用 Python 3.12）
 - 不要求 Git，不要求 Bash，也没有第三方 Python 运行依赖
-- 下载方式由 `OSKM_DOWNLOAD_SOURCE`（`OPENHARMONY_CI` 或 `HARMONYOS_CI`）选择，
+- 下载方式由 `OSKM_DOWNLOAD_SOURCE`（`OPENHARMONY_CI` 或 `INTERNAL_CI`）选择，
   端点由 `OSKM_DOWNLOAD_ENDPOINT` 提供
-- `OPENHARMONY_CI` 的 component 固定为 `dayu600_7885_ai`；`HARMONYOS_CI` 请求
+- `OPENHARMONY_CI` 的 component 固定为 `dayu600_7885_ai`；`INTERNAL_CI` 请求
   `$OSKM_DOWNLOAD_ENDPOINT/<YYYYMMDD>`
 - CLI 随 `knowledge.tar.gz` 一起发布（归档里四样东西：`knowledge.db`、
   `oskm-cli.pyz`、`interface/sdk-js`、`interface/sdk_c`），`install` 一次装齐；
@@ -40,7 +40,7 @@ skill 机器名、发布归档、解压根目录和安装目录叶子名统一�
 - Claude Code 项目级：`.claude/skills/ohos-design-architecture-evidence-query/`
 - Claude Code 用户级：`~/.claude/skills/ohos-design-architecture-evidence-query/`
 - Codex 用户级：`${CODEX_HOME:-$HOME/.codex}/skills/ohos-design-architecture-evidence-query/`
-- 其他工具：`<tool-skill-root>/ohos-design-architecture-evidence-query/`
+- 其余工具：`<tool-skill-root>/ohos-design-architecture-evidence-query/`
 - 运行时数据：`~/.oskm/`（与 skill 安装目录分离）
 
 发布归档名为 `ohos-design-architecture-evidence-query-<version>.tar.gz`，解压后只有
@@ -52,17 +52,17 @@ skill 机器名、发布归档、解压根目录和安装目录叶子名统一�
 tar -xzf ohos-design-architecture-evidence-query-3.0.0.tar.gz
 cd ohos-design-architecture-evidence-query
 
-# 首次使用时按需配置下载端点（也可放到 <runtime-root>/.env）
+# 初次使用时按需配置下载端点（也可放到 <runtime-root>/.env）
 cp oskm_runtime/.env.example oskm_runtime/.env
 "${EDITOR:-vi}" oskm_runtime/.env
 
 python3.12 bootstrap.py doctor
 
-# 首次使用：下载安装 DB + interface/sdk-js + interface/sdk_c + CLI
+# 初次使用：下载安装 DB + interface/sdk-js + interface/sdk_c + CLI
 # OpenHarmony CI（component 固定为 dayu600_7885_ai，无需命令行传入）
 python3.12 bootstrap.py install --source OPENHARMONY_CI --runtime-root ~/.oskm
-# HarmonyOS CI（GET <endpoint>/<YYYYMMDD>）
-python3.12 bootstrap.py install --source HARMONYOS_CI --runtime-root ~/.oskm
+# Internal platform CI（GET <endpoint>/<YYYYMMDD>）
+python3.12 bootstrap.py install --source INTERNAL_CI --runtime-root ~/.oskm
 
 python3.12 bootstrap.py cli-path               # 看它最终用了哪个 CLI
 
@@ -134,14 +134,14 @@ ohos-design-architecture-evidence-query/
 
 | 维度 | 结论 | 依据 |
 |---|---|---|
-| D1 知识增量 | 优秀 | 保留运行时分发边界、CLI 解析顺序、证据降级与误读判据，删除通用教程和数据库统计 |
-| D2 心智模型 | 优秀 | §3 给出固定判断顺序，§4 按 `arch` / `ask` / `diff` / `sql` 分支选择 |
-| D3 反模式质量 | 优秀 | §5 每条均为真实高风险误判，并写明违反后的具体后果 |
-| D4 规范符合度 | 优秀 | frontmatter、七节骨架、触发式 description 和条件引用均通过门禁 |
-| D5 渐进披露 | 优秀 | `SKILL.md` 控制在 180 行；规格、示例、评估和完整用法按问题路由 |
-| D6 自由度校准 | 优秀 | §4.5 明示为启发式；§5 明示为硬约束，违规后果可判断 |
-| D7 模式合理性 | 优秀 | 结构服务于“先装运行时、再定位 CLI、后选查询入口”的真实使用流程 |
-| D8 实用可用性 | 优秀 | 命令可直接运行，异常、退出码和查询/安装排错均有回退路径 |
+| D1 知识增量 | 通过 | 保留运行时分发边界、CLI 解析顺序、证据降级与误读判据，删除通用教程和数据库统计 |
+| D2 心智模型 | 通过 | §3 给出固定判断顺序，§4 按 `arch` / `ask` / `diff` / `sql` 分支选择 |
+| D3 反模式质量 | 通过 | §5 每条均为真实高风险误判，并写明违反后的具体后果 |
+| D4 规范符合度 | 通过 | frontmatter、七节骨架、触发式 description 和条件引用均通过门禁 |
+| D5 渐进披露 | 通过 | `SKILL.md` 控制在 180 行；规格、示例、评估和完整用法按问题路由 |
+| D6 自由度校准 | 通过 | §4.5 明示为启发式；§5 明示为硬约束，违规后果可判断 |
+| D7 模式合理性 | 通过 | 结构服务于“先装运行时、再定位 CLI、后选查询入口”的真实使用流程 |
+| D-8 实用可用性 | 通过 | 命令可直接运行，异常、退出码和查询/安装排错均有回退路径 |
 
-准入检查无阻断项；`D1`、`D4`、`D8` 均达到发布门槛。未发现开放规范、组织规范与
+准入检查无阻断项；`D1`、`D4`、`D-8` 均达到发布门槛。未发现开放规范、组织规范与
 `skill-creator` 工作流之间的冲突。

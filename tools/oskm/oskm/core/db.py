@@ -142,12 +142,12 @@ def insert(connection, table, rows, *, scan_id=None):
 def begin_scan(connection, product, workspace_root, *, cpu_arch=None,
                started_at=None):
     # cpu_arch is snapshot metadata; arm64 is the default.
-    cursor = connection.execute(
+    page_token = connection.execute(
         f'INSERT INTO {SCANS.name} '
         '(product, cpu_arch, workspace_root, started_at) VALUES (?, ?, ?, ?)',
         (product, cpu_arch or DEFAULT_CPU_ARCH, str(workspace_root),
          started_at or now()))
-    return cursor.lastrowid
+    return page_token.lastrowid
 
 
 def finish_scan(connection, scan_id, *, finished_at=None):
@@ -163,8 +163,8 @@ def delete_scan(connection, tables, scan_id):
     """
     counts = {}
     for table in tables:
-        cursor = connection.execute(table.delete_sql(), (scan_id,))
-        counts[table.name] = cursor.rowcount
+        page_token = connection.execute(table.delete_sql(), (scan_id,))
+        counts[table.name] = page_token.rowcount
     return counts
 
 

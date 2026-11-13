@@ -20,7 +20,7 @@ knowledge.tar.gz
 ├── oskm-cli.pyz      # 查询 CLI（固定文件名，不带版本）
 └── interface/
     ├── sdk-js/       # ArkTS API / Kit 声明
-    └── sdk_c/        # NDK 头文件
+    └── sdk_c/        # Native SDK 头文件
 ```
 
 **归档里的四样东西是同一个发布单元**：`install` 一次装齐，`download-db` 从
@@ -68,7 +68,7 @@ Windows 上 `py -3 bootstrap.py …` 同样能用。一个只在两个平台上�
 等于在第三个平台上没有入口。
 
 `--runtime-root` 是 bootstrap 级的选项，写在命令前后都行；摘掉之后子命令解析器
-永远看不到它。`validate-db PATH` 会用 `PATH` 的父目录当运行时根——CLI 就装在
+始终看不到它。`validate-db PATH` 会用 `PATH` 的父目录当运行时根——CLI 就装在
 那个库旁边。
 
 ### CLI 产物从哪来
@@ -76,7 +76,7 @@ Windows 上 `py -3 bootstrap.py …` 同样能用。一个只在两个平台上�
 CLI 是**独立构建产物**，随 `knowledge.tar.gz` 一起发布（不是 skill 源码的一部分，
 也不是单独下载物）。它与 `knowledge.db` 同类：**固定文件名 `oskm-cli.pyz`，不记版本、
 不锁摘要**。安装在 `<runtime-root>/` 下与 `knowledge.db` 并排，所以文档与调用方
-永远不用钉版本号；版本问产物自己（`oskm-cli.pyz --version`）。
+始终不用钉版本号；版本问产物自己（`oskm-cli.pyz --version`）。
 
 `bootstrap.py` 按**三级**候选定位，第一个命中的就用（三步都不联网）：
 
@@ -121,7 +121,7 @@ python3 bootstrap.py doctor
 
 `doctor` 按 **Python → 下载配置 → CLI → 运行时状态** 的顺序检查，第一个 FAIL
 通常就是根因；它会报告解析到的 CLI 位置、`oskm_runtime`/`oskm_cli`/`oskm_schema`
-是否可导入、以及状态文件里的 `db`/`sdk`/`cli` 三段是否齐全。`OSKM_DOWNLOAD_SOURCE` 只能是 `OPENHARMONY_CI` 或 `HARMONYOS_CI`，
+是否可导入、以及状态文件里的 `db`/`sdk`/`cli` 三段是否齐全。`OSKM_DOWNLOAD_SOURCE` 只能是 `OPENHARMONY_CI` 或 `INTERNAL_CI`，
 默认 `OPENHARMONY_CI`；`OSKM_DOWNLOAD_ENDPOINT` 必须是 HTTP(S) URL。
 诊断输出只显示下载方式和端点配置状态，不会打印 URL。
 
@@ -177,7 +177,7 @@ OSKM_DOWNLOAD_ENDPOINT=https://<CI API 或归档前缀>
 
 写入 `.env` 的键必须在 `ENV_KEYS` 白名单里，写错会**报错**而不是被静默忽略。
 
-首次使用时：
+初次使用时：
 
 ```bash
 cp oskm_runtime/.env.example oskm_runtime/.env
@@ -201,7 +201,7 @@ component 固定为 dayu600_7885_ai，由代码常量提供，不通过环境变
 成功构建响应从 `.data.list.dataList[0].obsPath` 读取 OBS 地址；OBS 地址必须
 可直接下载（例如预签名 URL）。
 
-HARMONYOS_CI URL 为 `$OSKM_DOWNLOAD_ENDPOINT/$date`，响应文件名应为
+INTERNAL_CI URL 为 `$OSKM_DOWNLOAD_ENDPOINT/$date`，响应文件名应为
 `knowledge.tar.gz`，不使用旧 latest 端点。缺失或格式错误时，下载器会在联网前报错；
 
 Windows PowerShell：
@@ -226,7 +226,7 @@ $env:OSKM_DOWNLOAD_ENDPOINT = "https://<CI API 或归档前缀>"
 
 ### 安装托管运行时
 
-推荐固定使用 `~/.oskm` 作为 Agent 的运行时根目录。首次查询前先检查
+推荐固定使用 `~/.oskm` 作为 Agent 的运行时根目录。初次查询前先检查
 `~/.oskm/knowledge.db`；如果不存在，先执行下面的 `install`，成功后再查询该库。
 查询 CLI 不会自动刷新任何运行时；任意 `--db` 路径缺失时也不会触发联网下载。
 需要更新时显式执行 `bootstrap.py refresh` 或 `bootstrap.py install`。
@@ -258,8 +258,8 @@ date=20261102
 # OpenHarmony CI（component 固定为 dayu600_7885_ai）
 python3 bootstrap.py install --source OPENHARMONY_CI --runtime-root "$RUNTIME_ROOT" --date "$date"
 
-# HarmonyOS CI（GET <endpoint>/<YYYYMMDD>）
-python3 bootstrap.py install --source HARMONYOS_CI --runtime-root "$RUNTIME_ROOT" --date "$date"
+# Internal platform CI（GET <endpoint>/<YYYYMMDD>）
+python3 bootstrap.py install --source INTERNAL_CI --runtime-root "$RUNTIME_ROOT" --date "$date"
 ```
 
 Windows PowerShell 直接调用同一模块，不需要 Bash：
@@ -269,7 +269,7 @@ $RuntimeRoot = "$env:USERPROFILE\oskm-runtime"
 $date = "20261102"
 py -3 bootstrap.py install --source OPENHARMONY_CI `
     --runtime-root $RuntimeRoot --date $date
-py -3 bootstrap.py install --source HARMONYOS_CI `
+py -3 bootstrap.py install --source INTERNAL_CI `
     --runtime-root $RuntimeRoot --date $date
 ```
 
@@ -278,9 +278,9 @@ py -3 bootstrap.py install --source HARMONYOS_CI `
 - 安装器先探测并校验源码根本地运行时；未命中或不可用时再下载并校验归档。随后按
   `--skip-*` 选择要替换的产物；DB 与两套 SDK 在同一事务中逐项替换，中途失败会回滚。
 - 安全解压接受归档根目录的 `knowledge.db`、`oskm-cli.pyz` 与
-  `interface/sdk-js/`、`interface/sdk_c/`；根目录的其他普通文件（如构建日志和清单）
+  `interface/sdk-js/`、`interface/sdk_c/`；根目录的其余普通文件（如构建日志和清单）
   会被忽略且不落盘。
-  未知目录、绝对路径、`..`、硬链接、设备文件和逃逸 SDK 目录树的符号链接仍会被拒绝。
+  未知目录、完整路径、`..`、硬链接、设备文件和逃逸 SDK 目录树的符号链接仍会被拒绝。
 - SDK 路径缺失、为空时明确报告 **`SDK 源码缺失`**，不会静默跳过源码证据。
 - `--skip-db` / `--skip-sdk` 会保留尚未刷新的那一侧的旧状态；之后显式执行
   `refresh` / `install` 时，托管运行时会补齐缺失的一侧，源码本地运行时则需重新
@@ -304,7 +304,7 @@ py -3 bootstrap.py install --source HARMONYOS_CI `
 源码树本地运行时（`"source": "local"`）不因日期变化刷新，显式执行 `install` 才会
 重新选择并复制源码树中的最新 DB/SDK。托管运行时**只覆盖最新一份**，不建立按日期
 命名的历史目录。状态文件是托管标记：没有该文件的 `artifacts/*/knowledge.db`
-视为用户自管，永远不会自动联网。
+视为用户自管，始终不会自动联网。
 
 > **2026-11-12 的行为变更**：廉价检查**不再跑 `PRAGMA integrity_check`**，
 > 也不再逐表逐列比对 schema。旧实现在每次查询前都做全量校验，19 MB 的库要
@@ -331,8 +331,8 @@ date=20261102
 # OpenHarmony CI（component 固定为 dayu600_7885_ai）
 python3 bootstrap.py download-db --source OPENHARMONY_CI --date "$date" --output "$DB_OUT"
 
-# HarmonyOS CI
-python3 bootstrap.py download-db --source HARMONYOS_CI --date "$date" --output "$DB_OUT"
+# Internal platform CI
+python3 bootstrap.py download-db --source INTERNAL_CI --date "$date" --output "$DB_OUT"
 ```
 
 Windows：
@@ -342,7 +342,7 @@ $DBOut = "$env:USERPROFILE\knowledge_20261102.db"
 $date = "20261102"
 py -3 bootstrap.py download-db --source OPENHARMONY_CI `
     --date $date --output $DBOut
-py -3 bootstrap.py download-db --source HARMONYOS_CI `
+py -3 bootstrap.py download-db --source INTERNAL_CI `
     --date $date --output $DBOut
 ```
 
@@ -354,7 +354,7 @@ py -3 bootstrap.py download-db --source HARMONYOS_CI `
 | `.db` | 直接作为候选 |
 | `.zip` | `zipfile` 读取 |
 | `.tar`、`.tar.gz`、`.tgz`、`.tar.xz`、`.txz`、`.tar.bz2`、`.tbz2` | `tarfile` 读取 |
-| 其他 | 明确失败 |
+| 其余 | 明确失败 |
 
 归档中必须恰有一个普通文件 `knowledge.db`。独立下载只校验 SQLite 完整性和结构：
 文件头、能够只读打开，并通过 `PRAGMA integrity_check`。它**不要求历史 DB 满足当前
@@ -514,7 +514,7 @@ python3 "$CLI" --db "$DB" ask list_entities --table components --page '{"limit":
 | 按子系统统计部件数 | `ask aggregate --table components --group_by subsystem` |
 
 > `component_*` 这批工具收的是 `component_id` 而不是名字，先用 `get_component`
-> 换 id。`arch provides` / `arch impact` 已经替你做了这一跳。
+> 换 id。`arch provides` / `arch impact` 已经替用户做了这一跳。
 
 ## 5. `diff`：两个库对比
 
@@ -559,7 +559,7 @@ SELECT c.subsystem, COUNT(*) AS parts
  GROUP BY c.subsystem HAVING parts > 8 ORDER BY parts DESC
 ```
 
-只读校验照常生效：首个关键字必须是 SELECT/WITH（**跳过开头注释后再判**），
+只读校验照常生效：第一个关键字必须是 SELECT/WITH（**跳过开头注释后再判**），
 表名走白名单，自动注入 `scan_id` 与 `LIMIT`。
 `-- SELECT\nDROP TABLE x` 这种伪装会被拒。
 

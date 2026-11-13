@@ -40,7 +40,7 @@ from oskm_runtime.db_download import DownloadError
 from oskm_runtime.environment import (
     CLI_PATH_ENV,
     ENDPOINT_ENV,
-    HARMONYOS_CI,
+    INTERNAL_CI,
     OPENHARMONY_CI,
     SOURCE_ENV,
 )
@@ -265,14 +265,14 @@ class DoctorCommand(unittest.TestCase):
     def test_doctor_rejects_missing_endpoint(self):
         stdout = io.StringIO()
         with mock.patch.dict('os.environ', {
-                SOURCE_ENV: HARMONYOS_CI,
+                SOURCE_ENV: INTERNAL_CI,
                 ENDPOINT_ENV: '',
         }, clear=True), contextlib.redirect_stdout(stdout):
             code = doctor.main([str(self.root)])
 
         output = stdout.getvalue()
         self.assertEqual(code, 1, output)
-        self.assertIn(f'{SOURCE_ENV}=HARMONYOS_CI', output)
+        self.assertIn(f'{SOURCE_ENV}=INTERNAL_CI', output)
         self.assertIn(f'{ENDPOINT_ENV}=未配置', output)
         self.assertIn('下载配置无效', output)
 
@@ -402,12 +402,12 @@ class InstallCommand(unittest.TestCase):
     def test_install_forwards_source_and_date(self):
         with mock.patch.object(install, 'install_runtime') as install_runtime:
             code, _, err = capture([
-                'install', '--source', HARMONYOS_CI,
+                'install', '--source', INTERNAL_CI,
                 '--runtime-root', str(self.root), '--date', '20261102',
                 '--skip-sdk'])
         self.assertEqual(code, 0, err)
         install_runtime.assert_called_once_with(
-            self.root.resolve(), HARMONYOS_CI, '20261102',
+            self.root.resolve(), INTERNAL_CI, '20261102',
             download_db=True, download_sdk=False)
 
     def test_install_does_not_resolve_a_cli_beforehand(self):
@@ -452,11 +452,11 @@ class InstallCommand(unittest.TestCase):
         with mock.patch.object(bootstrap, 'download_database',
                                return_value=output.resolve()) as download:
             code, out, err = capture([
-                'download-db', '--source', 'HARMONYOS_CI',
+                'download-db', '--source', 'INTERNAL_CI',
                 '--date', '20261102', '--output', str(output)])
         self.assertEqual(code, 0, err)
         download.assert_called_once_with(
-            source='HARMONYOS_CI', date='20261102', output=output.resolve())
+            source='INTERNAL_CI', date='20261102', output=output.resolve())
         self.assertIn(str(output.resolve()), out)
 
     def test_download_db_reports_download_errors(self):
@@ -650,7 +650,7 @@ class SkillEnvExampleIsComplete(unittest.TestCase):
 
         反方向的漂移比漏写更坏：漏写只是少一个功能，写了一个不存在的键
         会让人对着 `.env` 调半天，而 `load_env_file` 会用一句
-        "不支持的配置项"把他顶回来——前提是它认得那个键。
+        "不支持的配置项"将其拦下——前提是它认得那个键。
         """
         from oskm_runtime import environment
         text = (Path(environment.__file__).parent / '.env.example').read_text(

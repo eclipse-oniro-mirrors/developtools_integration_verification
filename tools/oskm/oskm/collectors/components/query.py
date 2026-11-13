@@ -67,9 +67,9 @@ class ComponentQuery(BaseQuery):
 
     def list_components(self, filters=ComponentFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(
+        selected, page_token = paginate(rows, page, dict(
             method='components', filters=filter_key(filters)), self._fingerprint)
-        return Page(tuple(row for _, row in selected), tuple(pos for pos, _ in selected), len(rows), cursor)
+        return Page(tuple(row for _, row in selected), tuple(pos for pos, _ in selected), len(rows), page_token)
 
     def list_dependents(self, name, *, page=PageRequest()):
         self._check()

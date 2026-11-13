@@ -17,7 +17,7 @@
 （`python3 -m oskm_cli` / pyz / skill 的 `bootstrap.py`）。
 2026-11-12 之前有个 `packages/oskm/oskm.py` 在外面按子命令名分派，已删除：
 它要手抄一份查询侧子命令清单，漂了会把命令送去扫描侧，报出
-"invalid choice: <你的 --db 路径>"这种方向完全错的错误。
+"invalid choice: <用户的 --db 路径>"这种方向完全错的错误。
 
 退出码沿用 `oskm/cli.py` 的既有口径，不另造一套：
     0 正常 / 2 参数错 / 3 库打不开 / 5 工具返回 error
@@ -93,7 +93,7 @@ def _database_not_found_message(path):
         root = path.parent
         command = f'python3 <skill>/bootstrap.py install --runtime-root {root}'
         setup = (
-            '首次使用请用 ohos-design-architecture-evidence-query skill 安装：'
+            '初次使用请用 ohos-design-architecture-evidence-query skill 安装：'
             '先在其 oskm_runtime/.env（或环境）中配置 OSKM_DOWNLOAD_ENDPOINT，'
             f'再执行 `{command}`。CLI 本身不下载数据。')
         return f'database not found: {path}. {setup}'

@@ -132,7 +132,7 @@ class DocsMatchRegistry(unittest.TestCase):
         三个都已删除：`agentic.runtime`（2026-11-12 拆分）、`-m agentic`
         （同上）、`oskm.py`（2026-11-12 删除；它要在外面手抄一份查询侧
         子命令清单，漂了会把命令送去扫描侧，报一句
-        "invalid choice: <你的 --db 路径>"）。
+        "invalid choice: <用户的 --db 路径>"）。
         """
         text = _agents_section()
         for removed in ('oskm.py', '-m agentic', 'agentic.runtime',

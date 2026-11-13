@@ -57,7 +57,7 @@
 `headers=partial`。
 
 **本次扫描为 degraded，原因只有一条**：`api/@internal/ets/global.d.ts` 含非 UTF-8 字节
-（首个非法字节在偏移 10,747）。保留路径、大小、完整摘要和 `encoding_failed`，不遗漏模块。
+（第一个非法字节在偏移 10,747）。保留路径、大小、完整摘要和 `encoding_failed`，不遗漏模块。
 这是真实的输入缺陷，不为通过验收修改输入源码。
 
 ## 2.1 4.0.0—6.0.0：精简
@@ -82,7 +82,7 @@
 | 本域表页合计 | 1,990,656 | **1,552,384** |
 
 **代价已记账**：删 `sha256` 后，按 `header_span` 回源码切片时无法判断单份文件是否变过，
-总摘要只能告诉你"整体变了"；删 `repo_id` 后档案页不再显示"所属仓"（源码链接不受影响，
+总摘要只能告诉用户"整体变了"；删 `repo_id` 后档案页不再显示"所属仓"（源码链接不受影响，
 它走路径前缀匹配）。两者都写在
 [arkts-sources-field-report.md §4](./arkts-sources-field-report.md)。
 
@@ -215,7 +215,7 @@ arkts 排采集序第 2、elf_modules 排最后，直接依赖会抛 `DEPENDENCY
 | `node --test oskm/collectors/arkts/node/tests/core.test.cjs`（工程内 v18.20.1） | 16 项通过 |
 | `python3 -m unittest discover -s cli/tests -p 'test_*.py'` | 111 项通过（含 CLI 与 skill 门禁） |
 | `python3 oskm/tests/verify_arkts.py --workspace-root …` | 通过（含实现映射独立重算） |
-| `python3 -m oskm.cli list` | 自动注册 arkts，依赖仅 repos；其他领域注册不要求 Node |
+| `python3 -m oskm.cli list` | 自动注册 arkts，依赖仅 repos；其余领域注册不要求 Node |
 | `python3 -m compileall -q oskm/collectors/arkts cli/oskm_cli/query/tools/arkts.py` | 通过 |
 | `PRAGMA integrity_check` / `foreign_key_check` | ok / 无违规 |
 | `git diff --check` | 通过 |
@@ -253,7 +253,7 @@ arkts 排采集序第 2、elf_modules 排最后，直接依赖会抛 `DEPENDENCY
 | E-05 | 同输入重扫导出相同、游标可继续；源码、有效配置或发现范围变化使游标失效；包身份不符启动失败；旧快照纯数据库可查询 |
 | E-06 | 错 id/hash、未知事实分区、错误跨度、UTF-8 非字符边界、未知必需字段/版本均被拒绝 |
 
-其他测试覆盖：stderr 填满同时发送大请求、无换行超大帧、输出污染/截断、超时/取消进程回收、
+其余测试覆盖：stderr 填满同时发送大请求、无换行超大帧、输出污染/截断、超时/取消进程回收、
 SQLite 插入中途失败回滚、跨扫描隔离、输入移走后导出、符号链接范围、编码/文件预算、
 精确匹配与歧义保留、双向查询与多证据去重、过滤条件绑定游标、MCP 参数拒绝与查询不启动进程。
 

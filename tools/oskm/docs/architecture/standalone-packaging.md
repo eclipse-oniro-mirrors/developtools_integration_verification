@@ -130,7 +130,7 @@ install-module 读模型内联为只读 session。发布物是单根目录 `oskm
 |---|---|
 | 改动 | 0 |
 | 包体 | 9,751 行闭包 + Node 后端 + napi-map.json（约 1 MB 级） |
-| 问题 | 上架一个"查询 skill"却带着整套扫描器，使用者装完会问"这些 collector 要我干嘛" |
+| 问题 | 上架一个"查询 skill"却带着整套扫描器，使用者装完会问"这些 collector 要本文干嘛" |
 
 **作为过渡可以，作为发布形态不合适。**
 
@@ -320,7 +320,7 @@ collector.py → TABLES            ← 唯一的采集侧
 三级相对，解析成 `oskm.core.schema`。软链到 `cli/oskm_cli/schema/` 下深度变了，
 直接 `ImportError: attempted relative import beyond top-level package`。
 
-改成绝对 import `from oskm.core.schema import ...` 能跑，
+改成明确 import `from oskm.core.schema import ...` 能跑，
 但那等于把 `oskm` 依赖焊死在共享文件里——**agentic 独立发布时带不走**，
 正好和目标相反。
 
@@ -512,7 +512,7 @@ ohos-design-architecture-evidence-query/
 - **`COMPONENT_COLUMN` 可推导性**：采集器声明的 `{TABLES[0].name: COMPONENT_COLUMN}`
   与"库里所有含 `component_id` 列的表"求对称差——**先量再下结论**，
   凭直觉会以为两者相同
-- **viewer 相关性**：`grep -rn viewer` 扫 `cli/oskm_cli/` 与 `oskm/core/`，
+- **viewer 相关性**：`grep -R -n viewer` 扫 `cli/oskm_cli/` 与 `oskm/core/`，
   确认只有一行注释，无 import
 
 ## 11. 构建与发布验收
@@ -558,7 +558,7 @@ Claude Code 项目级为 `.claude/skills/ohos-design-architecture-evidence-query
 
 解压后的 `doctor` 必须提示运行时使用单个 `knowledge.tar.gz`，不再需要 Git 或
 SDK 分支凭据。下载配置统一从环境变量或本地 `.env` 读取：
-`OSKM_DOWNLOAD_SOURCE` 选择 `OPENHARMONY_CI`（默认）或 `HARMONYOS_CI`，
+`OSKM_DOWNLOAD_SOURCE` 选择 `OPENHARMONY_CI`（默认）或 `INTERNAL_CI`，
 `OSKM_DOWNLOAD_ENDPOINT` 提供端点。
 `OPENHARMONY_CI` 的 component 固定为 `dayu600_7885_ai`。仓库只提交
 `.env.example`，不能提交真实端点。归档结构与校验同时由

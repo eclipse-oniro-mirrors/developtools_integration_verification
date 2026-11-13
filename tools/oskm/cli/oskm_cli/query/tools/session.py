@@ -218,6 +218,7 @@ def get_link_stats(params, manager):
     if not rows:
         return {'features': None, 'innerapis': None}
     r = rows[0]
+
     def _stats(linked, unresolved):
         total = linked + unresolved
         return {'linked': linked, 'unresolved': unresolved, 'total': total,
@@ -250,6 +251,77 @@ def detach_secondary(params, manager):
     return manager.detach_secondary(params['alias'])
 
 
+def _list_diff_params(params):
+    entity = params['entity']
+    if entity not in _DIFF_CONFIG:
+        raise ToolError('INVALID_ENTITY', f'unsupported entity: {entity}')
+    config = _DIFF_CONFIG[entity]
+    scan_a = params['scan_a']
+    if not isinstance(scan_a, int) or isinstance(scan_a, bool):
+        raise ToolError('INVALID_PARAM', 'scan_a must be an integer')
+    scan_b = params.get('scan_b')
+    if scan_b is not None and (not isinstance(scan_b, int) or isinstance(scan_b, bool)):
+        raise ToolError('INVALID_PARAM', 'scan_b must be an integer')
+    fields = params.get('fields')
+    if fields is None:
+        fields = list(config['fields'])
+    if (not isinstance(fields, list) or not fields
+            or any(not isinstance(field, str) or field not in config['expressions']
+                   for field in fields)):
+        raise ToolError('INVALID_FIELD', 'fields must contain known entity fields')
+    return config, scan_a, scan_b, params.get('db_b'), tuple(fields)
+
+
+def _list_diff_rows(manager, entity, config, scan_a, scan_b, db_b, fields):
+    session = manager.get_active()
+    entry = manager.get_entry()
+    primary_source = 'c' if entity == 'components' else (
+        'g' if entity == 'gn_args' else
+        'f' if entity == 'features' else
+        's' if entity == 'services' else
+        'm' if entity == 'install_modules' else 'i')
+    _validated_scan(session.connection, scan_a, label='scan_a')
+    if db_b is not None:
+        if db_b not in entry.aliases:
+            raise ToolError('ALIAS_NOT_FOUND', f'alias "{db_b}" not attached')
+        alias_session = entry.alias_sessions[db_b]
+        if scan_b is None:
+            scan_b = _latest_completed_scan(alias_session.connection)
+        else:
+            _validated_scan(alias_session.connection, scan_b, label='scan_b')
+        rows_b = _entity_rows(alias_session, entity, scan_b, primary_source, fields)
+    else:
+        if scan_b is None:
+            raise ToolError('MISSING_PARAM', 'scan_b is required for same-database diff')
+        _validated_scan(session.connection, scan_b, label='scan_b')
+        rows_b = _entity_rows(session, entity, scan_b, primary_source, fields)
+    rows_a = _entity_rows(session, entity, scan_a, primary_source, fields)
+    return scan_b, rows_a, rows_b, config['key']
+
+
+def _diff_key_value(key, key_cols):
+    if len(key_cols) == 1:
+        return key[0]
+    return {name: value for name, value in zip(key_cols, key)}
+
+
+def _diff_summary(index_a, index_b, key_cols, fields):
+    added = [_diff_key_value(key, key_cols) for key in index_b if key not in index_a]
+    removed = [_diff_key_value(key, key_cols) for key in index_a if key not in index_b]
+    changed = []
+    for key, row_a in index_a.items():
+        if key not in index_b:
+            continue
+        row_b = index_b[key]
+        changes = [
+            {'field': field, 'before': row_a[field], 'after': row_b[field]}
+            for field in fields if row_a[field] != row_b[field]
+        ]
+        if changes:
+            changed.append({'key': _diff_key_value(key, key_cols), 'changes': changes})
+    return added, removed, changed
+
+
 @register('diff_scans', '两次扫描差异对比', {
     'type': 'object',
     'properties': {
@@ -265,76 +337,11 @@ def detach_secondary(params, manager):
     'required': ['entity', 'scan_a'],
 })
 def diff_scans(params, manager):
-    entity = params['entity']
-    if entity not in _DIFF_CONFIG:
-        raise ToolError('INVALID_ENTITY', f'unsupported entity: {entity}')
-    config = _DIFF_CONFIG[entity]
-    scan_a = params['scan_a']
-    if not isinstance(scan_a, int) or isinstance(scan_a, bool):
-        raise ToolError('INVALID_PARAM', 'scan_a must be an integer')
-    scan_b = params.get('scan_b')
-    db_b = params.get('db_b')
-    if scan_b is not None and (not isinstance(scan_b, int) or isinstance(scan_b, bool)):
-        raise ToolError('INVALID_PARAM', 'scan_b must be an integer')
-
-    fields = params.get('fields')
-    if fields is None:
-        fields = list(config['fields'])
-    if (not isinstance(fields, list) or not fields
-            or any(not isinstance(field, str) or field not in config['expressions']
-                   for field in fields)):
-        raise ToolError('INVALID_FIELD', 'fields must contain known entity fields')
-    fields = tuple(fields)
-
-    session = manager.get_active()
-    entry = manager.get_entry()
-    primary_source = 'c' if entity == 'components' else (
-        'g' if entity == 'gn_args' else
-        'f' if entity == 'features' else
-        's' if entity == 'services' else
-        'm' if entity == 'install_modules' else 'i')
-    _validated_scan(session.connection, scan_a, label='scan_a')
-
-    if db_b is not None:
-        if db_b not in entry.aliases:
-            raise ToolError('ALIAS_NOT_FOUND', f'alias "{db_b}" not attached')
-        alias_session = entry.alias_sessions[db_b]
-        if scan_b is None:
-            scan_b = _latest_completed_scan(alias_session.connection)
-        else:
-            _validated_scan(alias_session.connection, scan_b, label='scan_b')
-        rows_b = _entity_rows(alias_session, entity, scan_b, primary_source, fields)
-    else:
-        if scan_b is None:
-            raise ToolError('MISSING_PARAM', 'scan_b is required for same-database diff')
-        _validated_scan(session.connection, scan_b, label='scan_b')
-        rows_b = _entity_rows(session, entity, scan_b, primary_source, fields)
-
-    rows_a = _entity_rows(session, entity, scan_a, primary_source, fields)
-    key_cols = config['key']
-
+    config, scan_a, scan_b, db_b, fields = _list_diff_params(params)
+    scan_b, rows_a, rows_b, key_cols = _list_diff_rows(
+        manager, params['entity'], config, scan_a, scan_b, db_b, fields)
     index_a = {tuple(row[column] for column in key_cols): row for row in rows_a}
     index_b = {tuple(row[column] for column in key_cols): row for row in rows_b}
-
-    def key_value(key):
-        if len(key_cols) == 1:
-            return key[0]
-        return {name: value for name, value in zip(key_cols, key)}
-
-    added = [key_value(key) for key in index_b if key not in index_a]
-    removed = [key_value(key) for key in index_a if key not in index_b]
-    changed = []
-    for key, row_a in index_a.items():
-        if key not in index_b:
-            continue
-        row_b = index_b[key]
-        changes = []
-        for field in fields:
-            before = row_a[field]
-            after = row_b[field]
-            if before != after:
-                changes.append({'field': field, 'before': before, 'after': after})
-        if changes:
-            changed.append({'key': key_value(key), 'changes': changes})
-    return {'entity': entity, 'scan_a': scan_a, 'scan_b': scan_b,
+    added, removed, changed = _diff_summary(index_a, index_b, key_cols, fields)
+    return {'entity': params['entity'], 'scan_a': scan_a, 'scan_b': scan_b,
             'added': added, 'removed': removed, 'changed': changed}

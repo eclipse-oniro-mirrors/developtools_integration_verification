@@ -1,7 +1,7 @@
 # OpenHarmony 系统知识扫描器
 
 把一个 OpenHarmony 产品的构成事实——代码仓、部件、安装产物、ELF 依赖、
-运行时服务、编译开关、SDK/NDK 接口——扫进一个 SQLite 库，
+运行时服务、编译开关、SDK/Native SDK 接口——扫进一个 SQLite 库，
 供人查看、供 Agent 查询。
 
 Python 3.10+，查询层**仅标准库且无 pip 依赖**；运行时安装的 DB 与两套 SDK
@@ -43,7 +43,7 @@ cd packages/oskm/skills/ohos-design-architecture-evidence-query
 
 # ④ 安装运行时（DB + interface/sdk-js + interface/sdk_c + CLI）
 cp oskm_runtime/.env.example oskm_runtime/.env
-# OSKM_DOWNLOAD_SOURCE 选择 OPENHARMONY_CI（默认）或 HARMONYOS_CI；
+# OSKM_DOWNLOAD_SOURCE 选择 OPENHARMONY_CI（默认）或 INTERNAL_CI；
 # OSKM_DOWNLOAD_ENDPOINT 提供归档端点。归档里就是 DB + CLI + 两套 SDK，
 # 没有单独的 CLI 下载端点。
 python3 bootstrap.py doctor
@@ -71,7 +71,7 @@ wukong100 实测（`date=20261111`，`cpu_arch=arm64`）：527 仓 · 57 子系�
 385 部件 · 5,936 安装模块 · 7,025 镜像落点 · 3,687 ELF（32,076 条依赖边）·
 171 服务 + 166 SA + 59 HDI · 3,004 编译参数 · 1,385 特性 · 310 SysCap ·
 1,763 InnerAPI · 50 Kit · 1,328 SDK 模块（935 个定位到实现 `.so`）·
-444 条 NDK 头文件映射。库 19.0 MB。
+444 条 Native SDK 头文件映射。库 19.0 MB。
 
 > `cpu_arch=arm64`，所以实现路径是 `system/lib64/…` 而不是 `system/lib/…`；
 > 以 `ask get_scan_info` 的 `cpu_arch` 和真实 `dest` 为准，不要凭路径猜。

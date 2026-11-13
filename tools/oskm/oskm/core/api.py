@@ -20,7 +20,7 @@
 The store is the system of record; this is the convenience path for a caller who
 wants a single domain's result without managing a database file. It runs the
 registered collector into an in-memory store and wraps the rows in that domain's
-Result type, so the rich in-memory query API (predicates, cursors, aggregation)
+Result type, so the rich in-memory query API (predicates, page_tokens, aggregation)
 stays available.
 
 One function covers every domain: the Result type and record field come from the

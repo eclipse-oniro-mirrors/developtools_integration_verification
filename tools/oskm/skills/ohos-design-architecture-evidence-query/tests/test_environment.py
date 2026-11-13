@@ -21,7 +21,7 @@ class EnvironmentFileTests(unittest.TestCase):
             path = Path(temp) / '.env'
             path.write_text(
                 '# local only\n'
-                f'{environment.SOURCE_ENV}=HARMONYOS_CI\n'
+                f'{environment.SOURCE_ENV}=INTERNAL_CI\n'
                 f'export {environment.ENDPOINT_ENV}='
                 "'https://mirror.example.invalid/daily' # archive prefix\n",
                 encoding='utf-8',
@@ -32,7 +32,7 @@ class EnvironmentFileTests(unittest.TestCase):
                 self.assertEqual(environment.load_env_file(path), path)
                 self.assertEqual(
                     environment.os.environ[environment.SOURCE_ENV],
-                    'HARMONYOS_CI')
+                    'INTERNAL_CI')
                 self.assertEqual(
                     environment.os.environ[environment.ENDPOINT_ENV],
                     'https://existing.invalid')
@@ -45,15 +45,14 @@ class EnvironmentFileTests(unittest.TestCase):
     def test_rejects_unknown_and_malformed_configuration(self):
         with tempfile.TemporaryDirectory(prefix='oskm env ') as temp:
             path = Path(temp) / '.env'
-            bodies = (
-                'OTHER_SETTING=value\n',
-                'OSKM_BAD_LINE\n',
-            )
-            for body in bodies:
+            for body in ('OTHER_SETTING=value\n', 'OSKM_BAD_LINE\n'):
                 with self.subTest(body=body):
-                    path.write_text(body, encoding='utf-8')
-                    with self.assertRaisesRegex(ValueError, str(path)):
-                        environment.load_env_file(path)
+                    self._assert_env_rejected(path, body)
+
+    def _assert_env_rejected(self, path, body):
+        path.write_text(body, encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, str(path)):
+            environment.load_env_file(path)
 
     def test_source_defaults_to_openharmony_ci(self):
         with mock.patch.dict(environment.os.environ, {}, clear=True):
@@ -78,12 +77,12 @@ class EnvironmentFileTests(unittest.TestCase):
 
     def test_download_config_reads_source_and_endpoint(self):
         with mock.patch.dict(environment.os.environ, {
-            environment.SOURCE_ENV: environment.HARMONYOS_CI,
+            environment.SOURCE_ENV: environment.INTERNAL_CI,
             environment.ENDPOINT_ENV: 'https://mirror.example.invalid/daily/',
         }, clear=True):
             config = environment.download_config()
 
-        self.assertEqual(config.source, environment.HARMONYOS_CI)
+        self.assertEqual(config.source, environment.INTERNAL_CI)
         self.assertEqual(
             config.endpoint, 'https://mirror.example.invalid/daily')
 

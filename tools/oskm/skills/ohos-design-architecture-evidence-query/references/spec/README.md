@@ -16,7 +16,7 @@
 | install | 4 | [install.md](./install.md) | 安装模块查找、搜索、路径归属、镜像路径反查 |
 | gn_args | 2 | [gn_args.md](./gn_args.md) | 编译参数查找与搜索 |
 | elf | 3 | [elf.md](./elf.md) | ELF 搜索、依赖闭包 BFS、反向依赖 |
-| ndk | 2 | [ndk.md](./ndk.md) | NDK 库与 SDK 头文件映射 |
+| native | 2 | [native.md](./native.md) | Native SDK 库与 SDK 头文件映射 |
 | sa | 2 | [sa.md](./sa.md) | SA 服务按 ID 查找、按库名/配置搜索 |
 | hdi | 2 | [hdi.md](./hdi.md) | HDI 按 serviceName/node 查找、模糊搜索 |
 | arkts | 7 | [arkts.md](./arkts.md) | SDK 模块、Kit、声明文件、双向关系、实现映射反查、证据与分页 |
@@ -61,8 +61,8 @@
 | `search_elf_modules` | elf | `query, partition?, component?, limit?` | 模糊搜索 ELF |
 | `elf_dependencies` | elf | `dest, direction?, max_distance?, limit?` | ELF 依赖闭包（节点去重，带 `total`/`truncated`）|
 | `elf_dependents` | elf | `dest` | 谁依赖了这个 ELF |
-| `search_ndk_headers` | ndk | `query, match_strategy?, component?, limit?` | 模糊搜索 NDK 库与头文件映射 |
-| `get_ndk_headers` | ndk | `dest` | 按镜像库路径查 NDK 头文件清单 |
+| `search_native_headers` | native | `query, match_strategy?, component?, limit?` | 模糊搜索 Native SDK 库与头文件映射 |
+| `get_native_headers` | native | `dest` | 按镜像库路径查 Native SDK 头文件清单 |
 | `get_sa` | sa | `sa_id` | 按 SA ID 查找 SA 服务 |
 | `search_sas` | sa | `query, distributed?, auto_restart?, component?, limit?` | 模糊搜索 SA 服务 |
 | `get_hdi` | hdi | `service_name?, node?` | 按 serviceName/node 查 HDI 设备 |
@@ -73,21 +73,21 @@
 | `list_issues` | issues | `collector?, severity?, advisory?, component?, limit?` | 质量问题清单 |
 | `get_schema` | schema | `table?` | 表/列/FK 自描述 |
 | `get_tables` | schema | — | 已注册表名列表 |
-| `list_arkts_kits` | arkts | `query?, origin?, limit?, cursor?` | Kit 与标签分组 |
-| `get_arkts_kit` | arkts | `kit_key, limit?, source_cursor?, evidence_cursor?` | Kit 入口、成员两条来路与证据；无入口时给 `mentioned_in` |
-| `list_arkts_modules` | arkts | `query?, declaration_scope?, implementation_kind?, declaration_format?, language_coverage?, membership?, component?, implemented_by?, limit?, cursor?` | 逻辑模块清单；`component`/`implemented_by` 从部件或 .so 反查 SDK 接口 |
-| `list_arkts_declarations` | arkts | `query?, role?, language_variant?, read_status?, limit?, cursor?` | 声明文件清单（含读取状态与仓内位置）|
-| `get_arkts_module` | arkts | `module_key, limit?, declaration_cursor?, evidence_cursor?` | 模块、声明文件、实现 .so、Kit 两条来路与证据 |
-| `arkts_kit_modules` | arkts | `kit_key, view?, relation_type?, condition?, limit?, cursor?` | Kit 对应模块或未解析引用 |
-| `arkts_module_kits` | arkts | `module_key, relation_type?, condition?, limit?, cursor?` | 模块对应 Kit/标签分组 |
+| `list_arkts_kits` | arkts | `query?, origin?, limit?, page_token?` | Kit 与标签分组 |
+| `get_arkts_kit` | arkts | `kit_key, limit?, source_page_token?, evidence_page_token?` | Kit 入口、成员两条来路与证据；无入口时给 `mentioned_in` |
+| `list_arkts_modules` | arkts | `query?, declaration_scope?, implementation_kind?, declaration_format?, language_coverage?, membership?, component?, implemented_by?, limit?, page_token?` | 逻辑模块清单；`component`/`implemented_by` 从部件或 .so 反查 SDK 接口 |
+| `list_arkts_declarations` | arkts | `query?, role?, language_variant?, read_status?, limit?, page_token?` | 声明文件清单（含读取状态与仓内位置）|
+| `get_arkts_module` | arkts | `module_key, limit?, declaration_page_token?, evidence_page_token?` | 模块、声明文件、实现 .so、Kit 两条来路与证据 |
+| `arkts_kit_modules` | arkts | `kit_key, view?, relation_type?, condition?, limit?, page_token?` | Kit 对应模块或未解析引用 |
+| `arkts_module_kits` | arkts | `module_key, relation_type?, condition?, limit?, page_token?` | 模块对应 Kit/标签分组 |
 
 ## 通用约定
 
 - 所有工具返回 JSON 可序列化值（dict / list / scalar）
 - `id` 始终是数据库 surrogate id（INTEGER），跨工具引用一致
-- arkts 工具使用稳定业务键 kit_key/module_key，不输出 surrogate id；顶层 limit/cursor 分页规则见其专用规格
+- arkts 工具使用稳定业务键 kit_key/module_key，不输出 surrogate id；顶层 limit/page_token 分页规则见其专用规格
 - `scan_id` 由 session 管理，工具参数中不出现
-- 分页：`page: {limit: int, cursor?: str}` → `{items: [...], total: int, next_cursor: str?}`
+- 分页：`page: {limit: int, page_token?: str}` → `{items: [...], total: int, next_page_token: str?}`
 - 错误：`{"error": {"code": "ERROR_CODE", "message": "..."}}`，详见各模块规格
 - 缺失值：`null`（字段存在但无值）vs 字段不存在（键缺失）
 

@@ -4,7 +4,7 @@
 四条断言各自拦一类真实故障：
 
 - **文件名带上了版本**：CLI 与 `knowledge.db` 同类，装到
-  `<runtime-root>/oskm-cli.pyz`，文档与调用方永远不用钉版本。名字一旦漂回
+  `<runtime-root>/oskm-cli.pyz`，文档与调用方始终不用钉版本。名字一旦漂回
   `oskm-cli-1.0.0.pyz`，SKILL.md 里的每条命令都会在下次发版时变成坏指令。
 - **不可复现**：`SHA256SUMS` 存的就是 pyz 的 sha256；构建不确定，
   "装的是不是刚构建的那份"就无从查起，每次 CI 都会"漂"。

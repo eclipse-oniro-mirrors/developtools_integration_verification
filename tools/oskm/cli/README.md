@@ -115,7 +115,7 @@ cli/dist/SHA256SUMS       本产物自己的校验和；已删除的旧文件条
 ```
 
 **文件名不带版本号**，与 `knowledge.db` 同类：skill 把它装到
-`<runtime-root>/oskm-cli.pyz`，文档与调用方永远不用钉版本，发版也不会让
+`<runtime-root>/oskm-cli.pyz`，文档与调用方始终不用钉版本，发版也不会让
 SKILL.md 里的命令变成坏指令。版本仍然可查（`--version`）。
 
 **pyz 是确定性的**：手写 zip（固定 `date_time=(1980,1,1,0,0,0)`、固定
@@ -141,7 +141,7 @@ python3.12 -m unittest discover -s cli/tests -p "test_*.py"
 `degraded` 不等于失败、依赖闭包要从 1 跳起、引用条数不等于模块数这些只有实测
 才会发现的边界。
 
-| 你想 | 看这个 |
+| 如果需要 | 看这个 |
 |---|---|
 | 让 Agent 用 | [SKILL.md](../skills/ohos-design-architecture-evidence-query/SKILL.md) |
 | 完整用法（人读） | [references/usage.md](../skills/ohos-design-architecture-evidence-query/references/usage.md) |

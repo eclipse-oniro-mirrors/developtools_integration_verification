@@ -40,7 +40,7 @@ def make_record(<context...>, raw):
 
 `services` 是同一个形状加一对互逆的派生操作（`path` ↔ `executable`/`args`，以及由 `executable` 推 `type`）。
 
-这四处必须**永远保持互逆**——`record` 列存的是 `raw_x(record)`，导出时再 `make_record(..., raw)` 还原，任何一侧改了而另一侧没改，数据就静默损坏。现在没有任何机制保证，只靠人工对齐。
+这四处必须**始终保持互逆**——`record` 列存的是 `raw_x(record)`，导出时再 `make_record(..., raw)` 还原，任何一侧改了而另一侧没改，数据就静默损坏。现在没有任何机制保证，只靠人工对齐。
 
 ### 1.1 两处同源的次级重复
 

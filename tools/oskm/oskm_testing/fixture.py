@@ -11,7 +11,7 @@ from oskm_schema import FRAMEWORK_TABLES
 
 SCHEMA_MODULES = (
     'args', 'arkts', 'components', 'elf_modules', 'hdi', 'install_modules',
-    'links', 'ndk', 'repos', 'sas', 'services',
+    'links', 'native', 'repos', 'sas', 'services',
 )
 SCHEMA_TABLES = tuple(
     table
@@ -36,7 +36,7 @@ _PREFIXES = {
     'install_targets': 'install_modules',
     'arkts_links_run': 'links',
     'component_links_run': 'links',
-    'ndk_headers': 'ndk',
+    'native_headers': 'native',
     'repos': 'repos',
     'sas': 'sas',
     'services': 'services',
@@ -83,33 +83,13 @@ def _insert_collector_catalog(connection, scan_id):
              int(table.name in _PRIMARY), component_column, service_column, '4.0.0'))
 
 
-def create_fixture_db(path) -> Path:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.unlink(missing_ok=True)
-    connection = sqlite3.connect(path)
-    create_schema(connection)
-    connection.execute(
-        'INSERT INTO scans '
-        '(id, product, cpu_arch, workspace_root, started_at, finished_at) '
-        "VALUES (1, ?, 'arm64', ?, ?, ?)",
-        ('synthetic', '/src',
-         '2026-11-02T00:00:00Z', '2026-11-02T00:00:01Z'))
-    connection.executemany(
-        'INSERT INTO collector_runs '
-        '(scan_id, collector, schema_version, status, scope, record_count, error) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [(1, collector, '4.0.0', 'complete', '{}', 1, None)
-         for collector in sorted(set(_PREFIXES.values()))])
-    _insert_collector_catalog(connection, 1)
-
+def _insert_repo_components(connection):
     connection.execute(
         'INSERT INTO repos '
         '(scan_id, id, name, path, remote, remote_url, revision, groups, '
         'clone_depth, head_commit) VALUES (1, 1, ?, ?, ?, ?, ?, ?, ?, ?)',
         ('ace', 'foundation/ace/ace_engine', 'origin',
-         'https://gitcode.com/openharmony/ace_engine', 'rev1', '[]', 1,
-         'head1'))
+         'https://gitcode.com/openharmony/ace_engine', 'rev1', '[]', 1, 'head1'))
     components = [
         (1, 1, 'ace_engine', 'graphics', 'foundation/ace/ace_engine', 1,
          json.dumps({'components': ['init']}),
@@ -125,8 +105,7 @@ def create_fixture_db(path) -> Path:
     connection.execute(
         'INSERT INTO features '
         '(scan_id, component_id, source_index, value, gn_arg_id) '
-        'VALUES (1, 1, 0, ?, 1)',
-        (json.dumps('feature_a'),))
+        'VALUES (1, 1, 0, ?, 1)', (json.dumps('feature_a'),))
     connection.execute(
         'INSERT INTO gn_args '
         '(scan_id, name, component_id, decl_file, decl_line, default_value, '
@@ -135,6 +114,8 @@ def create_fixture_db(path) -> Path:
         ('ace_engine_feature_a', 'foundation/ace/ace_engine/BUILD.gn',
          'false', 'true', '', 'bool'))
 
+
+def _insert_install_modules(connection):
     modules = [
         (1, 1, 0, '//base/foo:foo', 'foo', 'shared_library', 'shared_library',
          'foundation/base/foo', 1, 1, json.dumps({
@@ -160,39 +141,29 @@ def create_fixture_db(path) -> Path:
         '(scan_id, id, ordinal, label, label_name, type, shlib_type, source, '
         'install_enable, component_id, record) '
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', modules)
-    connection.execute(
+    targets = [
+        (1, 0, 'system/lib/libfoo.so', 0, 'system', 'libfoo.so'),
+        (2, 0, 'system/app/Bar', 1, 'system', 'Bar'),
+        (3, 0, 'system/app/Bar/deep', 1, 'system', 'deep'),
+    ]
+    connection.executemany(
         'INSERT INTO install_targets '
         '(scan_id, module_id, dest_index, dest, directory, partition, file_name, '
         'size, link_target_path, link_target_id) '
-        'VALUES (1, 1, 0, ?, 0, ?, ?, NULL, NULL, NULL)',
-        ('system/lib/libfoo.so', 'system', 'libfoo.so'))
-    connection.execute(
-        'INSERT INTO install_targets '
-        '(scan_id, module_id, dest_index, dest, directory, partition, file_name, '
-        'size, link_target_path, link_target_id) '
-        'VALUES (1, 2, 0, ?, 1, ?, ?, NULL, NULL, NULL)',
-        ('system/app/Bar', 'system', 'Bar'))
-    connection.execute(
-        'INSERT INTO install_targets '
-        '(scan_id, module_id, dest_index, dest, directory, partition, file_name, '
-        'size, link_target_path, link_target_id) '
-        'VALUES (1, 3, 0, ?, 1, ?, ?, NULL, NULL, NULL)',
-        ('system/app/Bar/deep', 'system', 'deep'))
+        'VALUES (1, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL)', targets)
     connection.executemany(
         'INSERT INTO install_module_tags '
         '(scan_id, module_id, source_index, value) VALUES (?, ?, ?, ?)',
         [(1, 1, 0, 'innerapi'), (1, 1, 1, 'chipsetsdk')])
 
-    service_record = json.dumps({
-        'name': 'foo', 'uid': '1000',
-        'path': ['/system/bin/sa_main', '-x'],
-        'secon': 'u:r:foo:s0', 'sandbox': 1,
-    })
-    second_service_record = json.dumps({
-        'name': 'host_service', 'uid': '1001',
-        'path': ['/system/bin/sa_main', '-y'],
-        'secon': 'u:r:host_service:s0', 'sandbox': 0,
-    })
+
+def _insert_services_hdis(connection):
+    first = json.dumps({
+        'name': 'foo', 'uid': '1000', 'path': ['/system/bin/sa_main', '-x'],
+        'secon': 'u:r:foo:s0', 'sandbox': 1})
+    second = json.dumps({
+        'name': 'host_service', 'uid': '1001', 'path': ['/system/bin/sa_main', '-y'],
+        'secon': 'u:r:host_service:s0', 'sandbox': 0})
     connection.executemany(
         'INSERT INTO services '
         '(scan_id, id, position, cfg, name, type, uid, start_mode, ondemand, '
@@ -200,10 +171,9 @@ def create_fixture_db(path) -> Path:
         'install_module_id, record) '
         'VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL, 1, 1, ?)',
         [(1, 0, '/etc/init/foo.cfg', 'foo', 'sa', '1000', 'boot', 0,
-          json.dumps(['-x']), 'u:r:foo:s0', 1, service_record),
+          json.dumps(['-x']), 'u:r:foo:s0', 1, first),
          (2, 1, '/etc/init/foo.cfg', 'host_service', 'sa', '1001', 'boot', 0,
-          json.dumps(['-y']), 'u:r:host_service:s0', 0,
-          second_service_record)])
+          json.dumps(['-y']), 'u:r:host_service:s0', 0, second)])
     connection.execute(
         'INSERT INTO hdis '
         '(scan_id, id, position, hcb, node, service_name, module_name, library, '
@@ -212,6 +182,29 @@ def create_fixture_db(path) -> Path:
         ('foo.hcb', '/dev/foo', 'HDI_NAME', 'hdi_foo',
          'foundation/ace/ace_engine/libhdi_foo.so',
          json.dumps({'node': '/dev/foo', 'serviceName': 'HDI_NAME'})))
+
+
+def create_fixture_db(path) -> Path:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.unlink(missing_ok=True)
+    connection = sqlite3.connect(path)
+    create_schema(connection)
+    connection.execute(
+        'INSERT INTO scans '
+        '(id, product, cpu_arch, workspace_root, started_at, finished_at) '
+        "VALUES (1, ?, 'arm64', ?, ?, ?)",
+        ('synthetic', '/src', '2026-11-02T00:00:00Z', '2026-11-02T00:00:01Z'))
+    connection.executemany(
+        'INSERT INTO collector_runs '
+        '(scan_id, collector, schema_version, status, scope, record_count, error) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [(1, collector, '4.0.0', 'complete', '{}', 1, None)
+         for collector in sorted(set(_PREFIXES.values()))])
+    _insert_collector_catalog(connection, 1)
+    _insert_repo_components(connection)
+    _insert_install_modules(connection)
+    _insert_services_hdis(connection)
     connection.commit()
     connection.close()
     return path

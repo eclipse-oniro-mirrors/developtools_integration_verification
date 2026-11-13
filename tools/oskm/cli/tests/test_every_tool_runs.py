@@ -31,7 +31,7 @@ from oskm_cli.query.tools import dispatch, REGISTRY
 from oskm_cli.query.session import SessionManager
 from oskm_testing.testdb import DB, count, sample_component, sample_elf
 from oskm_testing.testdb import sample_gn_arg, sample_arkts_kit, sample_arkts_module
-from oskm_testing.testdb import sample_ndk_mapping, sample_names, sample_repo
+from oskm_testing.testdb import sample_native_mapping, sample_names, sample_repo
 from oskm_testing.testdb import sample_install_dest, sample_install_label
 from oskm_testing.testdb import sample_service, sample_service_with_sa
 
@@ -55,26 +55,14 @@ def _first(values):
     return values[0] if values else None
 
 
-def probe_params():
-    """每个工具的探针参数，全部由库推导；缺样本的值为 None（跳过该工具）。"""
+def _basic_probes():
     component = sample_component(DB)
     repo = sample_repo(DB)
     service = sample_service(DB)
     service_id = _first(sample_names('services', 1, 'id', DB))
     label = _first(sample_names('install_modules', 1, 'label', DB))
-    sa_id = _first(sample_names('sas', 1, 'sa_id', DB))
-    hdi = _first(sample_names('hdis', 1, 'service_name', DB))
     gn_arg = sample_gn_arg(DB)
-    dest = sample_install_dest(DB)
-    elf = sample_elf(DB)
-    elf_with_deps = sample_elf(DB, with_dependencies=True)
-    elf_with_dependents = sample_elf(DB, with_dependents=True)
-    ndk = sample_ndk_mapping(DB)
-    kit = sample_arkts_kit(DB)
-    module = sample_arkts_module(DB)
-
     return {
-        # ---- 不需要参数的
         'list_sessions': {},
         'list_scans': {},
         'get_scan_info': {},
@@ -86,13 +74,11 @@ def probe_params():
         'list_arkts_modules': {},
         'list_arkts_declarations': {},
         'open_session': {'db_path': DB},
-        # session_id 是 SessionManager 的进程内序号，不是库内容。
         'switch_session': {'session_id': 1},
         'list_entities': {'table': 'components', 'page': {'limit': 2}},
         'aggregate': {'table': 'components', 'group_by': ['subsystem']},
         'sql_query': {'sql': 'SELECT COUNT(*) AS n FROM components'},
         'get_schema': {'table': 'components'},
-        # ---- 需要一个真样本的
         'get_repo': {'name': repo[0]} if repo else None,
         'git_url': {'path': repo[1]} if repo else None,
         'get_component': {'name': component} if component else None,
@@ -109,32 +95,57 @@ def probe_params():
         'get_install_module': {'label': label} if label else None,
         'search_install_modules': {'query': _fragment(label or 'a')} if label else None,
         'installed_at': {'label': label} if label else None,
-        # owner_of 要的是**任意**安装落点，不必是 ELF；挂在 sample_elf 上会让
-        # "有 install_targets 但 elf_modules 降级为空"的库漏探（实测到过）。
-        'owner_of': {'dest': dest} if dest else None,
         'get_gn_arg': {'name': gn_arg} if gn_arg else None,
         'search_gn_args': {'query': _fragment(gn_arg)} if gn_arg else None,
+    }
+
+
+def _runtime_probes():
+    dest = sample_install_dest(DB)
+    elf = sample_elf(DB)
+    elf_with_deps = sample_elf(DB, with_dependencies=True)
+    elf_with_dependents = sample_elf(DB, with_dependents=True)
+    sa_id = _first(sample_names('sas', 1, 'sa_id', DB))
+    hdi = _first(sample_names('hdis', 1, 'service_name', DB))
+    return {
+        'owner_of': {'dest': dest} if dest else None,
         'search_elf_modules': {'query': _fragment(elf)} if elf else None,
         'elf_dependencies': ({'dest': elf_with_deps, 'max_distance': 1}
                              if elf_with_deps else None),
         'elf_dependents': ({'dest': elf_with_dependents}
                            if elf_with_dependents else None),
-        'search_ndk_headers': ({'query': _fragment(ndk['file_name'])}
-                               if ndk else None),
-        'get_ndk_headers': {'dest': ndk['dest']} if ndk else None,
         'get_sa': {'sa_id': sa_id} if sa_id else None,
         'search_sas': ({'query': _fragment(_first(
                            sample_names('sas', 1, 'profile', DB)) or 'sa')}
                        if sa_id else None),
         'get_hdi': {'service_name': hdi} if hdi else None,
         'search_hdis': {'query': _fragment(hdi)} if hdi else None,
+    }
+
+
+def _native_and_arkts_probes():
+    native = sample_native_mapping(DB)
+    kit = sample_arkts_kit(DB)
+    module = sample_arkts_module(DB)
+    return {
+        'search_native_headers': ({'query': _fragment(native['file_name'])}
+                                  if native else None),
+        'get_native_headers': {'dest': native['dest']} if native else None,
         'get_arkts_kit': {'kit_key': kit} if kit else None,
         'arkts_kit_modules': {'kit_key': kit, 'limit': 2} if kit else None,
         'get_arkts_module': {'module_key': module} if module else None,
         'arkts_module_kits': {'module_key': module} if module else None,
-        # ---- 显式跳过
-        **{name: None for name in SKIPPED},
     }
+
+
+def probe_params():
+    """每个工具的探针参数，全部由库推导；缺样本的值为 None（跳过该工具）。"""
+    probes = {}
+    probes.update(_basic_probes())
+    probes.update(_runtime_probes())
+    probes.update(_native_and_arkts_probes())
+    probes.update({name: None for name in SKIPPED})
+    return probes
 
 
 # 工具 → 它取样所依赖的表。两个用途：
@@ -148,7 +159,7 @@ SEARCH_TABLES = {
     'search_elf_modules': 'elf_modules',
     'search_sas': 'sas',
     'search_hdis': 'hdis',
-    'search_ndk_headers': 'ndk_headers',
+    'search_native_headers': 'native_headers',
 }
 
 PROBE_SOURCES = {
@@ -163,7 +174,7 @@ PROBE_SOURCES = {
     'get_gn_arg': 'gn_args',
     'elf_dependencies': 'elf_module_dependencies',
     'elf_dependents': 'elf_module_dependencies',
-    'get_ndk_headers': 'ndk_headers',
+    'get_native_headers': 'native_headers',
     'get_sa': 'sas', 'get_hdi': 'hdis',
     'get_arkts_kit': 'arkts_kits', 'arkts_kit_modules': 'arkts_kits',
     'get_arkts_module': 'arkts_modules', 'arkts_module_kits': 'arkts_modules',
@@ -204,7 +215,7 @@ class EveryToolRuns(unittest.TestCase):
     def test_every_present_domain_is_actually_probed(self):
         """防呆：样本选择器集体失效时，前面几条会全绿而什么都没测到。
 
-        **不用"探到 N 个工具"这种绝对阈值**——那会把"库小"误判成"选择器坏了"
+        **不用"探到 N 个工具"这种明确阈值**——那会把"库小"误判成"选择器坏了"
         （合成库只有 35/52 个工具能探到，但它一切正常）。改成按域判：
         某张表在当前库里非空，依赖它的工具就必须拿到探针参数。
         """

@@ -28,8 +28,8 @@
     },
     {
       "id": 3,
-      "name": "harmonyos-exact-date",
-      "prompt": "使用 HARMONYOS_CI 下载 date=20261102 的运行时，OSKM_DOWNLOAD_ENDPOINT 已配置为测试服务。请执行并说明 URL。",
+      "name": "internal-exact-date",
+      "prompt": "使用 INTERNAL_CI 下载 date=20261102 的运行时，OSKM_DOWNLOAD_ENDPOINT 已配置为测试服务。请执行并说明 URL。",
       "expected_output": "请求 $OSKM_DOWNLOAD_ENDPOINT/20261102，响应文件为 knowledge.tar.gz；指定日期不会退化成 latest 或系统当天。",
       "assertions": [
         {"text": "$OSKM_DOWNLOAD_ENDPOINT/$date", "type": "contains"},

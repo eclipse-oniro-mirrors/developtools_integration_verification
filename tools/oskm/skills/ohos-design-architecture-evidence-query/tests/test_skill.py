@@ -275,7 +275,7 @@ class EvalCoversRuntimeDistribution(unittest.TestCase):
                 'knowledge.tar.gz', 'knowledge.db', 'oskm-cli.pyz',
                 'interface/sdk-js', 'interface/sdk_c',
                 'install', 'refresh', 'bootstrap.py install',
-                'OPENHARMONY_CI', 'HARMONYOS_CI', 'get_scan_info'):
+                'OPENHARMONY_CI', 'INTERNAL_CI', 'get_scan_info'):
             self.assertIn(token, normalized, f'eval 缺运行时分发场景：{token}')
 
     def test_eval_does_not_freeze_product_data(self):
@@ -365,7 +365,7 @@ class SkillRuntimeContract(unittest.TestCase):
         text = self.USAGE.read_text(encoding='utf-8')
         self.assertIn('knowledge.tar.gz', text)
         self.assertIn('--source OPENHARMONY_CI', text)
-        self.assertIn('--source HARMONYOS_CI', text)
+        self.assertIn('--source INTERNAL_CI', text)
         self.assertNotIn('--component', text)
         self.assertIn('interface/sdk-js', text)
         self.assertIn('interface/sdk_c', text)
@@ -406,14 +406,14 @@ class SkillRuntimeContract(unittest.TestCase):
         self.assertNotIn('extract_sdk', text)
         self.assertNotIn('interface_sdk-js.zip', text)
 
-    def test_harmonyos_database_download_uses_the_date_endpoint(self):
+    def test_internal_database_download_uses_the_date_endpoint(self):
         text = self.USAGE.read_text(encoding='utf-8')
         normalized = ' '.join(text.split())
         self.assertIn('$OSKM_DOWNLOAD_ENDPOINT/$date', normalized)
-        self.assertIn('--source HARMONYOS_CI', normalized)
+        self.assertIn('--source INTERNAL_CI', normalized)
         self.assertIn('--output "$DB_OUT"', normalized)
         self.assertNotIn('/latest', text)
-        self.assertIn('HARMONYOS_CI URL 为', normalized)
+        self.assertIn('INTERNAL_CI URL 为', normalized)
 
     def test_openharmony_database_download_posts_one_date_range_and_uses_obs_path(self):
         text = self.USAGE.read_text(encoding='utf-8')
@@ -593,7 +593,7 @@ class SkillMatchesOrgGuide(unittest.TestCase):
 
     # §3.5.3：正文不该绑平台专有的目录约定或调用机制。
     PLATFORM_SPECIFIC = ('Claude', 'Codex', 'CODEX_HOME', '.claude/',
-                         'cursor', 'Gemini')
+                         'page_token', 'Gemini')
 
     def test_all_seven_responsibilities_are_present(self):
         text = SKILL.read_text(encoding='utf-8')
@@ -767,7 +767,7 @@ class BootstrapEntrypoint(unittest.TestCase):
         """help 必须列全托管命令，并且**明确说查询不归它管**。
 
         后半句是删掉透传之后新加的：使用者敲 `bootstrap.py arch overview`
-        会得到"未知命令"，help 里必须直接告诉他该敲什么，否则他只能去翻文档。
+        会得到"未知命令"，help 里必须直接给出应执行的命令，避免使用者只能翻文档。
         """
         result = subprocess.run(
             [sys.executable, str(BOOTSTRAP), '--help'],

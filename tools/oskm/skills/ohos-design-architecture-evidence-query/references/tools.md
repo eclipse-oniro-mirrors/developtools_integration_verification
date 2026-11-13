@@ -8,13 +8,13 @@
 
 | 工具 | 模块 | 参数 | 说明 |
 |---|---|---|---|
-| `arkts_kit_modules` | arkts | `limit`?, `cursor`?, `relation_type`?, `condition`?, `include_unspecified`?, `include_candidates`?, `kit_key`, `view`? | Kit 的去重成员模块，或未解析的引用。relation_type 可只取一条来路。注意引用**条数**不等于模块数：同一模块常在 if arkts static / dynamic 两个分支里各 import 一次。被引用也不证明该模块的全部 API 都由这个 Kit 导出 |
-| `arkts_module_kits` | arkts | `limit`?, `cursor`?, `relation_type`?, `condition`?, `include_unspecified`?, `include_candidates`?, `module_key` | 模块所属的 Kit/标签分组。relation_type 区分"模块自己声明的归属"与"被入口引用"——两者会不一致，而且不一致是正常的 |
-| `get_arkts_kit` | arkts | `kit_key`, `limit`?, `source_cursor`?, `evidence_cursor`? | Kit 详情、入口文件与分页原文证据。member_routes 给出成员的两条来路（模块自己的 @kit 标签 / 入口的 import）各自多少、重合多少；没有入口文件的 label_only 分组改给 mentioned_in（谁提过它） |
-| `get_arkts_module` | arkts | `module_key`, `limit`?, `declaration_cursor`?, `evidence_cursor`? | 模块详情、各语言版本的声明文件、实现 so（含镜像实际位置）及分页归属/引用证据。implementation 为 null 表示没有实现证据，不等于"没有实现"——看 module.implementation_kind 区分 type_only / arkts_builtin / unknown |
-| `list_arkts_declarations` | arkts | `limit`?, `cursor`?, `query`?, `role`?, `language_variant`?, `read_status`? | 分页查询声明文件本身（模块声明与 Kit 入口），含读取状态与仓内位置 |
-| `list_arkts_kits` | arkts | `limit`?, `cursor`?, `query`?, `origin`? | 分页查询 SDK Kit 与标签分组。origin=label_only 的分组没有入口文件，不可 import；列出成员不表示这些 API 在本产品可用 |
-| `list_arkts_modules` | arkts | `limit`?, `cursor`?, `query`?, `declaration_scope`?, `implementation_kind`?, `declaration_format`?, `language_coverage`?, `membership`?, `component`?, `implemented_by`? | 分页查询 SDK 逻辑模块（同一模块的动/静两份声明合为一个模块）。除按声明位置/实现方式筛选外，还可用 component 或 implemented_by 反查"某个部件/某个 .so 实现了哪些 SDK 接口" |
+| `arkts_kit_modules` | arkts | `limit`?, `page_token`?, `relation_type`?, `condition`?, `include_unspecified`?, `include_candidates`?, `kit_key`, `view`? | Kit 的去重成员模块，或未解析的引用。relation_type 可只取一条来路。注意引用**条数**不等于模块数：同一模块常在 if arkts static / dynamic 两个分支里各 import 一次。被引用也不证明该模块的全部 API 都由这个 Kit 导出 |
+| `arkts_module_kits` | arkts | `limit`?, `page_token`?, `relation_type`?, `condition`?, `include_unspecified`?, `include_candidates`?, `module_key` | 模块所属的 Kit/标签分组。relation_type 区分"模块自己声明的归属"与"被入口引用"——两者会不一致，而且不一致是正常的 |
+| `get_arkts_kit` | arkts | `kit_key`, `limit`?, `source_page_token`?, `evidence_page_token`? | Kit 详情、入口文件与分页原文证据。member_routes 给出成员的两条来路（模块自己的 @kit 标签 / 入口的 import）各自多少、重合多少；没有入口文件的 label_only 分组改给 mentioned_in（谁提过它） |
+| `get_arkts_module` | arkts | `module_key`, `limit`?, `declaration_page_token`?, `evidence_page_token`? | 模块详情、各语言版本的声明文件、实现 so（含镜像实际位置）及分页归属/引用证据。implementation 为 null 表示没有实现证据，不等于"没有实现"——看 module.implementation_kind 区分 type_only / arkts_builtin / unknown |
+| `list_arkts_declarations` | arkts | `limit`?, `page_token`?, `query`?, `role`?, `language_variant`?, `read_status`? | 分页查询声明文件本身（模块声明与 Kit 入口），含读取状态与仓内位置 |
+| `list_arkts_kits` | arkts | `limit`?, `page_token`?, `query`?, `origin`? | 分页查询 SDK Kit 与标签分组。origin=label_only 的分组没有入口文件，不可 import；列出成员不表示这些 API 在本产品可用 |
+| `list_arkts_modules` | arkts | `limit`?, `page_token`?, `query`?, `declaration_scope`?, `implementation_kind`?, `declaration_format`?, `language_coverage`?, `membership`?, `component`?, `implemented_by`? | 分页查询 SDK 逻辑模块（同一模块的动/静两份声明合为一个模块）。除按声明位置/实现方式筛选外，还可用 component 或 implemented_by 反查"某个部件/某个 .so 实现了哪些 SDK 接口" |
 | `component_attached` | component | `component_id`, `collector`? | 部件关联的各域记录 |
 | `component_dependencies` | component | `component_id` | 正向依赖 |
 | `component_dependents` | component | `component_id` | 反向依赖 |
@@ -35,8 +35,8 @@
 | `owner_of` | install | `dest` | 镜像路径→部件 |
 | `search_install_modules` | install | `query`, `type`?, `component`?, `limit`? | 模糊搜索安装模块 |
 | `list_issues` | issues | `collector`?, `severity`?, `advisory`?, `component`?, `limit`? | 质量问题清单 |
-| `get_ndk_headers` | ndk | `dest` | 按镜像库路径查 NDK 头文件清单 |
-| `search_ndk_headers` | ndk | `query`, `match_strategy`?, `component`?, `limit`? | 模糊搜索 NDK 库与头文件映射 |
+| `get_native_headers` | native | `dest` | 按镜像库路径查 Native SDK 头文件清单 |
+| `search_native_headers` | native | `query`, `match_strategy`?, `component`?, `limit`? | 模糊搜索 Native SDK 库与头文件映射 |
 | `aggregate` | query | `table`, `group_by`, `filters`?, `page`? | 通用聚合 |
 | `list_entities` | query | `table`, `filters`?, `sort`?, `desc`?, `page`? | 通用分页列表 |
 | `sql_query` | query | `sql`, `params`?, `limit`? | 受限只读 SQL |

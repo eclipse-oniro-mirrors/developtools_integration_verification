@@ -71,7 +71,7 @@ def bundle_validator(bundle_root) -> Validator:
     except cli_install.CliInstallError:
         # 归档里的 CLI 可能是裁剪版（没有 `oskm_cli.database`，测试夹具就是
         # 这种）。退回已装/源码树的校验器——schema 契约仍然只有 CLI 那一份，
-        # 只是这次用哪个 CLI 来问而已。发布产物永远带 `database.py`。
+        # 只是这次用哪个 CLI 来问而已。发布产物始终带 `database.py`。
         return default_validator()
 
 
@@ -277,6 +277,44 @@ def build_state(
     return document
 
 
+def _try_local_runtime(work_dir, *, download_db, download_sdk, validate):
+    local_runtime = find_local_runtime(validate=validate)
+    if local_runtime is None:
+        return None, None
+    print(f'==> 使用源码本地运行时: {local_runtime.db_path}', file=sys.stderr)
+    local_stage = work_dir / 'local-runtime'
+    try:
+        bundle_root = _stage_local_runtime(
+            local_runtime,
+            local_stage,
+            install_db=download_db,
+            install_sdk=download_sdk,
+        )
+        if download_db:
+            (validate or default_validator())(bundle_root / 'knowledge.db')
+        return local_runtime, bundle_root
+    except (shutil.Error, ValueError) as exc:
+        shutil.rmtree(local_stage, ignore_errors=True)
+        print(f'==> 源码本地运行时不可用，回退下载: {exc}', file=sys.stderr)
+        return None, None
+
+
+def _download_bundle(work_dir, source, date, validate):
+    print(f'==> 下载 {source} 运行时: {date}', file=sys.stderr)
+    bundle_root = download_runtime_bundle(
+        source=source,
+        date=date,
+        output=work_dir / 'runtime',
+    )
+    (validate or bundle_validator(bundle_root))(bundle_root / 'knowledge.db')
+    return bundle_root
+
+
+def _bundled_cli(bundle_root, installed_local):
+    candidate = bundle_root / cli_install.ARTIFACT_NAME
+    return candidate if installed_local is None and candidate.is_file() else None
+
+
 def install_runtime(
     runtime_root,
     source: str,
@@ -291,83 +329,29 @@ def install_runtime(
     _validate_install_options(
         source, download_db=download_db, download_sdk=download_sdk)
     validate_date(date)
-
     runtime_root.mkdir(parents=True, exist_ok=True)
     previous = state.load_state(runtime_root / 'knowledge.db') or {}
     previous_date = previous.get('date')
     if previous_date is not None and not isinstance(previous_date, str):
         raise ValueError(
-            f'运行时状态文件字段类型错误: '
-            f'{runtime_root / state.STATE_NAME}')
-
+            f'运行时状态文件字段类型错误: {runtime_root / state.STATE_NAME}')
     with tempfile.TemporaryDirectory(
             prefix='.oskm-runtime-install.', dir=runtime_root) as temp:
         work_dir = Path(temp)
-        installed_local = None
-        local_runtime = find_local_runtime(validate=validate)
-        if local_runtime is not None:
-            print(
-                f'==> 使用源码本地运行时: {local_runtime.db_path}',
-                file=sys.stderr,
-            )
-            local_stage = work_dir / 'local-runtime'
-            try:
-                bundle_root = _stage_local_runtime(
-                    local_runtime,
-                    local_stage,
-                    install_db=download_db,
-                    install_sdk=download_sdk,
-                )
-                if download_db:
-                    # 源码树里没有归档自带的 CLI，只能用已装的 / 源码树的。
-                    (validate or default_validator())(bundle_root / 'knowledge.db')
-            except (shutil.Error, ValueError) as exc:
-                shutil.rmtree(local_stage, ignore_errors=True)
-                print(
-                    f'==> 源码本地运行时不可用，回退下载: {exc}',
-                    file=sys.stderr,
-                )
-                local_runtime = None
-            else:
-                installed_local = local_runtime
-
-        if local_runtime is None:
-            print(f'==> 下载 {source} 运行时: {date}', file=sys.stderr)
-            bundle_root = download_runtime_bundle(
-                source=source,
-                date=date,
-                output=work_dir / 'runtime',
-            )
-            # 用归档自带的 CLI 校验这一批数据。
-            (validate or bundle_validator(bundle_root))(bundle_root / 'knowledge.db')
-
+        installed_local, bundle_root = _try_local_runtime(
+            work_dir, download_db=download_db, download_sdk=download_sdk,
+            validate=validate)
+        if bundle_root is None:
+            bundle_root = _download_bundle(work_dir, source, date, validate)
+        bundle_cli = _bundled_cli(bundle_root, installed_local)
         document = build_state(
-            source=source,
-            date=date,
-            bundle_root=bundle_root,
-            download_db=download_db,
-            download_sdk=download_sdk,
-            previous=previous,
-            local=installed_local,
-            # 只有下载归档才带 CLI；源码树本地运行时没有。
-            # 只有"下载归档、且归档里真带了 CLI"才记它；
-            # 源码树本地运行时不带，旧归档也可能还没放。
-            bundle_cli=(bundle_root / cli_install.ARTIFACT_NAME
-                        if installed_local is None
-                        and (bundle_root / cli_install.ARTIFACT_NAME).is_file()
-                        else None),
-        )
+            source=source, date=date, bundle_root=bundle_root,
+            download_db=download_db, download_sdk=download_sdk,
+            previous=previous, local=installed_local, bundle_cli=bundle_cli)
         staged_state = work_dir / state.STATE_NAME
         state.write_state(staged_state, document)
         _install_artifacts(
-            bundle_root,
-            runtime_root,
-            install_db=download_db,
-            install_sdk=download_sdk,
-            # 只有下载归档才带 CLI；源码树本地运行时保留已有的。
-            # 归档真带 CLI 才装；源码树本地运行时不带，旧归档也可能还没放。
-            install_cli=(installed_local is None
-                         and (bundle_root / cli_install.ARTIFACT_NAME).is_file()),
-            state_source=staged_state,
-        )
+            bundle_root, runtime_root,
+            install_db=download_db, install_sdk=download_sdk,
+            install_cli=bundle_cli is not None, state_source=staged_state)
     print(f'==> 运行时安装完成: {runtime_root}', file=sys.stderr)

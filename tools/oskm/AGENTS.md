@@ -97,7 +97,7 @@ packages/oskm/
 │   ├── scripts/build_skill.py      → skills/…/dist/ohos-design-architecture-evidence-query-<v>.tar.gz
 │   └── tests/
 ├── oskm_testing/                   两个产物共用的合成库与真库辅助（都不发布）
-├── viewer/                         ⑤ 可视化（Vue 3 + sql.js）
+├── viewer/                         ⑤ 可视化（前端框架 3 + sql.js）
 └── docs/architecture/              跨组件的架构文档
 ```
 

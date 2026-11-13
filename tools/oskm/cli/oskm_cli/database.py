@@ -30,7 +30,7 @@ from oskm_schema import FRAMEWORK_TABLES
 # 会**放过一个缺表的库**——而这正是本模块存在的意义。
 SCHEMA_MODULES = (
     'args', 'arkts', 'components', 'elf_modules', 'hdi', 'install_modules',
-    'links', 'ndk', 'repos', 'sas', 'services',
+    'links', 'native', 'repos', 'sas', 'services',
 )
 
 REQUIRED_COLUMNS = {

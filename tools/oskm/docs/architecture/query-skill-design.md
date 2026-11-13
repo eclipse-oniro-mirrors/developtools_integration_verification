@@ -87,7 +87,7 @@ Skill 要解决的正是"这类知识没地方放"。
 <runtime-root>/
   knowledge.db          # 唯一数据库
   interface/sdk-js/     # ArkTS API / Kit 声明源码
-  interface/sdk_c/      # NDK 头文件源码
+  interface/sdk_c/      # Native SDK 头文件源码
 ```
 
 - 运行时不是三个数据库，而是一个统一 `knowledge.tar.gz`，解压后为**一个
@@ -98,7 +98,7 @@ Skill 要解决的正是"这类知识没地方放"。
   `interface/sdk_c`；三者完整且 schema 兼容时复制安装，不联网、不移动源码。
   本地运行时不按日期自动刷新，显式 `install` 才会重新复制源码产物。
 - DB 保存关系事实和证据位置；`sdk-js` 用来核对 ArkTS `source_path` 与实现 `.so`，
-  `sdk_c` 用来核对 NDK `header_path`。
+  `sdk_c` 用来核对 Native SDK `header_path`。
 - 源码只读。DB 的 revision 和 `content_match=unverified` 说明快照可能漂移；
   缺失时报告 `SDK 源码缺失`，不要把“无法核对”说成“没有关系”。
 - skill 不扫描、不重建 DB、不编译；初始化只负责安全解压归档并把固定目录结构就位。
@@ -298,7 +298,7 @@ SELECT c.subsystem, COUNT(*) AS parts,
 
 | 层 | 内容 | 何时进上下文 | 体量 |
 |---|---|---|---|
-| **Tier 0** | frontmatter 的 `name` + `description` | **永远** | 实测草稿 166 字符 ≈ 170 token |
+| **Tier 0** | frontmatter 的 `name` + `description` | **始终** | 实测草稿 166 字符 ≈ 170 token |
 | **Tier 1** | `SKILL.md` 正文 | 命中触发词时 | 目标 ≤150 行 ≈ 2.5k token |
 | **Tier 2** | `skills/ohos-design-architecture-evidence-query/references/spec/*.md`（13 份 66 KB）+ 生成的工具索引 | 模型按需 Read | 不常驻 |
 
@@ -351,7 +351,7 @@ KnowledgeBase/.claude/skills/ohos-design-architecture-evidence-query
 运行时只下载一个 `knowledge.tar.gz`，不要求 Git 或 SDK 分支凭据。下载方式由
 `OSKM_DOWNLOAD_SOURCE` 选择：`OPENHARMONY_CI`（默认）向
 `OSKM_DOWNLOAD_ENDPOINT` POST，component 固定为 `dayu600_7885_ai`；
-`HARMONYOS_CI` 请求 `$OSKM_DOWNLOAD_ENDPOINT/<YYYYMMDD>`。真实 `.env`
+`INTERNAL_CI` 请求 `$OSKM_DOWNLOAD_ENDPOINT/<YYYYMMDD>`。真实 `.env`
 不进入仓库。
 
 入库字段遵循 `ohos-<stage>-<domain>-<capability>` 命名；顶层只放 `name` 与
@@ -424,7 +424,7 @@ Tier 1 的 150 行怎么花：
 
 **第一条是写这份方案时临时加的，因为它当场抓到四个死工具。**
 原来只有 32 条 e2e 测试，覆盖「20 个典型提问」——挑的都是能答得漂亮的，
-"列在文档里但从没人调过"的正好漏在缝里。手工挨个探时我还漏了 `get_hdi`，
+"列在文档里但从没人调过"的正好漏在缝里。手工挨个探时本文还漏了 `get_hdi`，
 是这份名单抓出来的。名单里每个跳过项都要写理由，**不写理由就是漏测**。
 
 "逐条真跑"同样关键：**门禁能校工具名和计数，校不了"这个建议本身是坏的"。**
@@ -486,7 +486,7 @@ Tier 1 的 150 行怎么花：
 
 ## 10. 测量方法
 
-- **删除面**：`grep -rn "import server\|from .server\|mcp.server"` 确认
+- **删除面**：`grep -R -n "import server\|from .server\|mcp.server"` 确认
   `server.py` 无人依赖；`wc -l` 逐文件统计去留
 - **参数类型分布**：遍历 `export()` 的 `inputSchema.properties` 按 `type` 计数，
   并列出全部非标量项——**先量再设计**，"数组参数很麻烦"的印象不量就会否掉生成式方案

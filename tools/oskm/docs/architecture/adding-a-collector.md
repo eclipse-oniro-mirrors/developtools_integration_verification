@@ -8,7 +8,7 @@
 
 1. **这个领域的记录身份是什么？** 快照内位置（services/hdi/sas 用 `position`）还是天然稳定键（components 用 `name`）？决定主键与 `EXPORT_ORDER`。
 2. **需要 component 归属吗？** 需要 → 声明 `COMPONENT_COLUMN`，走第 4 节。
-3. **需要依赖其他领域吗？** 需要 → 声明 `DEPENDS_ON`，通过 `ctx.upstream` 读表，**绝不要嵌套调用别的扫描**。
+3. **需要依赖其余领域吗？** 需要 → 声明 `DEPENDS_ON`，通过 `ctx.upstream` 读表，**绝不要嵌套调用别的扫描**。
 
 ## 1. 目录结构
 
@@ -19,7 +19,7 @@ oskm/collectors/<name>/
 ├── discovery.py    # 领域专属：发现与解析
 ├── records.py      # 可选：make_record()/raw_*() 一对互逆的纯函数（第 3 节）
 ├── ownership.py    # 可选：归属解析
-├── linking.py      # 可选：关联其他领域
+├── linking.py      # 可选：关联其余领域
 ├── models.py       # 可选：<Name>Filter（Request/Limits/Result 都用共享的）
 ├── query.py        # 可选：内存记录上的查询（走 BaseQuery）
 └── quality.py      # 可选：advisory 质量检查（第 8 节）

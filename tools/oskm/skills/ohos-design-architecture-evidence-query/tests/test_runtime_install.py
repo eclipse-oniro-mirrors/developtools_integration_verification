@@ -25,7 +25,7 @@ from oskm_runtime import cli_install, install, state
 from oskm_runtime.db_download import DownloadError
 from oskm_runtime.environment import (
     ENDPOINT_ENV,
-    HARMONYOS_CI,
+    INTERNAL_CI,
     OPENHARMONY_CI,
     SOURCE_ENV,
 )
@@ -162,10 +162,10 @@ class RuntimeInstallTests(unittest.TestCase):
                 install, 'download_runtime_bundle',
                 side_effect=self.copy_bundle(bundle)) as download:
             install.install_runtime(
-                self.root, HARMONYOS_CI, '20261102')
+                self.root, INTERNAL_CI, '20261102')
 
         self.assertEqual(
-            download.call_args.kwargs['source'], HARMONYOS_CI)
+            download.call_args.kwargs['source'], INTERNAL_CI)
         self.assertEqual(download.call_args.kwargs['date'], '20261102')
         self.assertNotIn('component', download.call_args.kwargs)
         document = json.loads(
@@ -173,7 +173,7 @@ class RuntimeInstallTests(unittest.TestCase):
         # version 3 是拆分后写入的（比 2 多一个 `cli` 段）。
         self.assertEqual(document['version'], state.STATE_VERSION)
         self.assertEqual(document['date'], '20261102')
-        self.assertEqual(document['source'], HARMONYOS_CI)
+        self.assertEqual(document['source'], INTERNAL_CI)
         self.assertNotIn('component', document)
         self.assertEqual(document['db']['path'], 'knowledge.db')
         self.assertEqual(len(document['db']['sha256']), 64)
@@ -233,7 +233,7 @@ class RuntimeInstallTests(unittest.TestCase):
         with mock.patch.object(
                 install, 'download_runtime_bundle',
                 side_effect=self.copy_bundle(bundle)):
-            install.install_runtime(self.root, HARMONYOS_CI, '20261102')
+            install.install_runtime(self.root, INTERNAL_CI, '20261102')
 
         self.assertTrue((self.root / 'knowledge.db').is_file())
         for relative in state.SDK_PATHS.values():
@@ -280,7 +280,7 @@ class RuntimeInstallTests(unittest.TestCase):
                     install, 'download_runtime_bundle',
                     side_effect=self.copy_bundle(bundle)) as download:
             install.install_runtime(
-                self.root, HARMONYOS_CI, '20261102')
+                self.root, INTERNAL_CI, '20261102')
 
         download.assert_not_called()
         self.assertTrue((self.root / 'knowledge.db').is_file())
@@ -307,7 +307,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 install.Path, 'cwd', return_value=source), \
                 mock.patch.object(install, 'download_runtime_bundle') as download:
             install.install_runtime(
-                self.root, HARMONYOS_CI, '20261102')
+                self.root, INTERNAL_CI, '20261102')
 
         download.assert_not_called()
         connection = sqlite3.connect(self.root / 'knowledge.db')
@@ -393,7 +393,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 install, 'download_runtime_bundle',
                 side_effect=self.copy_bundle(bundle)):
             install.install_runtime(
-                self.root, HARMONYOS_CI, '20261102', download_sdk=False)
+                self.root, INTERNAL_CI, '20261102', download_sdk=False)
 
         self.assertEqual(old_marker.read_text(encoding='utf-8'), 'keep-sdk')
         document = json.loads(
@@ -414,7 +414,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 install, 'download_runtime_bundle',
                 side_effect=self.copy_bundle(bundle)):
             install.install_runtime(
-                self.root, HARMONYOS_CI, '20261102', download_db=False)
+                self.root, INTERNAL_CI, '20261102', download_db=False)
 
         self.assertEqual(existing_db.read_bytes(), b'keep-db')
         document = json.loads(
@@ -429,7 +429,7 @@ class RuntimeInstallTests(unittest.TestCase):
         old_document = {
             'version': state.STATE_VERSION,
             'date': '20261101',
-            'source': HARMONYOS_CI,
+            'source': INTERNAL_CI,
             'db': {'date': '20261101', 'path': 'knowledge.db'},
             'sdk': {
                 'date': '20261101',
@@ -449,7 +449,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 side_effect=self.copy_bundle(bundle)):
             with self.assertRaisesRegex(ValueError, 'schema'):
                 install.install_runtime(
-                    self.root, HARMONYOS_CI, '20261102')
+                    self.root, INTERNAL_CI, '20261102')
 
         self.assertEqual((self.root / 'knowledge.db').read_bytes(), old_db)
         self.assertEqual(
@@ -470,7 +470,7 @@ class RuntimeInstallTests(unittest.TestCase):
                 side_effect=DownloadError('network down')):
             with self.assertRaisesRegex(DownloadError, 'network down'):
                 install.install_runtime(
-                    self.root, HARMONYOS_CI, '20261102')
+                    self.root, INTERNAL_CI, '20261102')
 
         self.assertEqual((self.root / 'knowledge.db').read_bytes(), old_db)
         self.assertEqual(
@@ -484,7 +484,7 @@ class RuntimeInstallTests(unittest.TestCase):
         old_document = {
             'version': state.STATE_VERSION,
             'date': '20261101',
-            'source': HARMONYOS_CI,
+            'source': INTERNAL_CI,
             'db': {'date': '20261101', 'path': 'knowledge.db'},
             'sdk': {
                 'date': '20261101',
@@ -516,7 +516,7 @@ class RuntimeInstallTests(unittest.TestCase):
                     install.os, 'replace', side_effect=fail_state_replace):
             with self.assertRaisesRegex(OSError, 'state replace failed'):
                 install.install_runtime(
-                    self.root, HARMONYOS_CI, '20261102')
+                    self.root, INTERNAL_CI, '20261102')
 
         self.assertEqual((self.root / 'knowledge.db').read_bytes(), old_db)
         self.assertEqual(

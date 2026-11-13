@@ -14,7 +14,7 @@
 skill 的 `validate-db` 是转发过来的。不带它，pyz 就跑不起来。
 
 **文件名不带版本号**，与 `knowledge.db` 同类：skill 把它装到
-`<runtime-root>/oskm-cli.pyz`，文档与调用方永远不用钉版本。版本仍然在
+`<runtime-root>/oskm-cli.pyz`，文档与调用方始终不用钉版本。版本仍然在
 `oskm_cli.__version__` 里，`--version` 随时可查；发布记录靠 `SHA256SUMS`。
 
 **确定性仍然保留**：`zipapp.create_archive` 控制不了 `ZipInfo`（时间戳来自

@@ -414,7 +414,7 @@ class SATest(unittest.TestCase):
                 components=['a']), SAFilter(fields=(FieldPredicate('name', 'bad'),))):
             with self.assertRaises(QueryError):
                 query.list_sas(f)
-        for page in (PageRequest(0), PageRequest(True), PageRequest(cursor='not-a-cursor')):
+        for page in (PageRequest(0), PageRequest(True), PageRequest(page_token='not-a-page_token')):
             with self.assertRaises(QueryError):
                 query.list_sas(page=page)
         with self.assertRaises(QueryError):
@@ -425,19 +425,19 @@ class SATest(unittest.TestCase):
         with self.assertRaises(QueryError):
             query.list_sas()
 
-    def test_exact_values_survive_the_store_and_cursors_rebind(self):
+    def test_exact_values_survive_the_store_and_page_tokens_rebind(self):
         raw = dict(self.raw, value=Decimal('1.12345678901234567890123456789'), big=2**80)
         self.install([raw, raw])
         self.target(raw)
         result = self.scan()
         baseline = result.query()
-        cursor = baseline.list_sas(page=PageRequest(1)).next_cursor
+        page_token = baseline.list_sas(page=PageRequest(1)).next_page_token
         record = result.to_dict()['sas'][0]
         self.assertEqual(str(record['config']['value']), '1.12345678901234567890123456789')
         self.assertEqual(record['config']['big'], 2**80)
         with self.scan().query() as query:
             self.assertEqual(query.list_sas(), baseline.list_sas())
-            self.assertEqual(query.list_sas(page=PageRequest(cursor=cursor)).positions, (1,))
+            self.assertEqual(query.list_sas(page=PageRequest(page_token=page_token)).positions, (1,))
             self.assertEqual(query.aggregate_sas(), baseline.aggregate_sas())
 
     def test_callbacks_and_cancellation(self):

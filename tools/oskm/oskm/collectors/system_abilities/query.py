@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Read-only SA queries, with the same predicate and cursor semantics as services."""
+"""Read-only SA queries, with the same predicate and page_token semantics as services."""
 from collections.abc import Mapping
 from decimal import Decimal
 from .models import SAFilter, SAAggregatePage
@@ -61,8 +61,8 @@ class SAQuery(BaseQuery):
 
     def list_sas(self, filters=SAFilter(), *, page=PageRequest()):
         rows = self._select(filters)
-        selected, cursor = paginate(rows, page, dict(method='sas', filters=filter_key(filters)), self._fingerprint)
-        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), cursor)
+        selected, page_token = paginate(rows, page, dict(method='sas', filters=filter_key(filters)), self._fingerprint)
+        return Page(tuple(r for _, r in selected), tuple(p for p, _ in selected), len(rows), page_token)
 
     def aggregate_sas(self, group_by=('component',), *, filters=SAFilter(), page=PageRequest()):
         if not isinstance(
@@ -108,6 +108,6 @@ class SAQuery(BaseQuery):
             group = groups.setdefault(canonical(identity), dict(key=keys, count=0))
             group['count'] += 1
         ordered = [freeze(group) for _, group in sorted(groups.items())]
-        selected, cursor = paginate(ordered, page, dict(method='sas-aggregate',
+        selected, page_token = paginate(ordered, page, dict(method='sas-aggregate',
                                     filters=filter_key(filters), dimensions=group_by), self._fingerprint)
-        return SAAggregatePage(tuple(selected), len(rows), len(rows), len(groups), cursor)
+        return SAAggregatePage(tuple(selected), len(rows), len(rows), len(groups), page_token)

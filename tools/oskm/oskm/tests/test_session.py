@@ -102,7 +102,7 @@ class SessionTest(Fixture):
         self.assertEqual(session.scan_id, self.scan_id)
         self.assertEqual(session.collectors,
                          ('args', 'arkts_links', 'component_links', 'components', 'elf_modules',
-                          'hdi', 'install_modules', 'ndk_headers', 'repos', 'sas',
+                          'hdi', 'install_modules', 'native_headers', 'repos', 'sas',
                           'services'))
         self.assertIn(session.status, ('complete', 'degraded'))
 
@@ -245,7 +245,7 @@ class CommandLineTest(Fixture):
         self.assertEqual(report['order'],
                          ['repos', 'arkts', 'components', 'args', 'install_modules',
                           'component_links', 'services', 'hdi', 'sas', 'elf_modules',
-                          'arkts_links', 'ndk_headers'])
+                          'arkts_links', 'native_headers'])
         self.assertEqual(report['collectors']['hdi']['depends_on'],
                          ['services', 'components', 'install_modules'])
 
@@ -256,7 +256,7 @@ class CommandLineTest(Fixture):
         self.assertEqual(code, 0)
         self.assertEqual(sorted(report['collectors']),
                          ['args', 'arkts_links', 'component_links', 'components', 'elf_modules',
-                          'hdi', 'install_modules', 'ndk_headers', 'repos', 'sas',
+                          'hdi', 'install_modules', 'native_headers', 'repos', 'sas',
                           'services'])
         self.assertTrue(target.exists())
         _, scans = self.invoke('scans', '--db', str(target))

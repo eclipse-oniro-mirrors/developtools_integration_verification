@@ -473,23 +473,23 @@ class ArktsTest(unittest.TestCase):
             q.list_modules(component='ace_engine')
         # 游标与新筛选项绑定：换一个 implemented_by，旧游标必须失效。
         first = q.list_modules(limit=1)
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(implemented_by='libace_engine', limit=1, cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'INVALID_PAGE_TOKEN'):
+            q.list_modules(implemented_by='libace_engine', limit=1, page_token=first['next_page_token'])
 
 
-    def test_cursor_filter_binding_and_rescan_invalidation(self):
+    def test_page_token_filter_binding_and_rescan_invalidation(self):
         q = ArktsQuery(self.session()); first = q.list_modules(limit=2)
-        second = q.list_modules(limit=2, cursor=first['next_cursor'])
+        second = q.list_modules(limit=2, page_token=first['next_page_token'])
         self.assertFalse({m['module_key'] for m in first['items']} & {m['module_key'] for m in second['items']})
-        with self.assertRaisesRegex(QueryError, 'INVALID_CURSOR'):
-            q.list_modules(query='x', cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'INVALID_PAGE_TOKEN'):
+            q.list_modules(query='x', page_token=first['next_page_token'])
         for limit in (0, 201, True, '1'):
             with self.assertRaises(QueryError): q.list_modules(limit=limit)
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        self.assertEqual(q.list_modules(limit=2, cursor=first['next_cursor'])['items'], second['items'])
+        self.assertEqual(q.list_modules(limit=2, page_token=first['next_page_token'])['items'], second['items'])
         self.write('api/@ohos.new.d.ts', 'declare class New {}')
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=first['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=first['next_page_token'])
 
 
     def test_evidence_roundtrip_and_export_without_sources(self):
@@ -653,11 +653,11 @@ class ArktsTest(unittest.TestCase):
         q = ArktsQuery(self.session()); page = q.list_modules(limit=1)
         self.request = replace(self.request, options={'arkts': {'file_seconds':16}})
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=page['next_page_token'])
         page = q.list_modules(limit=1)
         (self.sdk/'api/skip').symlink_to(self.sdk/'api', target_is_directory=True)
         self.scan(scan_id=self.scan_id, reuse_upstream=True)
-        with self.assertRaisesRegex(QueryError, 'STALE_CURSOR'): q.list_modules(cursor=page['next_cursor'])
+        with self.assertRaisesRegex(QueryError, 'STALE_PAGE_TOKEN'): q.list_modules(page_token=page['next_page_token'])
 
 
     def test_protocol_integrity_rejects_future_fields_and_bad_evidence(self):
@@ -692,16 +692,16 @@ class ArktsTest(unittest.TestCase):
             self.assertIsNone(module['impl_elf_id'])
 
             def add_elf(dest):
-                cursor = connection.execute(
+                page_token = connection.execute(
                     'INSERT INTO install_modules(scan_id, ordinal, record) VALUES(?,?,?)',
                     (result.scan_id, 0, '{}'))
-                module_id = cursor.lastrowid
-                cursor = connection.execute(
+                module_id = page_token.lastrowid
+                page_token = connection.execute(
                     'INSERT INTO install_targets(scan_id, module_id, dest_index, dest, '
                     'directory, partition, file_name) VALUES(?,?,?,?,?,?,?)',
                     (result.scan_id, module_id, 0, dest, 0, 'system',
                      dest.rsplit('/', 1)[-1]))
-                target_id = cursor.lastrowid
+                target_id = page_token.lastrowid
                 connection.execute(
                     'INSERT INTO elf_modules(scan_id, position, install_target_id, '
                     'install_module_id, partition, file_name, api_type, category, '

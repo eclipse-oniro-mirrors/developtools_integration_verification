@@ -18,6 +18,32 @@ from oskm_cli.query.tools.elf import (
 )
 
 
+_ELF_SCHEMA_SQL = '''
+            DELETE FROM elf_module_dependencies;
+            DELETE FROM elf_modules;
+            DELETE FROM install_targets;
+            INSERT INTO install_targets VALUES
+                (1, 1, 1, 'system/lib/root.so', 0, 'system', 'root.so'),
+                (2, 1, 2, 'system/lib/a.so', 0, 'system', 'a.so'),
+                (3, 1, 3, 'system/lib/b.so', 0, 'system', 'b.so'),
+                (4, 1, 4, 'system/lib/sink.so', 0, 'system', 'sink.so'),
+                (5, 1, 5, 'system/lib/loop.so', 0, 'system', 'loop.so');
+            INSERT INTO elf_modules VALUES
+                (1, 1, 1, 1, 1, 'root.so', 'root.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
+                (2, 1, 2, 2, 1, 'a.so', 'a.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
+                (3, 1, 3, 3, 1, 'b.so', 'b.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
+                (4, 1, 4, 4, 1, 'sink.so', 'sink.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
+                (5, 1, 5, 5, 1, 'loop.so', 'loop.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]');
+            INSERT INTO elf_module_dependencies VALUES
+                (1, 1, 1, 0, 'a.so', 2),
+                (2, 1, 1, 1, 'b.so', 3),
+                (3, 1, 2, 0, 'sink.so', 4),
+                (4, 1, 3, 0, 'sink.so', 4),
+                (5, 1, 4, 0, 'loop.so', 5),
+                (6, 1, 5, 0, 'a.so', 2);
+'''
+
+
 class FakeSession:
     scan_id = 1
 
@@ -154,30 +180,7 @@ class GraphSession(FakeSession):
 
     def __init__(self):
         super().__init__()
-        self.connection.executescript("""
-            DELETE FROM elf_module_dependencies;
-            DELETE FROM elf_modules;
-            DELETE FROM install_targets;
-            INSERT INTO install_targets VALUES
-                (1, 1, 1, 'system/lib/root.so', 0, 'system', 'root.so'),
-                (2, 1, 2, 'system/lib/a.so', 0, 'system', 'a.so'),
-                (3, 1, 3, 'system/lib/b.so', 0, 'system', 'b.so'),
-                (4, 1, 4, 'system/lib/sink.so', 0, 'system', 'sink.so'),
-                (5, 1, 5, 'system/lib/loop.so', 0, 'system', 'loop.so');
-            INSERT INTO elf_modules VALUES
-                (1, 1, 1, 1, 1, 'root.so', 'root.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
-                (2, 1, 2, 2, 1, 'a.so', 'a.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
-                (3, 1, 3, 3, 1, 'b.so', 'b.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
-                (4, 1, 4, 4, 1, 'sink.so', 'sink.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]'),
-                (5, 1, 5, 5, 1, 'loop.so', 'loop.so', 'system', 'ELF', 'public_api', '[]', 'lib', 183, 1, '[]');
-            INSERT INTO elf_module_dependencies VALUES
-                (1, 1, 1, 0, 'a.so', 2),
-                (2, 1, 1, 1, 'b.so', 3),
-                (3, 1, 2, 0, 'sink.so', 4),
-                (4, 1, 3, 0, 'sink.so', 4),
-                (5, 1, 4, 0, 'loop.so', 5),
-                (6, 1, 5, 0, 'a.so', 2);
-        """)
+        self.connection.executescript(_ELF_SCHEMA_SQL)
 
 
 class GraphManager(FakeManager):

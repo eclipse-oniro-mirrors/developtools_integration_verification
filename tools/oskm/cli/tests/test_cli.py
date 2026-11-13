@@ -62,7 +62,7 @@ class AskIsGenerated(unittest.TestCase):
         """标量参数从 schema 生成，取到的行要能对上请求的名字。
 
         原来钉的是 `ace_engine` + `subsystem == 'arkui'`，两个都是 wukong100
-        的事实。现在名字从库里取，断言改成"返回的就是我要的那一行"。
+        的事实。现在名字从库里取，断言改成"返回的就是本文要的那一行"。
         """
         name = sample_component(DB)
         if not name:

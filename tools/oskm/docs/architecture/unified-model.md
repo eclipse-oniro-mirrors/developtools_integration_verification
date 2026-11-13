@@ -234,7 +234,7 @@ elf_modules
 ├── soname             TEXT
 ├── format             TEXT          # ELF 格式标识
 ├── api_type           TEXT NOT NULL # public_api | inner_api | internal_api
-├── category           JSON NOT NULL # 有序数组；ndk 命中后短路其它 public 标签，未命中 ndk 时 ani/napi 互斥
+├── category           JSON NOT NULL # 有序数组；native 命中后短路其它 public 标签，未命中 native 时 ani/napi 互斥
 ├── type               TEXT          # ET_DYN / ET_EXEC
 ├── machine            INTEGER       # 架构（EM_ARM 等）
 ├── dynamic            INTEGER       # 是否动态链接

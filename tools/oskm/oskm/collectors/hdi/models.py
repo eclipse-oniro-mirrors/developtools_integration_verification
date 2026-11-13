@@ -52,4 +52,4 @@ class HDIAggregatePage:
     denominator: int
     matched_hdi_count: int
     total_groups: int
-    next_cursor: str | None
+    next_page_token: str | None

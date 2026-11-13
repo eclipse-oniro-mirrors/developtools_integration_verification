@@ -21,13 +21,7 @@ ROOT = OSKM.parents[1]
 SKILL_ROOT = OSKM / 'skills' / 'ohos-design-architecture-evidence-query'
 
 
-class FakeSession:
-    scan_id = 1
-
-    def __init__(self):
-        self.connection = sqlite3.connect(':memory:')
-        self.connection.row_factory = sqlite3.Row
-        self.connection.executescript('''
+_SEARCH_SCHEMA_SQL = '''
             CREATE TABLE install_targets (
                 id INTEGER PRIMARY KEY,
                 scan_id INTEGER NOT NULL,
@@ -59,7 +53,7 @@ class FakeSession:
                 dynamic INTEGER NOT NULL,
                 needed TEXT NOT NULL
             );
-            CREATE TABLE ndk_headers (
+            CREATE TABLE native_headers (
                 id INTEGER PRIMARY KEY,
                 scan_id INTEGER NOT NULL,
                 elf_module_id INTEGER NOT NULL,
@@ -82,10 +76,19 @@ class FakeSession:
             WITH RECURSIVE sequence(n) AS (
                 VALUES (1) UNION ALL SELECT n + 1 FROM sequence WHERE n < 21
             )
-            INSERT INTO ndk_headers
+            INSERT INTO native_headers
                 SELECT n, 1, n, 'interface/sdk_c/search' || n || '.h',
                        'build_gn' FROM sequence;
-        ''')
+'''
+
+
+class FakeSession:
+    scan_id = 1
+
+    def __init__(self):
+        self.connection = sqlite3.connect(':memory:')
+        self.connection.row_factory = sqlite3.Row
+        self.connection.executescript(_SEARCH_SCHEMA_SQL)
 
     def sql(self, sql, params=()):
         return [dict(row) for row in self.connection.execute(sql, params)]
@@ -116,10 +119,10 @@ class TestSearchTotals(unittest.TestCase):
         self.assertEqual(len(full['results']), 21)
         self.assertFalse(full['truncated'])
 
-    def test_ndk_total_is_full_match_count_not_return_count(self):
-        limited = dispatch('search_ndk_headers',
+    def test_native_total_is_full_match_count_not_return_count(self):
+        limited = dispatch('search_native_headers',
                            {'query': 'search'}, self.manager)
-        full = dispatch('search_ndk_headers',
+        full = dispatch('search_native_headers',
                         {'query': 'search', 'limit': 100}, self.manager)
 
         self.assertEqual(limited['total'], 21)
@@ -134,7 +137,7 @@ class TestSearchDocs(unittest.TestCase):
     def test_docs_define_full_match_total_and_truncation(self):
         for path in (
                 SKILL_ROOT / 'references/spec/elf.md',
-                SKILL_ROOT / 'references/spec/ndk.md'):
+                SKILL_ROOT / 'references/spec/native.md'):
             with self.subTest(path=path.name):
                 text = path.read_text(encoding='utf-8')
                 self.assertIn('`total` 是全量匹配数', text)
@@ -145,7 +148,7 @@ class TestSearchDocs(unittest.TestCase):
         text = (SKILL_ROOT / 'SKILL.md').read_text(encoding='utf-8')
         self.assertIn('`install_targets` 不是实际 `.img` 数', text)
         self.assertIn('实测 `.img` 数量', text)
-        self.assertIn('ELF 与 NDK 宽搜索的 `total`', text)
+        self.assertIn('ELF 与 Native SDK 宽搜索的 `total`', text)
         self.assertIn('`truncated`', text)
 
     def test_skill_requires_feature_count_for_arch_switch_answers(self):

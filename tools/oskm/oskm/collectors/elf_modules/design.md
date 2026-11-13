@@ -50,9 +50,9 @@ CREATE TABLE elf_module_dependencies (
 
 `elf_modules` 是发布记录主表；`elf_module_dependencies` 是直接边子表。闭包、反向闭包和 panorama 由 `ElfModuleQuery.reachable()` 在查询期计算。
 
-`api_type` 与 `category` 是独立输出：先按直接事实和依赖图生成多值 `category`，再按 public category → Inner API → 其余的优先级生成三值 `api_type`。`category` 的规范顺序为 `napi`、`ndk`、`ani`、`cangjie`、`extension`、`platform_sdk`、`platform_sdk_indirect`、`chipset_sdk`、`chipset_sdk_indirect`、`sa`、`hdi`、`hdi_proxy`、`hdi_stub`、`anco`、`other`。
+`api_type` 与 `category` 是独立输出：先按直接事实和依赖图生成多值 `category`，再按 public category → Inner API → 其余的优先级生成三值 `api_type`。`category` 的规范顺序为 `napi`、`native`、`ani`、`cangjie`、`extension`、`platform_sdk`、`platform_sdk_indirect`、`chipset_sdk`、`chipset_sdk_indirect`、`sa`、`hdi`、`hdi_proxy`、`hdi_stub`、`anco`、`other`。
 
-public 直接分类的实际优先级为：`ndk` 最高，命中后不再匹配 `napi`、`ani`、`cangjie`、`extension`；未命中 `ndk` 时，`ani` 优先于 `napi`。非 public 标签（SA/HDI/anco 等）与依赖传播标签不受该短路影响。
+public 直接分类的实际优先级为：`native` 最高，命中后不再匹配 `napi`、`ani`、`cangjie`、`extension`；未命中 `native` 时，`ani` 优先于 `napi`。非 public 标签（SA/HDI/anco 等）与依赖传播标签不受该短路影响。
 
 `dest` 不在 `elf_modules` 里重复保存：发布记录和 viewer 通过 `install_target_id → install_targets.dest` 重建。`callee_dest` 同理，通过 `callee_id → elf_modules.install_target_id → install_targets.dest` 重建。`engine` 是内置解析器的固定 provenance 值，不再作为每行事实落库；解析器身份由代码与 schema 版本表达。
 
@@ -91,7 +91,7 @@ public 直接分类的实际优先级为：`ndk` 最高，命中后不再匹配 
 ```text
 napi:        dest 位于 system/lib/module/ 或 system/lib64/module/，
              且排除 system/lib{64}/module/ani/
-ndk:         安装 ELF basename 命中 SDK sysroot .so 清单
+native:         安装 ELF basename 命中 SDK sysroot .so 清单
 ani:         .dynsym 中存在已定义的精确符号 ANI_Constructor
 cangjie:     section header 中存在 .cjmetadata
 extension:   dest 位于 system/lib{64}/extensionability/
@@ -104,13 +104,13 @@ anco:        归属部件 subsystem = virt_service，
 other:       以上全部未命中时的兜底标签
 ```
 
-`ndk` 是 public category 的最高优先级：安装 ELF basename 命中 SDK `.so` 清单后，不再继续匹配 `napi`、`ani`、`cangjie`、`extension`。未命中 `ndk` 时，`ani` 与 `napi` 互斥：只要 ELF 导出 `ANI_Constructor`，即使安装路径位于 `system/lib{64}/module/`，也只保存 `ani`，不再叠加 `napi`。
+`native` 是 public category 的最高优先级：安装 ELF basename 命中 SDK `.so` 清单后，不再继续匹配 `napi`、`ani`、`cangjie`、`extension`。未命中 `native` 时，`ani` 与 `napi` 互斥：只要 ELF 导出 `ANI_Constructor`，即使安装路径位于 `system/lib{64}/module/`，也只保存 `ani`，不再叠加 `napi`。
 
 直接分类的执行顺序等价于：
 
 ```text
 if basename ∈ sdk_so_names:
-    save ndk
+    save native
 else:
     if ANI_Constructor exported:
         save ani
@@ -122,11 +122,11 @@ else:
         save extension
 ```
 
-SDK sysroot 不固定版本目录。优先读取 `ScanRequest` 中 `elf_modules.ndk_sysroot_lib_dir` 的完整库目录；未配置时在 `prebuilts/ohos-sdk/linux/*/native/sysroot/usr/lib/x86_64-linux-ohos` 中自动发现，多版本按数值感知规则取最高版本（`26.0.1 > 9.0.0`），并列最高版本时报告 `SDK_INDEX_AMBIGUOUS`。清单只收 `.so`，显式忽略 `.o` 与 `.a`，且每个候选文件计入输入 provenance。
+SDK sysroot 不固定版本目录。优先读取 `ScanRequest` 中 `elf_modules.native_sysroot_lib_dir` 的完整库目录；未配置时在 `prebuilts/ohos-sdk/linux/*/native/sysroot/usr/lib/x86_64-linux-ohos` 中自动发现，多版本按数值感知规则取最高版本（`26.0.1 > 9.0.0`），并列最高版本时报告 `SDK_INDEX_AMBIGUOUS`。清单只收 `.so`，显式忽略 `.o` 与 `.a`，且每个候选文件计入输入 provenance。
 
 ### 依赖传播
 
-1. public 集合是命中 `napi / ndk / ani / cangjie / extension` 的 ELF。
+1. public 集合是命中 `napi / native / ani / cangjie / extension` 的 ELF。
 2. public ELF 直接依赖的 system 分区非 public ELF 标记 `platform_sdk`；`platform_sdk` 的传递闭包标记 `platform_sdk_indirect`。
 3. `platform_sdk_indirect` 从全部直接 `platform_sdk` 种子沿依赖边闭包计算，并扣除所有种子；因此直接种子不会同时携带 direct 与 indirect 标签。闭包中的 public ELF 可以携带 `platform_sdk_indirect`，但 `api_type` 仍为 `public_api`。
 4. vendor 分区 ELF 直接依赖的 system 分区 ELF 标记 `chipset_sdk`；`chipset_sdk` 的传递闭包标记 `chipset_sdk_indirect`，并同样扣除全部直接种子。
@@ -135,7 +135,7 @@ SDK sysroot 不固定版本目录。优先读取 `ScanRequest` 中 `elf_modules.
 ### API 优先级
 
 ```text
-public_api    category 命中 napi / ndk / ani / cangjie / extension
+public_api    category 命中 napi / native / ani / cangjie / extension
 inner_api     public 未命中，且 innerapis.install_module_id 命中
 internal_api  其余 ELF
 ```
@@ -154,8 +154,8 @@ ELF 列表查询直接带出 `api_type` 与 `category`：API 类型用 badge 展
 | `install_modules` 失败或清单不完整 | `INSTALL_INDEX_INCOMPLETE` | degraded |
 | ELF 存在但无法解析 | `ELF_PARSE_FAILED` | degraded |
 | `DT_NEEDED` 在 `system/`、`vendor/` 内无同名 ELF 或软链别名 | `ELF_DEPENDENCY_UNRESOLVED` | advisory warning；边保留 `callee_id=NULL` |
-| SDK sysroot 目录缺失 | `SDK_INDEX_UNAVAILABLE` | advisory；本次不命中 `ndk` |
-| SDK 最高版本目录并列歧义 | `SDK_INDEX_AMBIGUOUS` | advisory；本次不命中 `ndk` |
-| 显式配置的 SDK 目录不在 workspace 内 | `SDK_INDEX_OUTSIDE_WORKSPACE` | advisory；本次不命中 `ndk` |
+| SDK sysroot 目录缺失 | `SDK_INDEX_UNAVAILABLE` | advisory；本次不命中 `native` |
+| SDK 最高版本目录并列歧义 | `SDK_INDEX_AMBIGUOUS` | advisory；本次不命中 `native` |
+| 显式配置的 SDK 目录不在 workspace 内 | `SDK_INDEX_OUTSIDE_WORKSPACE` | advisory；本次不命中 `native` |
 
 重复 dest、部件归属冲突等属于 `install_modules` 的 advisory，不在这里重复报告。

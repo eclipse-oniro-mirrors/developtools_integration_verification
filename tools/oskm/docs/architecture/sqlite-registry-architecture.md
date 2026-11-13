@@ -40,7 +40,7 @@ def _is_collector_file(self, file_path: str) -> bool:
 | --- | --- | --- |
 | 1 | **stdlib `sqlite3` + 轻量 schema 层** | 保持零第三方依赖；需自写约 250 行表定义/DDL/查询封装 |
 | 2 | **依赖通过数据库传递**（彻底照搬 SystemPulse） | `ownership.py`/`linking.py` 改写为 SQL 查询；`load_components()` 删除；9 次扫描降为 5 次 |
-| 3 | **查询层全面改为 SQL** | 5 个 `<Name>Query` + `core/query.py` + `core/base_query.py` 重写；跨域导航 = JOIN |
+| 3 | **查询层完整改为 SQL** | 5 个 `<Name>Query` + `core/query.py` + `core/base_query.py` 重写；跨域导航 = JOIN |
 | 4 | **支持多快照，每行带 `scan_id`** | 新增 `scans`/`collector_runs` 表；每个采集器声明 `TABLES`，框架自动生成按 `scan_id` 删除 |
 
 ## 4. 目标架构

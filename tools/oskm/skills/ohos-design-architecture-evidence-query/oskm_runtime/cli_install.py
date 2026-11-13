@@ -15,7 +15,7 @@ skill 归档里**不包含查询引擎**（2.5.6 时代打包整个 `agentic/`�
 ## CLI 与 `knowledge.db` 同类：**不记版本、不锁摘要**
 
 固定文件名 `oskm-cli.pyz`，装在 `<runtime-root>/` 下与 `knowledge.db` 并排。
-于是文档与调用方永远不用钉版本号，`install` 也不用维护一份会漂的 pin。
+于是文档与调用方始终不用钉版本号，`install` 也不用维护一份会漂的 pin。
 
 完整性校验因此是**结构性**的（`verify_pyz()`：shebang + 是 zip + 有
 `__main__.py` 与 `oskm_cli/cli.py` + CRC 完好），与 DB 那侧的 `verify_sqlite()`

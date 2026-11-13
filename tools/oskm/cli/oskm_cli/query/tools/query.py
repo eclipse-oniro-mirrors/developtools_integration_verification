@@ -51,30 +51,30 @@ def _fingerprint(payload: dict) -> str:
     return canonical
 
 
-def _encode_cursor(payload: dict) -> str:
+def _encode_page_token(payload: dict) -> str:
     raw = json.dumps(
         payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
     return base64.urlsafe_b64encode(raw.encode()).decode().rstrip('=')
 
 
-def _decode_cursor(cursor: str, scan_id: int, fingerprint: str) -> int:
-    if not isinstance(cursor, str) or not cursor:
-        raise ToolError('INVALID_CURSOR', 'cursor is empty')
+def _decode_page_token(page_token: str, scan_id: int, fingerprint: str) -> int:
+    if not isinstance(page_token, str) or not page_token:
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token is empty')
     try:
-        padding = '=' * (-len(cursor) % 4)
+        padding = '=' * (-len(page_token) % 4)
         payload = json.loads(
-            base64.urlsafe_b64decode(cursor + padding).decode('utf-8'))
+            base64.urlsafe_b64decode(page_token + padding).decode('utf-8'))
     except (UnicodeError, json.JSONDecodeError):
-        raise ToolError('INVALID_CURSOR', 'cursor is not valid base64 JSON') from None
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token is not valid base64 JSON') from None
     if not isinstance(payload, dict):
-        raise ToolError('INVALID_CURSOR', 'cursor payload must be an object')
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token payload must be an object')
     if payload.get('scan_id') != scan_id:
-        raise ToolError('INVALID_CURSOR', 'cursor belongs to another scan')
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token belongs to another scan')
     if payload.get('fingerprint') != fingerprint:
-        raise ToolError('INVALID_CURSOR', 'cursor does not match query parameters')
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token does not match query parameters')
     offset = payload.get('offset')
     if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
-        raise ToolError('INVALID_CURSOR', 'cursor offset is invalid')
+        raise ToolError('INVALID_PAGE_TOKEN', 'page_token offset is invalid')
     return offset
 
 
@@ -97,7 +97,7 @@ def _where(session, table: str, filters: dict, columns: set[str]):
         'desc': {'type': 'boolean', 'default': False},
         'page': {'type': 'object', 'properties': {
             'limit': {'type': 'integer', 'default': 100},
-            'cursor': {'type': 'string'},
+            'page_token': {'type': 'string'},
         }},
     },
     'required': ['table'],
@@ -130,8 +130,8 @@ def list_entities(params, manager):
         'limit': limit,
     }
     fingerprint = _fingerprint(payload)
-    offset = _decode_cursor(page.get('cursor'), session.scan_id, fingerprint) \
-        if page.get('cursor') is not None else 0
+    offset = _decode_page_token(page.get('page_token'), session.scan_id, fingerprint) \
+        if page.get('page_token') is not None else 0
 
     where, values = _where(session, table, filters, columns)
     quoted_table = _quote_identifier(table)
@@ -142,14 +142,14 @@ def list_entities(params, manager):
     has_more = len(rows) > limit
     total = session.sql(
         f'SELECT COUNT(*) AS n FROM {quoted_table} WHERE {where}', values)[0]['n']
-    next_cursor = None
+    next_page_token = None
     if has_more:
-        next_cursor = _encode_cursor({
+        next_page_token = _encode_page_token({
             'scan_id': session.scan_id,
             'fingerprint': fingerprint,
             'offset': offset + limit,
         })
-    return {'items': items, 'total': total, 'next_cursor': next_cursor}
+    return {'items': items, 'total': total, 'next_page_token': next_page_token}
 
 
 @register('aggregate', '通用聚合', {
@@ -160,7 +160,7 @@ def list_entities(params, manager):
         'filters': {'type': 'object'},
         'page': {'type': 'object', 'properties': {
             'limit': {'type': 'integer', 'default': 100},
-            'cursor': {'type': 'string'},
+            'page_token': {'type': 'string'},
         }},
     },
     'required': ['table', 'group_by'],
@@ -183,8 +183,8 @@ def aggregate(params, manager):
 
     payload = {'table': table, 'group_by': group_by, 'filters': filters, 'limit': limit}
     fingerprint = _fingerprint(payload)
-    offset = _decode_cursor(page.get('cursor'), session.scan_id, fingerprint) \
-        if page.get('cursor') is not None else 0
+    offset = _decode_page_token(page.get('page_token'), session.scan_id, fingerprint) \
+        if page.get('page_token') is not None else 0
 
     where, values = _where(session, table, filters, columns)
     quoted_table = _quote_identifier(table)
@@ -202,14 +202,14 @@ def aggregate(params, manager):
     has_more = len(rows) > limit
     total = session.sql(
         f'SELECT COUNT(*) AS n FROM {quoted_table} WHERE {where}', values)[0]['n']
-    next_cursor = None
+    next_page_token = None
     if has_more:
-        next_cursor = _encode_cursor({
+        next_page_token = _encode_page_token({
             'scan_id': session.scan_id,
             'fingerprint': fingerprint,
             'offset': offset + limit,
         })
-    return {'groups': groups, 'total': total, 'next_cursor': next_cursor}
+    return {'groups': groups, 'total': total, 'next_page_token': next_page_token}
 
 
 @register('sql_query', '受限只读 SQL', {

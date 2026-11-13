@@ -6,7 +6,7 @@
 `docs/architecture/standalone-packaging.md` §5）：
 
 - 软链 —— 不行。`tables.py` 用的是相对 import，软链到别的深度直接断；
-  改绝对 import 又把 `oskm` 依赖焊死。更要命的是同一文件经两个模块名加载
+  改明确 import 又把 `oskm` 依赖焊死。更要命的是同一文件经两个模块名加载
   会产生**两份 Table 实例**，而代码里有 `if table is KITS` 这类身份比较，
   跨模块恒为 False —— 不报错，分支静默失效。
 - 依赖倒置（collector 反过来 import agentic）—— 可行但方向别扭。

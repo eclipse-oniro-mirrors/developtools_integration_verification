@@ -45,92 +45,88 @@ def _quote_identifier(value: str) -> str:
     return '"' + value.replace('"', '""') + '"'
 
 
+def _prepare_scan_sources(connection, sources):
+    allowed_by_db = {}
+    for index, (alias, db_path, scan_id, allowed_tables) in enumerate(sources):
+        source_alias = f'__oskmsrc{index}'
+        uri = Path(db_path).expanduser().resolve().as_uri() + '?mode=ro'
+        connection.execute(
+            f'ATTACH DATABASE ? AS {_quote_identifier(source_alias)}', (uri,))
+        target_db = 'main' if alias is None else alias
+        if alias is not None:
+            connection.execute(
+                f'ATTACH DATABASE ":memory:" AS {_quote_identifier(alias)}')
+        allowed_by_db[target_db] = set(allowed_tables)
+        for table in sorted(allowed_tables):
+            connection.execute(
+                f'CREATE TABLE {_quote_identifier(target_db)}.'
+                f'{_quote_identifier(table)} AS '
+                f'SELECT * FROM {_quote_identifier(source_alias)}.'
+                f'{_quote_identifier(table)} WHERE scan_id = ?',
+                (scan_id,))
+        connection.execute(
+            f'DETACH DATABASE {_quote_identifier(source_alias)}')
+    return allowed_by_db
+
+
+def _readonly_authorizer(allowed_by_db):
+    def authorizer(action, arg1, arg2, db_name, trigger):
+        if action in (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_RECURSIVE):
+            return sqlite3.SQLITE_OK
+        if action == sqlite3.SQLITE_FUNCTION:
+            if (arg2 or '').lower() in {'load_extension', 'readfile', 'writefile'}:
+                return sqlite3.SQLITE_DENY
+            return sqlite3.SQLITE_OK
+        if action == sqlite3.SQLITE_READ:
+            if db_name is None:
+                return sqlite3.SQLITE_OK
+            if arg1 in allowed_by_db.get(db_name, ()):
+                return sqlite3.SQLITE_OK
+        return sqlite3.SQLITE_DENY
+    return authorizer
+
+
+def _sql_error(exc, allowed_by_db):
+    message = str(exc)
+    if 'interrupted' in message.lower():
+        raise SecurityError('TIMEOUT', 'SQL execution exceeded 5 seconds') from exc
+    if 'no such table' in message.lower():
+        table = message.split(':', 1)[-1].strip().strip('"`[]')
+        database, separator, _ = table.partition('.')
+        if separator and database not in allowed_by_db:
+            raise SecurityError(
+                'ALIAS_NOT_ATTACHED', f'alias "{database}" is not attached') from exc
+        raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
+    if 'not authorized' in message.lower():
+        raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
+    raise SecurityError('SQL_ERROR', message) from exc
+
+
 def execute_readonly_sql(sources, sql: str, params=(), *, limit: int = 1000,
                          timeout_seconds: float = 5.0):
-    """Execute SQL against private copies of approved scan snapshots.
-
-    Each source is ``(alias, db_path, scan_id, allowed_tables)``.  The query
-    runs in an in-memory database containing only the selected scan rows from
-    the active database and attached aliases.  A SQLite authorizer then checks
-    the real tables read by the statement, which is independent of formatting,
-    quoting, comments, joins, CTEs, and OR precedence.
-    """
+    """Execute SQL against private copies of approved scan snapshots."""
     if (not isinstance(limit, int) or isinstance(limit, bool)
             or not 1 <= limit <= 1000):
         raise SecurityError('INVALID_PARAM', 'limit must be between 1 and 1000')
-
     stripped = sql.strip()
     if not stripped:
         raise SecurityError('EMPTY_SQL', 'empty SQL statement')
     first = _first_keyword(stripped)
     if first not in ('SELECT', 'WITH'):
         raise SecurityError('NOT_READ_ONLY', f'first keyword: {first or "(empty)"}')
-
     connection = sqlite3.connect(':memory:', uri=True, isolation_level=None)
     connection.row_factory = sqlite3.Row
     allowed_by_db = {}
     try:
-        for index, (alias, db_path, scan_id, allowed_tables) in enumerate(sources):
-            source_alias = f'__oskmsrc{index}'
-            uri = Path(db_path).expanduser().resolve().as_uri() + '?mode=ro'
-            connection.execute(
-                f'ATTACH DATABASE ? AS {_quote_identifier(source_alias)}', (uri,))
-
-            target_db = 'main' if alias is None else alias
-            if alias is not None:
-                connection.execute(
-                    f'ATTACH DATABASE ":memory:" AS {_quote_identifier(alias)}')
-            allowed_by_db[target_db] = set(allowed_tables)
-            for table in sorted(allowed_tables):
-                connection.execute(
-                    f'CREATE TABLE {_quote_identifier(target_db)}.'
-                    f'{_quote_identifier(table)} AS '
-                    f'SELECT * FROM {_quote_identifier(source_alias)}.'
-                    f'{_quote_identifier(table)} WHERE scan_id = ?',
-                    (scan_id,))
-            connection.execute(
-                f'DETACH DATABASE {_quote_identifier(source_alias)}')
-
-        def authorizer(action, arg1, arg2, db_name, trigger):
-            if action in (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_RECURSIVE):
-                return sqlite3.SQLITE_OK
-            if action == sqlite3.SQLITE_FUNCTION:
-                if (arg2 or '').lower() in {
-                        'load_extension', 'readfile', 'writefile'}:
-                    return sqlite3.SQLITE_DENY
-                return sqlite3.SQLITE_OK
-            if action == sqlite3.SQLITE_READ:
-                # Recursive CTE rows are ephemeral tables whose database is
-                # reported as None.  Persistent scans always expose a database
-                # name and still have to pass the catalog whitelist below.
-                if db_name is None:
-                    return sqlite3.SQLITE_OK
-                if arg1 in allowed_by_db.get(db_name, ()):
-                    return sqlite3.SQLITE_OK
-            return sqlite3.SQLITE_DENY
-
-        connection.set_authorizer(authorizer)
+        allowed_by_db = _prepare_scan_sources(connection, sources)
+        connection.set_authorizer(_readonly_authorizer(allowed_by_db))
         deadline = time.monotonic() + timeout_seconds
         connection.set_progress_handler(
             lambda: int(time.monotonic() >= deadline), 1000)
         rows = connection.execute(stripped, tuple(params)).fetchmany(limit + 1)
-        truncated = len(rows) > limit
-        return [dict(row) for row in rows[:limit]], truncated
+        return [dict(row) for row in rows[:limit]], len(rows) > limit
     except sqlite3.OperationalError as exc:
-        message = str(exc)
-        if 'interrupted' in message.lower():
-            raise SecurityError('TIMEOUT', 'SQL execution exceeded 5 seconds') from exc
-        if 'no such table' in message.lower():
-            table = message.split(':', 1)[-1].strip().strip('"`[]')
-            database, separator, _ = table.partition('.')
-            if separator and database not in allowed_by_db:
-                raise SecurityError(
-                    'ALIAS_NOT_ATTACHED',
-                    f'alias "{database}" is not attached') from exc
-            raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
-        if 'not authorized' in message.lower():
-            raise SecurityError('TABLE_NOT_ALLOWED', message) from exc
-        raise SecurityError('SQL_ERROR', message) from exc
+        _sql_error(exc, allowed_by_db)
     except sqlite3.Error as exc:
         raise SecurityError('SQL_ERROR', str(exc)) from exc
     finally:

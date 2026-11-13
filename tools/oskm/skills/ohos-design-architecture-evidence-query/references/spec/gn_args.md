@@ -34,7 +34,7 @@ GN 编译参数（`declare_args` 参数）的查找与搜索。
   "comment": "Enable ability runtime power management",
   "decl_file": "foundation/ability/ability_runtime/ability_runtime.gni",
   "decl_line": 101,
-  "source_url": "https://gitcode.com/openharmony/ability_ability_runtime/tree/abc123d/ability_runtime.gni#L101",
+  "source_url": "https://gitcode.com/openharmony/ability_ability_runtime/tree/abc123d/ability_runtime.gni#L%31%30%31",
   "component": "ability_runtime",
   "component_id": 5,
   "feature_count": 1

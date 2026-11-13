@@ -118,7 +118,7 @@
 
 `file_path` 是仓内相对路径（已 strip 仓 path 前缀）。`exact` 为 true 表示用 `head_commit`（扫描时确切状态），false 表示用 `revision`（分支名，会漂移）。
 
-GN label 示例：`//foundation/ability/ability_runtime:ability_runtime` → `file_path` 为 `BUILD.gn`，URL 指向该目录的 BUILD.gn 文件（目标定义的最佳猜测，不排除来自 .gni import）。
+GN label 示例：`//foundation/ability/ability_runtime:ability_runtime` → `file_path` 为 `BUILD.gn`，URL 指向该目录的 BUILD.gn 文件（目标定义的推荐猜测，不排除来自 .gni import）。
 
 **错误码**
 

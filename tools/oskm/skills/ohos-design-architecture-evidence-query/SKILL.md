@@ -25,7 +25,7 @@ CLI 执行，skill 不内置查询引擎。
 refresh / cli-path」，以及「这个产品由哪些子系统/部件构成」「这个 `.so` / `.img` /
 配置文件属于谁」「改 X 会影响谁」「某部件对外提供什么」「SysCap / InnerAPI 由谁
 实现」「这个 GN 参数控制什么」「某 SDK 模块的实现在哪、声明在哪」「这个原生库
-有哪些 NDK 头文件」「两个库或两个快照差了什么」，以及 `degraded`、
+有哪些 Native SDK 头文件」「两个库或两个快照差了什么」，以及 `degraded`、
 `elf_modules=0`、`truncated`、`out_of_scope` 这类证据边界问题。**不适用**：
 要新扫一个产品（用源码仓的采集器）、要看设备运行态、要改代码。
 
@@ -86,10 +86,10 @@ python3 $CLI ask --list                        # 52 个工具，按模块分组
 python3 $CLI ask get_component --help          # 参数与枚举从 schema 生成
 python3 $CLI --db $DB ask get_component --name ace_engine
 python3 $CLI --db $DB --format table ask search_elf_modules --query libimage
-python3 $CLI --db $DB ask search_ndk_headers --query image    # 原生库 → SDK 头文件
+python3 $CLI --db $DB ask search_native_headers --query image    # 原生库 → SDK 头文件
 ```
 
-ELF / NDK 证据问题先各做一次**宽搜索**，报告 ELF 与 NDK 宽搜索的 `total` 与
+ELF / Native SDK 证据问题先各做一次**宽搜索**，报告 ELF 与 Native SDK 宽搜索的 `total` 与
 `truncated`；精确命中数不是宽搜索总数，`truncated=true` 时先提高 `limit` 或说明
 截断。数组参数用空格分隔（逗号在 GN label 和路径里都出现），对象参数收 JSON，
 `component_*` 收 `component_id` 不是名字（先用 `get_component` 换 id）。
@@ -104,7 +104,7 @@ python3 $CLI --db $DB sql --sql "SELECT COUNT(*) AS n FROM components"
 ```
 
 `--db` 给两次是跨库；给一次加 `--scan-a/--scan-b` 是同库两快照，这两个参数写在
-`diff` 后面。多行 SQL 走 `--file`（可带注释）。只读校验要求首个关键字为
+`diff` 后面。多行 SQL 走 `--file`（可带注释）。只读校验要求第一个关键字为
 SELECT/WITH，表名走白名单，并自动注入 `scan_id` 与 `LIMIT`。
 
 ### 4.5 判断经验：容易误读的六处
@@ -163,7 +163,7 @@ SDK 源码缺失、跨快照对不上这七种情形的判据，以及下载/`.e
 | 部件归属、依赖、影响面、SysCap、InnerAPI | `references/spec/component.md` |
 | SDK 模块、Kit、ArkTS 声明或实现 | `references/spec/arkts.md` |
 | ELF 依赖、反向依赖或库影响面 | `references/spec/elf.md` |
-| NDK 库和头文件映射 | `references/spec/ndk.md` |
+| Native SDK 库和头文件映射 | `references/spec/native.md` |
 | 服务 / SA / HDI | `references/spec/service.md`、`sa.md`、`hdi.md` |
 | GN 参数和特性 | `references/spec/gn_args.md` |
 | 代码仓 / 镜像安装落点 | `references/spec/repos.md`、`install.md` |

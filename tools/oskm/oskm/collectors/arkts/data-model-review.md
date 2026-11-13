@@ -147,7 +147,7 @@ viewer 里多一层。它的五列原样搬到 `arkts_modules` 上（`source_id`
 | `source_path` | 业务键。声明文件的 workspace 相对路径 |
 | `module_id` / `kit_id` / `role` | 这份文件声明哪个实体。role: module(1,517) / kit_entry(50) |
 | `declaration_format` | d.ts(1,074) / d.ets(81) / static.d.ets(412)，语法事实 |
-| `language_variant` | dynamic(1,155) / static(412)，后缀对应的语言版本，**永远单值** |
+| `language_variant` | dynamic(1,155) / static(412)，后缀对应的语言版本，**始终单值** |
 | `file_condition` / `condition_evidence` | 文件**内容**声明的适用模式及原文证据，与后缀无关 |
 | `byte_size` | 实际读取字节数 |
 | `read_status` | ok(1,566) / encoding_failed(1) / … |
@@ -185,7 +185,7 @@ viewer 里多一层。它的五列原样搬到 `arkts_modules` 上（`source_id`
 
 ## 3. 两个分类列
 
-一个字段承担不了两件事。**声明在哪**永远可判定，**怎么实现**需要证据且可能未知。
+一个字段承担不了两件事。**声明在哪**始终可判定，**怎么实现**需要证据且可能未知。
 
 把两者交叉，可以看到旧的单列分类为什么不成立：
 

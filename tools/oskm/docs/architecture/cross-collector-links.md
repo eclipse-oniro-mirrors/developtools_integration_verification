@@ -215,7 +215,7 @@ INNERAPI_MODULES = Table('innerapi_modules', columns=(
 
 ---
 
-## 5. 一个需要你定的口径
+## 5. 一个需要用户定的口径
 
 `features` 表现在存的是**部件声明了哪些 feature 名**。关联 gn_args 之后，
 "这个 feature 在本产品的实际取值"就有了。问题是**取值放哪**：

@@ -74,8 +74,8 @@ export const ENTITIES = {
        repo_id 在本域只有一个取值，沿它走会让所有文件的面包屑指向同一个仓。 */
     parent: 'module_id',
   },
-  ndk_headers: {
-    label: 'NDK 头文件映射', icon: 'node', accent: 'component',
+  native_headers: {
+    label: 'Native SDK 头文件映射', icon: 'node', accent: 'component',
     title: r => r.header_path,
     subtitle: r => r.match_strategy,
     parent: 'elf_module_id',

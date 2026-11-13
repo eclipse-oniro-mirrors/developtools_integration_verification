@@ -118,11 +118,11 @@ export function fileSource(scanId, path) {
 }
 
 /**
- * NDK 源码头文件的源码地址。保留这个入口名给 NDK 视图和既有调用方；
+ * Native SDK 源码头文件的源码地址。保留这个入口名给 Native SDK 视图和既有调用方；
  * 文件链接规则已经下沉到 fileSource，声明文件也用同一套宿主规则。
  *
  * @returns {{url, repo, rel, ref, exact}|null}
  */
-export function ndkHeaderSource(scanId, headerPath) {
+export function nativeHeaderSource(scanId, headerPath) {
   return fileSource(scanId, headerPath)
 }

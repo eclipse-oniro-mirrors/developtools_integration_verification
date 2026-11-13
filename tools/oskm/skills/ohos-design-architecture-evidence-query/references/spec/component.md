@@ -272,8 +272,8 @@ syscaps 是 `component.syscap`/`system_capabilities` 数组展开值表。与 fe
     },
     {
       "id": 89,
-      "name": "//foundation/ability/ability_runtime/services:ams",
-      "external_name": "ability_runtime:ams",
+      "name": "//foundation/ability/ability_runtime/services:ability_manager_service",
+      "external_name": "ability_runtime:ability_manager_service",
       "field": "inner_api",
       "source_index": 1,
       "install_module_id": null,
@@ -284,6 +284,6 @@ syscaps 是 `component.syscap`/`system_capabilities` 数组展开值表。与 fe
 }
 ```
 
-`source_url` 由 `name`（GN label）经 `git_url` 工具构建，指向 label 目录的 BUILD.gn（目标定义的最佳猜测）。
+`source_url` 由 `name`（GN label）经 `git_url` 工具构建，指向 label 目录的 BUILD.gn（目标定义的推荐猜测）。
 
 `install_module_id` 为 null 表示该 innerapi 的 GN label 未在 `install_modules.label` 中找到匹配（声明了但未构建为安装模块）。`install_module_label` 从 `install_modules` 表 JOIN 获取。

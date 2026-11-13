@@ -57,14 +57,14 @@ python3.12 "$CLI" --db "$DB" ask elf_dependencies \
 同时报告 `total` 与 `truncated`。需要更深闭包时显式提高 `max_distance`；不要把
 截断后的 `reachable` 条数当作闭包规模。
 
-## 5. 核对 NDK 证据
+## 5. 核对 Native SDK 证据
 
 ```bash
-python3.12 "$CLI" --db "$DB" ask search_ndk_headers --query <文件名>
+python3.12 "$CLI" --db "$DB" ask search_native_headers --query <文件名>
 ```
 
-NDK 映射按具体库建立。`get_ndk_headers` 对非 NDK 库返回 `NOT_FOUND` 时，只能说明
-该库没有 NDK 头文件映射，不能推断 NDK 采集整体缺失；改查宽搜索命中的 NDK 库。
+Native SDK 映射按具体库建立。`get_native_headers` 对非 Native SDK 库返回 `NOT_FOUND` 时，只能说明
+该库没有 Native SDK 头文件映射，不能推断 Native SDK 采集整体缺失；改查宽搜索命中的 Native SDK 库。
 
 ## 6. 反向影响与能力边界
 

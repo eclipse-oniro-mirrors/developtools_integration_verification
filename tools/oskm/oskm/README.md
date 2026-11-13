@@ -6,7 +6,7 @@
 
 ```
 repos → arkts → components → args → install_modules → component_links
-      → services → hdi → sas → elf_modules → arkts_links → ndk_headers
+      → services → hdi → sas → elf_modules → arkts_links → native_headers
 ```
 
 | 看什么 | 去哪 |
@@ -28,7 +28,7 @@ repos → arkts → components → args → install_modules → component_links
 > （`cli/dist/oskm-cli-<版本>.pyz`，或 skill 的 `bootstrap.py`）。
 > 2026-11-12 之前有个 `packages/oskm/oskm.py` 在外面按子命令名分派两边，
 > 已删除：它必须手抄一份查询侧子命令清单，漂了会把命令送去扫描侧，报出
-> `invalid choice: '<你的 --db 路径>'` 这种方向完全错的错误。
+> `invalid choice: '<用户的 --db 路径>'` 这种方向完全错的错误。
 > 见 [../docs/architecture/cli-skill-split.md](../docs/architecture/cli-skill-split.md)。
 
 在 OpenHarmony 工程根扫描时，`packages/oskm` 不在 `sys.path` 上，所以要么
@@ -46,7 +46,7 @@ oskm() { PYTHONPATH="$PKG" python3 -m oskm.cli "$@"; }
 oskm list          # 等价于 PYTHONPATH="$PKG" python3 -m oskm.cli list
 ```
 
-输出每个采集器的描述、`depends_on`、schema 版本，以及拓扑执行顺序 `repos → arkts → components → args → install_modules → component_links → services → hdi → sas → elf_modules → arkts_links → ndk_headers`。
+输出每个采集器的描述、`depends_on`、schema 版本，以及拓扑执行顺序 `repos → arkts → components → args → install_modules → component_links → services → hdi → sas → elf_modules → arkts_links → native_headers`。
 
 ### 扫描
 
@@ -161,7 +161,7 @@ oskm drop  --db ... --scan-id 1  # 删除一个快照（级联清空其全部行
 
 rk3568 实测：13 条扫描层问题 + 88 条 advisory。
 
-退出码只反映**你要求扫描的**采集器；`status` 字段仍报告整次扫描的真实状态，所以依赖降级可见，但不会让一次健康的 `--only` 运行失败。
+退出码只反映**用户要求扫描的**采集器；`status` 字段仍报告整次扫描的真实状态，所以依赖降级可见，但不会让一次健康的 `--only` 运行失败。
 
 | 退出码 | 含义 |
 | --- | --- |
@@ -200,7 +200,7 @@ run(store, ScanRequest(Path.cwd(), 'abi/device'))
 with ScanSession.open(store) as session:
     session.collectors            # ('repos','components','args','install_modules',
                                  #  'component_links','services','hdi','sas','elf_modules',
-                                 #  'ndk_headers')
+                                 #  'native_headers')
     session.status                # complete / degraded / failed
 
     # unified model 导航：subsystem → component → service → {hdi, sas}
@@ -288,7 +288,7 @@ print([i for i in result.snapshot.get('issues', ()) if i.get('advisory')])
 [components](../oskm/collectors/components/)、
 [install_modules](../oskm/collectors/install_modules/)、
 [ELF modules](../oskm/collectors/elf_modules/)、
-[NDK headers](../oskm/collectors/ndk_headers/)、
+[Native SDK headers](../oskm/collectors/native_headers/)、
 [repos](../oskm/collectors/repos/)。
 
 ## 边界与验证

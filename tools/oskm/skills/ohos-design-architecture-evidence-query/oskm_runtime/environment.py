@@ -20,8 +20,8 @@ CLI_PATH_ENV = 'OSKM_CLI'
 RUNTIME_ROOT_ENV = 'OSKM_RUNTIME_ROOT'
 
 OPENHARMONY_CI = 'OPENHARMONY_CI'
-HARMONYOS_CI = 'HARMONYOS_CI'
-DOWNLOAD_SOURCES = (OPENHARMONY_CI, HARMONYOS_CI)
+INTERNAL_CI = 'INTERNAL_CI'
+DOWNLOAD_SOURCES = (OPENHARMONY_CI, INTERNAL_CI)
 OPENHARMONY_COMPONENT = 'dayu600_7885_ai'
 
 ENV_KEYS = (SOURCE_ENV, ENDPOINT_ENV, CLI_PATH_ENV, RUNTIME_ROOT_ENV)
@@ -99,7 +99,7 @@ def load_env_file(path: Path | None = None) -> Path | None:
         if parsed is not None:
             key, value = parsed
             values[key] = value
-    # setdefault：真实环境变量永远赢过文件，否则 CI 里 export 会被静默盖掉。
+    # setdefault：真实环境变量始终赢过文件，否则 CI 里 export 会被静默盖掉。
     for key, value in values.items():
         os.environ.setdefault(key, value)
     return path

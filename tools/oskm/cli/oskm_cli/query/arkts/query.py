@@ -1,4 +1,4 @@
-"""SQL-only module/Kit queries with filter-bound, content-versioned keyset cursors."""
+"""SQL-only module/Kit queries with filter-bound, content-versioned keyset page_tokens."""
 import base64
 import hashlib
 import json
@@ -28,19 +28,19 @@ class ArktsQuery:
         self._refresh()
 
 
-    def list_kits(self, *, query='', origin=None, limit=50, cursor=None):
+    def list_kits(self, *, query='', origin=None, limit=50, page_token=None):
         _text(query, 'query')
         if origin not in (None, 'entry_backed', 'label_only'):
             raise QueryError('INVALID_PARAM: origin')
         clauses, values = ['(instr(t.name,?)>0 OR instr(t.kit_key,?)>0)'], [query, query]
         if origin:
             clauses.append('t.origin=?'); values.append(origin)
-        return self._page(KITS, clauses, values, limit=limit, cursor=cursor, filters=dict(query=query, origin=origin))
+        return self._page(KITS, clauses, values, limit=limit, page_token=page_token, filters=dict(query=query, origin=origin))
 
 
     def list_modules(self, *, query='', declaration_scope=None, implementation_kind=None,
                      declaration_format=None, language_coverage=None, membership=None,
-                     component=None, implemented_by=None, limit=50, cursor=None):
+                     component=None, implemented_by=None, limit=50, page_token=None):
         _text(query, 'query')
         _text(component, 'component', optional=True)
         _text(implemented_by, 'implemented_by', optional=True)
@@ -80,7 +80,7 @@ class ArktsQuery:
             clauses.append('EXISTS (SELECT 1 FROM elf_modules e JOIN components c ON c.id=e.component_id '
                            'WHERE e.id=t.impl_elf_id AND c.name=?)')
             values.append(component)
-        return self._page(MODULES, clauses, values, limit=limit, cursor=cursor,
+        return self._page(MODULES, clauses, values, limit=limit, page_token=page_token,
             filters=dict(query=query, declaration_scope=declaration_scope,
                          implementation_kind=implementation_kind,
                          declaration_format=declaration_format,
@@ -88,7 +88,7 @@ class ArktsQuery:
                          component=component, implemented_by=implemented_by))
 
 
-    def kit_modules(self, kit_key, *, view='resolved', limit=50, cursor=None, **filters):
+    def kit_modules(self, kit_key, *, view='resolved', limit=50, page_token=None, **filters):
         if view not in ('resolved', 'unresolved'):
             raise QueryError('INVALID_PARAM: view')
         with snapshot(self.connection):
@@ -98,25 +98,25 @@ class ArktsQuery:
             if view == 'unresolved':
                 clauses = [c.replace('r.', 't.') for c in clauses]
                 return self._page(RELATIONS, ['t.kit_id=?', "t.resolution_status!='resolved'", *clauses], [row['id'], *values],
-                    limit=limit, cursor=cursor, filters=dict(kit_key=kit_key, view=view, **filters), evidence=True)
+                    limit=limit, page_token=page_token, filters=dict(kit_key=kit_key, view=view, **filters), evidence=True)
             where = ' AND '.join(["r.resolution_status='resolved'", *clauses])
             return self._page(MODULES, ['EXISTS (SELECT 1 FROM arkts_kit_relations r WHERE r.scan_id=t.scan_id '
-                f'AND r.module_id=t.id AND r.kit_id=? AND {where})'], [row['id'], *values], limit=limit, cursor=cursor,
+                f'AND r.module_id=t.id AND r.kit_id=? AND {where})'], [row['id'], *values], limit=limit, page_token=page_token,
                 filters=dict(kit_key=kit_key, view=view, **filters))
 
 
-    def module_kits(self, module_key, *, limit=50, cursor=None, **filters):
+    def module_kits(self, module_key, *, limit=50, page_token=None, **filters):
         with snapshot(self.connection):
             self._refresh()
             row = self._entity(MODULES, module_key)
             clauses, values = self._relations(**filters)
             where = ' AND '.join(["r.resolution_status='resolved'", *clauses])
             return self._page(KITS, ['EXISTS (SELECT 1 FROM arkts_kit_relations r WHERE r.scan_id=t.scan_id '
-                f'AND r.kit_id=t.id AND r.module_id=? AND {where})'], [row['id'], *values], limit=limit, cursor=cursor,
+                f'AND r.kit_id=t.id AND r.module_id=? AND {where})'], [row['id'], *values], limit=limit, page_token=page_token,
                 filters=dict(module_key=module_key, **filters))
 
 
-    def list_declarations(self, *, query='', role=None, language_variant=None, read_status=None, limit=50, cursor=None):
+    def list_declarations(self, *, query='', role=None, language_variant=None, read_status=None, limit=50, page_token=None):
         _text(query, 'query')
         if (role not in (None, 'module', 'kit_entry') or language_variant not in (None, 'dynamic', 'static')
                 or read_status not in (None, 'ok', 'unreadable', 'encoding_failed', 'limit_exceeded', 'path_invalid')):
@@ -125,17 +125,17 @@ class ArktsQuery:
         for column, value in (('role', role), ('language_variant', language_variant), ('read_status', read_status)):
             if value:
                 clauses.append(f't.{column}=?'); values.append(value)
-        return self._attach_sources(self._page(SOURCES, clauses, values, limit=limit, cursor=cursor,
+        return self._attach_sources(self._page(SOURCES, clauses, values, limit=limit, page_token=page_token,
             filters=dict(query=query, role=role, language_variant=language_variant, read_status=read_status)))
 
 
-    def get_module(self, module_key, *, limit=50, declaration_cursor=None, evidence_cursor=None):
+    def get_module(self, module_key, *, limit=50, declaration_page_token=None, evidence_page_token=None):
         with snapshot(self.connection):
             self._refresh()
             row = self._entity(MODULES, module_key)
             declarations = self._attach_sources(self._page(SOURCES, ['t.module_id=?'], [row['id']],
-                limit=limit, cursor=declaration_cursor, filters=dict(module_key=module_key, view='declarations')))
-            evidence = self._page(RELATIONS, ['t.module_id=?'], [row['id']], limit=limit, cursor=evidence_cursor,
+                limit=limit, page_token=declaration_page_token, filters=dict(module_key=module_key, view='declarations')))
+            evidence = self._page(RELATIONS, ['t.module_id=?'], [row['id']], limit=limit, page_token=evidence_page_token,
                                   filters=dict(module_key=module_key, view='evidence'), evidence=True)
             # A module spans several files, so its issues are the union of the
             # issues recorded against each of them.
@@ -151,13 +151,13 @@ class ArktsQuery:
                         quality=self.scope['quality'], evidence=evidence, issues=issues)
 
 
-    def get_kit(self, kit_key, *, limit=50, source_cursor=None, evidence_cursor=None):
+    def get_kit(self, kit_key, *, limit=50, source_page_token=None, evidence_page_token=None):
         with snapshot(self.connection):
             self._refresh()
             row = self._entity(KITS, kit_key)
             sources = self._attach_sources(self._page(SOURCES, ['t.kit_id=?'], [row['id']],
-                limit=limit, cursor=source_cursor, filters=dict(kit_key=kit_key, view='sources')))
-            evidence = self._page(RELATIONS, ['t.kit_id=?'], [row['id']], limit=limit, cursor=evidence_cursor,
+                limit=limit, page_token=source_page_token, filters=dict(kit_key=kit_key, view='sources')))
+            evidence = self._page(RELATIONS, ['t.kit_id=?'], [row['id']], limit=limit, page_token=evidence_page_token,
                                   filters=dict(kit_key=kit_key, view='evidence'), evidence=True)
             summary = self.connection.execute(
                 "SELECT COUNT(DISTINCT CASE WHEN evidence_state='confirmed' AND resolution_status='resolved' THEN module_id END) modules, "
@@ -192,77 +192,98 @@ class ArktsQuery:
     # 表的判别一律按 `name`，不按对象身份。同一份 schema 一旦以两个模块名
     # 被加载（软链、vendored 副本都会导致），`is` 恒为 False 而且不报错，
     # 分支静默失效。按名字比较对这种情况免疫。
-    def _page(self, table, clauses, params, *, limit, cursor, filters, evidence=False):
+    def _decode_page_token(self, page_token, state):
+        if page_token is None:
+            return None
+        try:
+            raw = base64.b64decode(
+                page_token.encode('ascii'), altchars=b'-_', validate=True)
+            decoded = json.loads(raw)
+            if not isinstance(decoded, dict) or set(decoded) != set(state) | {'last_key'}:
+                raise ValueError()
+            if (not isinstance(decoded['version'], int)
+                    or isinstance(decoded['version'], bool)
+                    or not isinstance(decoded['scan_id'], int)
+                    or isinstance(decoded['scan_id'], bool)):
+                raise ValueError()
+            for key in ('input_digest', 'filters_hash', 'view', 'last_key'):
+                if not isinstance(decoded[key], str):
+                    raise ValueError()
+            if decoded['scan_id'] != self.scan_id or decoded['input_digest'] != state['input_digest']:
+                raise QueryError('STALE_PAGE_TOKEN')
+            if any(decoded[k] != v for k, v in state.items()):
+                raise ValueError()
+            return decoded['last_key']
+        except (UnicodeError, KeyError) as exc:
+            raise QueryError('INVALID_PAGE_TOKEN') from exc
+
+    def _attach_kit_summaries(self, rows, items):
+        ids = [r['id'] for r in rows]
+        marks = ','.join('?' for _ in ids)
+        counts = {r['kit_id']: r for r in self.connection.execute(
+            f"SELECT kit_id,COUNT(DISTINCT CASE WHEN evidence_state='confirmed' AND resolution_status='resolved' "
+            f"THEN module_id END) modules,SUM(resolution_status!='resolved') unresolved "
+            f'FROM arkts_kit_relations WHERE scan_id=? AND kit_id IN ({marks}) GROUP BY kit_id',
+            [self.scan_id, *ids])}
+        sources = {r['kit_id']: r['n'] for r in self.connection.execute(
+            f'SELECT kit_id,COUNT(*) n FROM arkts_sources WHERE scan_id=? '
+            f'AND kit_id IN ({marks}) GROUP BY kit_id', [self.scan_id, *ids])}
+        for row, item in zip(rows, items):
+            count = counts.get(row['id'])
+            item['summary'] = dict(
+                modules=count['modules'] if count else 0,
+                unresolved=count['unresolved'] if count else 0,
+                sources=sources.get(row['id'], 0))
+
+    def _attach_module_summaries(self, rows, items):
+        ids = [r['id'] for r in rows]
+        marks = ','.join('?' for _ in ids)
+        summaries = {}
+        for r in self.connection.execute(
+                f'SELECT module_id,relation_type,COUNT(*) n FROM arkts_kit_relations '
+                f'WHERE scan_id=? AND module_id IN ({marks}) GROUP BY module_id,relation_type',
+                [self.scan_id, *ids]):
+            summaries.setdefault(r['module_id'], {})[r['relation_type']] = r['n']
+        declarations = {r['module_id']: r['n'] for r in self.connection.execute(
+            f'SELECT module_id,COUNT(*) n FROM arkts_sources WHERE scan_id=? '
+            f'AND module_id IN ({marks}) GROUP BY module_id', [self.scan_id, *ids])}
+        for row, item in zip(rows, items):
+            item['evidence_counts'] = summaries.get(row['id'], {})
+            item['declaration_count'] = declarations.get(row['id'], 0)
+
+    def _page(self, table, clauses, params, *, limit, page_token, filters, evidence=False):
         if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 200:
             raise QueryError('INVALID_PARAM: limit')
-        _text(cursor, 'cursor', optional=True)
+        _text(page_token, 'page_token', optional=True)
         with snapshot(self.connection):
             self._refresh()
             state = dict(version=1, scan_id=self.scan_id, input_digest=self.scope['input_digest'],
                          filters_hash=hashlib.sha256(canonical(filters)).hexdigest(), view=table.name)
-            last = None
-            if cursor is not None:
-                try:
-                    raw = base64.b64decode(cursor.encode('ascii'), altchars=b'-_', validate=True)
-                    decoded = json.loads(raw)
-                    if not isinstance(decoded, dict) or set(decoded) != set(state) | {'last_key'}:
-                        raise ValueError()
-                    if (not isinstance(decoded['version'], int) or isinstance(decoded['version'], bool)
-                            or not isinstance(decoded['scan_id'], int) or isinstance(decoded['scan_id'], bool)):
-                        raise ValueError()
-                    for key in ('input_digest', 'filters_hash', 'view', 'last_key'):
-                        if not isinstance(decoded[key], str):
-                            raise ValueError()
-                    if decoded['scan_id'] != self.scan_id or decoded['input_digest'] != state['input_digest']:
-                        raise QueryError('STALE_CURSOR')
-                    if any(decoded[k] != v for k, v in state.items()):
-                        raise ValueError()
-                    last = decoded['last_key']
-                except (UnicodeError, KeyError) as exc:
-                    raise QueryError('INVALID_CURSOR') from exc
+            last = self._decode_page_token(page_token, state)
             where = ' AND '.join(['t.scan_id=?', *clauses])
             params = [self.scan_id, *params]
-            total = self.connection.execute(f'SELECT COUNT(*) FROM {table.name} t WHERE {where}', params).fetchone()[0]
+            total = self.connection.execute(
+                f'SELECT COUNT(*) FROM {table.name} t WHERE {where}', params).fetchone()[0]
             key = table.primary_key[0]
             page_where = where + (f' AND t.{key}>?' if last is not None else '')
-            rows = self.connection.execute(f'SELECT t.* FROM {table.name} t WHERE {page_where} ORDER BY t.{key} LIMIT ?',
+            rows = self.connection.execute(
+                f'SELECT t.* FROM {table.name} t WHERE {page_where} '
+                f'ORDER BY t.{key} LIMIT ?',
                 [*params, *([last] if last is not None else []), limit + 1]).fetchall()
-            next_cursor = None
+            next_page_token = None
             if len(rows) > limit:
-                next_cursor = base64.urlsafe_b64encode(canonical(dict(state, last_key=rows[limit - 1][key]))).decode()
+                next_page_token = base64.urlsafe_b64encode(
+                    canonical(dict(state, last_key=rows[limit - 1][key]))).decode()
             rows = rows[:limit]
             keys = key_maps(self.connection, self.scan_id) if table in (SOURCES, RELATIONS) else {}
             items = [publish(row, table, keys, evidence=evidence) for row in rows]
             if table.name == KITS.name and rows:
-                ids = [r['id'] for r in rows]
-                marks = ','.join('?' for _ in ids)
-                counts = {r['kit_id']: r for r in self.connection.execute(
-                    f"SELECT kit_id,COUNT(DISTINCT CASE WHEN evidence_state='confirmed' AND resolution_status='resolved' "
-                    f"THEN module_id END) modules,SUM(resolution_status!='resolved') unresolved "
-                    f'FROM arkts_kit_relations WHERE scan_id=? AND kit_id IN ({marks}) GROUP BY kit_id', [self.scan_id, *ids])}
-                sources = {r['kit_id']: r['n'] for r in self.connection.execute(
-                    f'SELECT kit_id,COUNT(*) n FROM arkts_sources WHERE scan_id=? AND kit_id IN ({marks}) GROUP BY kit_id', [self.scan_id, *ids])}
-                for row, item in zip(rows, items):
-                    count = counts.get(row['id'])
-                    item['summary'] = dict(modules=count['modules'] if count else 0,
-                        unresolved=count['unresolved'] if count else 0, sources=sources.get(row['id'], 0))
+                self._attach_kit_summaries(rows, items)
             if table.name == MODULES.name and rows:
-                ids = [r['id'] for r in rows]
-                marks = ','.join('?' for _ in ids)
-                summaries = {}
-                for r in self.connection.execute(
-                    f'SELECT module_id,relation_type,COUNT(*) n FROM arkts_kit_relations '
-                    f'WHERE scan_id=? AND module_id IN ({marks}) GROUP BY module_id,relation_type', [self.scan_id, *ids]):
-                    summaries.setdefault(r['module_id'], {})[r['relation_type']] = r['n']
-                declarations = {r['module_id']: r['n'] for r in self.connection.execute(
-                    f'SELECT module_id,COUNT(*) n FROM arkts_sources WHERE scan_id=? '
-                    f'AND module_id IN ({marks}) GROUP BY module_id',
-                    [self.scan_id, *ids])}
-                for row, item in zip(rows, items):
-                    item['evidence_counts'] = summaries.get(row['id'], {})
-                    item['declaration_count'] = declarations.get(row['id'], 0)
-            return dict(scan_id=self.scan_id, input_digest=self.scope['input_digest'], items=items,
-                        total=total, next_cursor=next_cursor, quality=self.scope['quality'])
+                self._attach_module_summaries(rows, items)
+            return dict(scan_id=self.scan_id, input_digest=self.scope['input_digest'],
+                        items=items, total=total, next_page_token=next_page_token,
+                        quality=self.scope['quality'])
 
 
     def _available(self, collector, *tables):
@@ -290,7 +311,7 @@ class ArktsQuery:
 
         `declared_membership` 是模块在自己文件头写的 @kit 标签，
         `entry_reference` 是 Kit 入口把它 import 了进去。两者会不一致，而且
-        **不一致是正常的**——标签是模块的自我声明，import 是入口的实际组成。
+        **不一致是正常的**——标签是模块的自本文声明，import 是入口的实际组成。
         只给一个合计数就把"谁说的"抹掉了，所以这里拆开。
 
         另一个容易误读的地方：引用**条数**不等于模块数。同一个模块常在

@@ -10,7 +10,7 @@ def canonical(value, *, indent=None):
     """Return deterministic exact UTF-8 JSON.
 
     Decimal values are emitted as their exact decimal spelling and non-finite
-    numbers are rejected. Mapping keys are sorted, so cursor hashes and output
+    numbers are rejected. Mapping keys are sorted, so page_token hashes and output
     do not depend on insertion order.
     """
     def container(left, right, items, depth):

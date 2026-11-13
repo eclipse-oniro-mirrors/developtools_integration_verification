@@ -282,13 +282,13 @@ def sample_elf(db_path=None, *, with_dependencies=False, with_dependents=False):
         (scan,), db_path)
 
 
-def sample_ndk_library(db_path=None):
-    """An ELF file name that has at least one NDK header mapping."""
+def sample_native_library(db_path=None):
+    """An ELF file name that has at least one Native SDK header mapping."""
     scan = _scan_id(db_path)
     if scan is None:
         return None
     return _one(
-        'SELECT e.file_name FROM ndk_headers n JOIN elf_modules e '
+        'SELECT e.file_name FROM native_headers n JOIN elf_modules e '
         'ON e.scan_id=n.scan_id AND e.id=n.elf_module_id '
         'WHERE n.scan_id=? GROUP BY e.id ORDER BY COUNT(*) DESC, e.file_name LIMIT 1',
         (scan,), db_path)
@@ -344,11 +344,11 @@ def sample_names(table, limit=3, column='name', db_path=None):
         return []
 
 
-def sample_ndk_mapping(db_path=None, *, match_strategy=None):
-    """One real NDK header mapping, with everything a test needs to re-find it.
+def sample_native_mapping(db_path=None, *, match_strategy=None):
+    """One real Native SDK header mapping, with everything a test needs to re-find it.
 
     返回 `{dest, file_name, header_path, match_strategy, component}`，
-    取不到则为 None。NDK 映射表在部分库里为空（采集降级），那是正常状态。
+    取不到则为 None。Native SDK 映射表在部分库里为空（采集降级），那是正常状态。
     """
     scan = _scan_id(db_path)
     if scan is None:
@@ -363,7 +363,7 @@ def sample_ndk_mapping(db_path=None, *, match_strategy=None):
                 '       n.header_path AS header_path, '
                 '       n.match_strategy AS match_strategy, '
                 '       c.name AS component '
-                'FROM ndk_headers n '
+                'FROM native_headers n '
                 'JOIN elf_modules e ON e.scan_id=n.scan_id AND e.id=n.elf_module_id '
                 'JOIN install_targets t ON t.scan_id=e.scan_id '
                 '     AND t.id=e.install_target_id '
@@ -378,7 +378,7 @@ def sample_ndk_mapping(db_path=None, *, match_strategy=None):
         return None
 
 
-def ndk_strategies(db_path=None):
+def native_strategies(db_path=None):
     """``{match_strategy: row_count}`` observed in the selected database."""
     scan = _scan_id(db_path)
     if scan is None:
@@ -387,7 +387,7 @@ def ndk_strategies(db_path=None):
     try:
         connection = connect(db_path)
         return {row['match_strategy']: row['n'] for row in connection.execute(
-            'SELECT match_strategy, COUNT(*) AS n FROM ndk_headers '
+            'SELECT match_strategy, COUNT(*) AS n FROM native_headers '
             'WHERE scan_id=? GROUP BY match_strategy', (scan,))}
     except sqlite3.Error:
         return {}

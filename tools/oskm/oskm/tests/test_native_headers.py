@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Contract tests for the NDK ELF-to-header mapping collector."""
+"""Contract tests for the Native SDK ELF-to-header mapping collector."""
 from pathlib import Path
 import sqlite3
 import sys
@@ -23,14 +23,14 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from oskm.collectors.ndk_headers.collector import NdkHeadersContext, NdkHeadersCollector
+from oskm.collectors.native_headers.collector import NativeHeadersContext, NativeHeadersCollector
 from oskm.core.models import ScanRequest
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
-class NdkHeadersTest(unittest.TestCase):
+class NativeHeadersTest(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
@@ -55,29 +55,29 @@ class NdkHeadersTest(unittest.TestCase):
         connection.execute(
             "INSERT INTO collector_runs VALUES (1, 'elf_modules', 'complete')")
         connection.execute(
-            "INSERT INTO elf_modules VALUES (1, 1, ?, ?, '[\"ndk\"]')",
+            "INSERT INTO elf_modules VALUES (1, 1, ?, ?, '[\"native\"]')",
             (file_name, soname or file_name))
         request = ScanRequest(self.root, "test")
-        return NdkHeadersContext(scan_id=1, connection=connection, request=request,
-                                  collector=NdkHeadersCollector())
+        return NativeHeadersContext(scan_id=1, connection=connection, request=request,
+                                  collector=NativeHeadersCollector())
 
     def collect(self, ctx):
-        NdkHeadersCollector().collect(ctx)
-        return ctx.records.get("ndk_headers", ())
+        NativeHeadersCollector().collect(ctx)
+        return ctx.records.get("native_headers", ())
 
     def test_header_library_tag_fallback(self):
         self.write(self.sdk / "sysroot/usr/include/hilog/log.h",
-                   "/*\n * @library libhilog_ndk.z.so\n"
+                   "/*\n * @library libhilog_native.z.so\n"
                    " * @syscap SystemCapability.HiviewDFX.HiLog\n */\n")
         self.write(self.root / "interface/sdk_c/hiviewdfx/hilog/include/hilog/log.h",
-                   "/* @library libhilog_ndk.z.so */\n")
+                   "/* @library libhilog_native.z.so */\n")
         self.write(self.root / "interface/sdk_c/hiviewdfx/hilog/BUILD.gn", """
-ohos_ndk_headers("hilog_header") {
-  dest_dir = "$ndk_headers_out_dir/hilog"
+ohos_native_headers("hilog_header") {
+  dest_dir = "$native_headers_out_dir/hilog"
   sources = [ "./include/hilog/log.h" ]
 }
 """)
-        ctx = self.context("libhilog_ndk.z.so")
+        ctx = self.context("libhilog_native.z.so")
         records = self.collect(ctx)
 
         self.assertEqual(len(records), 1)
@@ -90,12 +90,12 @@ ohos_ndk_headers("hilog_header") {
         self.write(self.sdk / "sysroot/usr/include/GLES3/gl3.h",
                    "#include <stdint.h>\n")
         self.write(self.root / "interface/sdk_c/graphic/BUILD.gn", """
-ohos_ndk_headers("GLES3_header") {
-  dest_dir = "$ndk_headers_out_dir/GLES3"
+ohos_native_headers("GLES3_header") {
+  dest_dir = "$native_headers_out_dir/GLES3"
   sources = [ "//interface/sdk_c/third_party/openGLES/GLES3/gl3.h" ]
 }
 
-ohos_ndk_library("libGLESv3_ndk") {
+ohos_native_library("libGLESv3_native") {
   output_name = "GLESv3"
   output_extension = "so"
   system_capability = "SystemCapability.Graphic.Graphic2D.GLES3"
@@ -113,12 +113,12 @@ ohos_ndk_library("libGLESv3_ndk") {
     def test_exported_symbols_are_last_resort(self):
         self.write(self.sdk / "sysroot/usr/include/uv.h",
                    "void uv_close(void *handle);\nvoid uv_run(void *loop);\n")
-        self.write(self.root / "interface/sdk_c/third_party/libuv/include/uv_ndk/uv.h",
+        self.write(self.root / "interface/sdk_c/third_party/libuv/include/uv_native/uv.h",
                    "void uv_close(void *handle);\nvoid uv_run(void *loop);\n")
         self.write(self.root / "interface/sdk_c/third_party/libuv/BUILD.gn", """
-ohos_ndk_headers("libuv_header") {
-  dest_dir = "$ndk_headers_out_dir"
-  sources = [ "include/uv_ndk/uv.h" ]
+ohos_native_headers("libuv_header") {
+  dest_dir = "$native_headers_out_dir"
+  sources = [ "include/uv_native/uv.h" ]
 }
 """)
         library = self.sdk / "sysroot/usr/lib/x86_64-linux-ohos/libuv.so"
@@ -126,7 +126,7 @@ ohos_ndk_headers("libuv_header") {
         library.write_bytes(b"fake-elf")
         ctx = self.context("libuv.so")
 
-        from oskm.collectors.ndk_headers import collector as module
+        from oskm.collectors.native_headers import collector as module
         with patch.object(module, "read_elf", return_value={
                 "exported_symbols": ("uv_close", "uv_run")}):
             records = self.collect(ctx)
@@ -135,24 +135,24 @@ ohos_ndk_headers("libuv_header") {
         self.assertEqual(set(records[0]), {"elf_module_id", "header_path", "match_strategy"})
         self.assertEqual(records[0]["match_strategy"], "symbol")
         self.assertEqual(records[0]["header_path"],
-                         "interface/sdk_c/third_party/libuv/include/uv_ndk/uv.h")
+                         "interface/sdk_c/third_party/libuv/include/uv_native/uv.h")
 
     def test_schema_keeps_only_mapping_columns(self):
-        columns = tuple(column.name for column in NdkHeadersCollector.TABLES[0].columns)
+        columns = tuple(column.name for column in NativeHeadersCollector.TABLES[0].columns)
 
         self.assertEqual(columns, ("elf_module_id", "header_path", "match_strategy"))
-        self.assertEqual(NdkHeadersCollector.SCHEMA_VERSION, "1.2.0")
+        self.assertEqual(NativeHeadersCollector.SCHEMA_VERSION, "1.2.0")
 
     def test_build_gn_directory_source_is_expanded(self):
         self.write(self.root / "interface/sdk_c/sample/attrs/button.h", "")
         self.write(self.sdk / "sysroot/usr/include/sample/attrs/button.h", "")
         self.write(self.root / "interface/sdk_c/sample/BUILD.gn", """
-ohos_ndk_headers("sample_header") {
-  dest_dir = "$ndk_headers_out_dir/sample"
+ohos_native_headers("sample_header") {
+  dest_dir = "$native_headers_out_dir/sample"
   sources = [ "./attrs" ]
 }
 
-ohos_ndk_library("sample") {
+ohos_native_library("sample") {
   system_capability_headers = [ "sample/attrs/button.h" ]
 }
 """)

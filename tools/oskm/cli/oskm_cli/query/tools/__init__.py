@@ -77,5 +77,5 @@ def dispatch(name: str, params: dict, manager) -> dict:
 # already defined above when these modules import from .. (this package).
 import importlib as _il
 for _mod in ('session', 'repos', 'component', 'service', 'install',
-             'gn_args', 'elf', 'ndk', 'sa', 'hdi', 'query', 'issues', 'schema', 'arkts'):
+             'gn_args', 'elf', 'native', 'sa', 'hdi', 'query', 'issues', 'schema', 'arkts'):
     _il.import_module(f'.{_mod}', package=__name__)

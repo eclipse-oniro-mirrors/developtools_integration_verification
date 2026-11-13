@@ -213,34 +213,34 @@ class SessionAndGenericQueryContractTests(unittest.TestCase):
         }, self.manager)
         self.assertEqual(injected_sort['error']['code'], 'INVALID_SORT')
 
-    def test_list_entities_traverses_two_pages_with_bound_cursor(self):
+    def test_list_entities_traverses_two_pages_with_bound_page_token(self):
         first = dispatch('list_entities', {
             'table': 'components', 'page': {'limit': 1},
         }, self.manager)
         self.assertEqual(first['total'], 2)
         self.assertEqual(len(first['items']), 1)
-        self.assertIsNotNone(first['next_cursor'])
+        self.assertIsNotNone(first['next_page_token'])
 
         second = dispatch('list_entities', {
-            'table': 'components', 'page': {'limit': 1, 'cursor': first['next_cursor']},
+            'table': 'components', 'page': {'limit': 1, 'page_token': first['next_page_token']},
         }, self.manager)
         self.assertEqual({row['name'] for row in (first['items'] + second['items'])},
                          {'ace_engine', 'init'})
-        self.assertIsNone(second['next_cursor'])
+        self.assertIsNone(second['next_page_token'])
 
         stale = dispatch('list_entities', {
             'table': 'components',
-            'page': {'limit': 1, 'cursor': first['next_cursor']},
+            'page': {'limit': 1, 'page_token': first['next_page_token']},
             'filters': {'subsystem': 'graphics'},
         }, self.manager)
-        self.assertEqual(stale['error']['code'], 'INVALID_CURSOR')
+        self.assertEqual(stale['error']['code'], 'INVALID_PAGE_TOKEN')
 
-    def test_bad_cursor_is_rejected(self):
+    def test_bad_page_token_is_rejected(self):
         result = dispatch('list_entities', {
             'table': 'components',
-            'page': {'cursor': 'not-a-cursor'},
+            'page': {'page_token': 'not-a-page_token'},
         }, self.manager)
-        self.assertEqual(result['error']['code'], 'INVALID_CURSOR')
+        self.assertEqual(result['error']['code'], 'INVALID_PAGE_TOKEN')
 
     def test_aggregate_validates_columns_and_pages(self):
         injected = dispatch('aggregate', {
@@ -256,13 +256,13 @@ class SessionAndGenericQueryContractTests(unittest.TestCase):
         }, self.manager)
         self.assertEqual(len(first['groups']), 1)
         self.assertEqual(first['total'], 2)
-        self.assertIsNotNone(first['next_cursor'])
+        self.assertIsNotNone(first['next_page_token'])
         second = dispatch('aggregate', {
             'table': 'components',
             'group_by': ['subsystem'],
-            'page': {'limit': 1, 'cursor': first['next_cursor']},
+            'page': {'limit': 1, 'page_token': first['next_page_token']},
         }, self.manager)
-        self.assertIsNone(second['next_cursor'])
+        self.assertIsNone(second['next_page_token'])
         self.assertEqual({g['key'] for g in first['groups'] + second['groups']},
                          {'graphics', 'startup'})
 

@@ -163,8 +163,8 @@ def main(argv=None):
             with Database(args.db).connect() as connection:
                 with db.transaction(connection):
                     connection.execute('PRAGMA foreign_keys = ON')
-                    cursor = connection.execute('DELETE FROM scans WHERE id = ?', (args.scan_id,))
-            response = dict(scan_id=args.scan_id, deleted=cursor.rowcount, exit_code=0)
+                    page_token = connection.execute('DELETE FROM scans WHERE id = ?', (args.scan_id,))
+            response = dict(scan_id=args.scan_id, deleted=page_token.rowcount, exit_code=0)
     except (KeyboardInterrupt, ScanCancelled):
         response = dict(error='CANCELLED', exit_code=130)
     except (QueryError, StoreError) as exc:

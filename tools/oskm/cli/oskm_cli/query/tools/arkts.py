@@ -4,7 +4,7 @@ from ..errors import QueryError
 from . import register, ToolError
 
 TEXT = {'type': 'string'}
-PAGE = {'limit': {'type': 'integer', 'minimum': 1, 'maximum': 200, 'default': 50}, 'cursor': TEXT}
+PAGE = {'limit': {'type': 'integer', 'minimum': 1, 'maximum': 200, 'default': 50}, 'page_token': TEXT}
 RELATION = {
     'relation_type': {'type': 'string', 'enum': ['declared_membership', 'entry_reference']},
     'condition': {'type': 'string', 'enum': ['dynamic', 'static', 'both', 'unknown', 'unspecified']},
@@ -59,12 +59,12 @@ tool('get_arkts_kit', 'get_kit',
      'Kit 详情、入口文件与分页原文证据。member_routes 给出成员的两条来路'
      '（模块自己的 @kit 标签 / 入口的 import）各自多少、重合多少；'
      '没有入口文件的 label_only 分组改给 mentioned_in（谁提过它）',
-     {'kit_key': TEXT, 'limit': PAGE['limit'], 'source_cursor': TEXT, 'evidence_cursor': TEXT}, ('kit_key',))
+     {'kit_key': TEXT, 'limit': PAGE['limit'], 'source_page_token': TEXT, 'evidence_page_token': TEXT}, ('kit_key',))
 tool('get_arkts_module', 'get_module',
      '模块详情、各语言版本的声明文件、实现 so（含镜像实际位置）及分页归属/引用证据。'
      'implementation 为 null 表示没有实现证据，不等于"没有实现"——'
      '看 module.implementation_kind 区分 type_only / arkts_builtin / unknown',
-     {'module_key': TEXT, 'limit': PAGE['limit'], 'declaration_cursor': TEXT, 'evidence_cursor': TEXT}, ('module_key',))
+     {'module_key': TEXT, 'limit': PAGE['limit'], 'declaration_page_token': TEXT, 'evidence_page_token': TEXT}, ('module_key',))
 tool('arkts_kit_modules', 'kit_modules',
      'Kit 的去重成员模块，或未解析的引用。relation_type 可只取一条来路。'
      '注意引用**条数**不等于模块数：同一模块常在 if arkts static / dynamic 两个分支里'

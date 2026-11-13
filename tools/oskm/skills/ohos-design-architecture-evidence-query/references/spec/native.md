@@ -1,23 +1,23 @@
-# ndk 模块 — 查询工具规格
+# native 模块 — 查询工具规格
 
-NDK 库与 `interface/sdk_c` 源码头文件的映射。关系由 `knowledge.db` 提供，
+Native SDK 库与 `interface/sdk_c` 源码头文件的映射。关系由 `knowledge.db` 提供，
 `interface/sdk_c/` 是 `knowledge.tar.gz` 解压出的 SDK 源码，用于核对 `header_path` 指向的头文件；
 它不是数据库，查询过程也不重新扫描或构建。
 
 运行时根目录下应存在 `interface/sdk_c/`。DB 的 `header_path` 从该根目录解析；
 归档中的 SDK 快照可能与扫描 revision 不同。源码缺失或路径不存在时明确报告 `SDK 源码缺失`，
-不能把“没有源码可核对”说成“没有 NDK 头文件映射”。
+不能把“没有源码可核对”说成“没有 Native SDK 头文件映射”。
 
 ## 工具清单
 
 | 工具 | 说明 |
 |------|------|
-| `search_ndk_headers` | 模糊搜索头文件、库路径、SONAME、文件名或部件名 |
-| `get_ndk_headers` | 按镜像库路径取全部头文件 |
+| `search_native_headers` | 模糊搜索头文件、库路径、SONAME、文件名或部件名 |
+| `get_native_headers` | 按镜像库路径取全部头文件 |
 
 ---
 
-## search_ndk_headers
+## search_native_headers
 
 **参数**
 
@@ -56,7 +56,7 @@ NDK 库与 `interface/sdk_c` 源码头文件的映射。关系由 `knowledge.db`
 
 ---
 
-## get_ndk_headers
+## get_native_headers
 
 **参数**
 
@@ -98,5 +98,5 @@ NDK 库与 `interface/sdk_c` 源码头文件的映射。关系由 `knowledge.db`
 
 | code | 说明 |
 |------|------|
-| `NOT_FOUND` | `dest` 没有 NDK 头文件映射 |
+| `NOT_FOUND` | `dest` 没有 Native SDK 头文件映射 |
 | `INVALID_PARAM` | `match_strategy` 非法或 `limit < 1` |

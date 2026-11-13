@@ -182,7 +182,7 @@ class DownloadDatabaseTests(unittest.TestCase):
             json.loads(requests[0].data)['component'], 'dayu600_7885_ai')
 
 
-    def test_harmonyos_gets_exact_date(self):
+    def test_internal_gets_exact_date(self):
         requests = []
         archive = self.payload()
         endpoint = 'https://harmony.example.invalid/mirror'
@@ -193,7 +193,7 @@ class DownloadDatabaseTests(unittest.TestCase):
 
         output = self.root / 'knowledge.db'
         with mock.patch.dict(db_download.os.environ, {
-                'OSKM_DOWNLOAD_SOURCE': 'HARMONYOS_CI',
+                'OSKM_DOWNLOAD_SOURCE': 'INTERNAL_CI',
                 'OSKM_DOWNLOAD_ENDPOINT': endpoint,
         }), mock.patch.object(db_download, 'urlopen', side_effect=open_url):
             result = db_download.download_database(
@@ -220,16 +220,10 @@ class DownloadDatabaseTests(unittest.TestCase):
         )
         for environment, kwargs, message in cases:
             with self.subTest(environment=environment, kwargs=kwargs):
-                with mock.patch.dict(db_download.os.environ, environment), \
-                        mock.patch.object(db_download, 'urlopen') as open_url:
-                    with self.assertRaisesRegex(
-                            db_download.DownloadError, message):
-                        db_download.download_database(**kwargs)
-                open_url.assert_not_called()
+                self._assert_download_rejected(environment, kwargs, message)
 
 
     def test_invalid_endpoint_fails_before_network(self):
-        output = self.root / 'knowledge.db'
         cases = (
             ({'OSKM_DOWNLOAD_ENDPOINT': ''}, 'OSKM_DOWNLOAD_ENDPOINT'),
             ({'OSKM_DOWNLOAD_ENDPOINT': 'not-a-url'},
@@ -237,13 +231,9 @@ class DownloadDatabaseTests(unittest.TestCase):
         )
         for environment, message in cases:
             with self.subTest(environment=environment):
-                with mock.patch.dict(db_download.os.environ, environment), \
-                        mock.patch.object(db_download, 'urlopen') as open_url:
-                    with self.assertRaisesRegex(
-                            db_download.DownloadError, message):
-                        db_download.download_database(
-                            date='20261102', output=output)
-                open_url.assert_not_called()
+                self._assert_download_rejected(
+                    environment, {'date': '20261102',
+                                  'output': self.root / 'knowledge.db'}, message)
 
 
     def test_http_failure_preserves_existing_output(self):
@@ -251,7 +241,7 @@ class DownloadDatabaseTests(unittest.TestCase):
         output.write_bytes(b'keep-me')
         with mock.patch.dict(
                 db_download.os.environ,
-                {'OSKM_DOWNLOAD_SOURCE': 'HARMONYOS_CI'}), \
+                {'OSKM_DOWNLOAD_SOURCE': 'INTERNAL_CI'}), \
                 mock.patch.object(
                     db_download, 'urlopen',
                     side_effect=URLError('proxy connection refused')):
@@ -269,7 +259,7 @@ class DownloadDatabaseTests(unittest.TestCase):
             f'{self.endpoint}/20261102', 503, 'unavailable', {}, None)
         with mock.patch.dict(
                 db_download.os.environ,
-                {'OSKM_DOWNLOAD_SOURCE': 'HARMONYOS_CI'}), \
+                {'OSKM_DOWNLOAD_SOURCE': 'INTERNAL_CI'}), \
                 mock.patch.object(db_download, 'urlopen', side_effect=error):
             with self.assertRaisesRegex(
                     db_download.DownloadError, 'HTTP 503'):
@@ -289,7 +279,7 @@ class DownloadDatabaseTests(unittest.TestCase):
 
         with mock.patch.dict(
                 db_download.os.environ,
-                {'OSKM_DOWNLOAD_SOURCE': 'HARMONYOS_CI'}), \
+                {'OSKM_DOWNLOAD_SOURCE': 'INTERNAL_CI'}), \
                 mock.patch.object(
                     db_download, 'urlopen',
                     side_effect=lambda *args, **kwargs: FakeResponse(
@@ -326,7 +316,7 @@ class DownloadDatabaseTests(unittest.TestCase):
                 db_download, 'urlopen',
                 return_value=FakeResponse(self.runtime_payload())):
             result = db_download.download_runtime_bundle(
-                source='HARMONYOS_CI', date='20261102', output=output)
+                source='INTERNAL_CI', date='20261102', output=output)
 
         self.assertEqual(result, output.resolve())
         self.assert_sqlite_marker(output / 'knowledge.db')
@@ -364,11 +354,19 @@ class DownloadDatabaseTests(unittest.TestCase):
             with self.assertRaisesRegex(
                     db_download.DownloadError, 'SQLite integrity_check'):
                 db_download.download_runtime_bundle(
-                    source='HARMONYOS_CI', date='20261102', output=output)
+                    source='INTERNAL_CI', date='20261102', output=output)
 
         self.assertEqual(marker.read_text(encoding='utf-8'), 'keep-me')
         self.assertEqual(
             sorted(path.name for path in output.iterdir()), ['marker.txt'])
+
+
+    def _assert_download_rejected(self, environment, kwargs, message):
+        with mock.patch.dict(db_download.os.environ, environment), \
+                mock.patch.object(db_download, 'urlopen') as open_url:
+            with self.assertRaisesRegex(db_download.DownloadError, message):
+                db_download.download_database(**kwargs)
+        open_url.assert_not_called()
 
 
 if __name__ == '__main__':

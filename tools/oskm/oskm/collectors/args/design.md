@@ -44,7 +44,7 @@ prebuilts/build-tools/linux-x86/bin/gn args {build_root} --list --json
 
 ### 值解析
 
-`parse_gn_value()` 将 GN 字面量字符串解析为 Python 值：`"true"`/`"false"` → bool，`"\"...\""` → str（去引号），`"123"` → int，`"[...]"` → list，其他复杂表达式保留原样。`classify_value()` 返回 `bool`/`str`/`int`/`list`/`other`。
+`parse_gn_value()` 将 GN 字面量字符串解析为 Python 值：`"true"`/`"false"` → bool，`"\"...\""` → str（去引号），`"123"` → int，`"[...]"` → list，其余复杂表达式保留原样。`classify_value()` 返回 `bool`/`str`/`int`/`list`/`other`。
 
 实际值规则：`actual_value = current.value`（若 current 存在），否则 `default.value`。
 

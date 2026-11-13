@@ -135,17 +135,17 @@ elf_total = q('SELECT COUNT(*) AS c FROM elf_modules WHERE scan_id = ?', (scan_i
 check('ELF list reconstructs dest', len(elf_rows) == min(20, elf_total)
       and all(r['dest'] for r in elf_rows), f'{len(elf_rows)} rows / {elf_total} total')
 
-ndk_rows = q('''
+native_rows = q('''
     SELECT n.header_path, t.dest, e.soname, n.match_strategy, c.name AS component
-      FROM ndk_headers n
+      FROM native_headers n
       JOIN elf_modules e ON e.scan_id = n.scan_id AND e.id = n.elf_module_id
       JOIN install_targets t ON t.scan_id = e.scan_id AND t.id = e.install_target_id
       LEFT JOIN components c ON c.scan_id = e.scan_id AND c.id = e.component_id
      WHERE n.scan_id = ?
      LIMIT 50''', (scan_id,))
-check('NDK header list joins library owner',
-      len(ndk_rows) > 0 and all(r['dest'] and r['header_path'] for r in ndk_rows),
-      f'{len(ndk_rows)} rows')
+check('Native SDK header list joins library owner',
+      len(native_rows) > 0 and all(r['dest'] and r['header_path'] for r in native_rows),
+      f'{len(native_rows)} rows')
 
 edge_rows = q('''
     SELECT d.id, d.needed_name, callee_t.dest AS callee_dest

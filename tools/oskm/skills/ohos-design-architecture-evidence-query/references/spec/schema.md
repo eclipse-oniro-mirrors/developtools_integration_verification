@@ -58,7 +58,7 @@
 }
 ```
 
-`outgoing_fks` 是本表指向其他表的外键（正方向）。`incoming_fks` 是其他表指向本表的外键（反方向）。`on_delete` 取 `CASCADE` 或 `SET NULL`。`type` 取 `TEXT` / `INTEGER` / `JSON`（JSON 实际存储为 TEXT）。
+`outgoing_fks` 是本表指向其余表的外键（正方向）。`incoming_fks` 是其余表指向本表的外键（反方向）。`on_delete` 取 `CASCADE` 或 `SET NULL`。`type` 取 `TEXT` / `INTEGER` / `JSON`（JSON 实际存储为 TEXT）。
 
 Agent 可用此工具自行构造多表 JOIN：从 `outgoing_fks`/`incoming_fks` 找到关联表与列，拼出 SQL 后通过 `sql_query` 执行。
 
@@ -91,7 +91,7 @@ Agent 可用此工具自行构造多表 JOIN：从 `outgoing_fks`/`incoming_fks`
     "install_module_tags",
     "install_modules",
     "install_targets",
-    "ndk_headers",
+    "native_headers",
     "repos",
     "sas",
     "services",

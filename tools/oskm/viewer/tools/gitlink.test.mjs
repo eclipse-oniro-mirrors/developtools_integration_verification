@@ -35,9 +35,9 @@ const mirrorRepos = [{
   head_commit: 'dbedc2e4121c5bc056ab76bfbde8032cf2850f3d',
 }]
 
-test('内部镜像仓：NDK 头文件拼 files 链接，ref 用分支名', async () => {
-  const { ndkHeaderSource } = await load(mirrorRepos)
-  const got = ndkHeaderSource(2, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+test('内部镜像仓：Native SDK 头文件拼 files 链接，ref 用分支名', async () => {
+  const { nativeHeaderSource } = await load(mirrorRepos)
+  const got = nativeHeaderSource(2, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(
     got.url,
     'https://open.codehub.example.invalid/mirror/openharmony/interface_sdk_c/files' +
@@ -49,8 +49,8 @@ test('内部镜像仓：NDK 头文件拼 files 链接，ref 用分支名', async
 })
 
 test('内部镜像仓：深目录头文件相对路径正确', async () => {
-  const { ndkHeaderSource } = await load(mirrorRepos)
-  const got = ndkHeaderSource(2, 'interface/sdk_c/third_party/icu4c/ndk_headers/unicode/utypes.h')
+  const { nativeHeaderSource } = await load(mirrorRepos)
+  const got = nativeHeaderSource(2, 'interface/sdk_c/third_party/icu4c/ndk_headers/unicode/utypes.h')
   assert.equal(
     got.url,
     'https://open.codehub.example.invalid/mirror/openharmony/interface_sdk_c/files' +
@@ -77,7 +77,7 @@ test('内部镜像仓：声明文件也拼 files 链接，ref 用分支名', asy
   assert.equal(got.ref, 'huawei/EMUI/HarmonyOS/hmos_trunk/OpenHarmony-Trunk')
   assert.equal(got.rel, 'api/@ohos.app.ability.UIAbility.d.ts')
   assert.equal(got.exact, true)
-  assert.deepEqual(mod.ndkHeaderSource(2, path), got)
+  assert.deepEqual(mod.nativeHeaderSource(2, path), got)
 })
 
 /* ---- 公开仓：gitcode 等托管站，必须保持原 blob 拼法，一字不改 ---- */
@@ -89,23 +89,23 @@ const publicRepos = [{
   head_commit: 'abc123def456',
 }]
 
-test('公开仓：NDK 头文件仍走 fileSource 原逻辑（blob + 提交号）', async () => {
+test('公开仓：Native SDK 头文件仍走 fileSource 原逻辑（blob + 提交号）', async () => {
   const mod = await load(publicRepos)
-  const got = mod.ndkHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+  const got = mod.nativeHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(
     got.url,
     'https://gitcode.com/openharmony/interface_sdk_c/blob/abc123def456/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(got.ref, 'abc123def456')
   assert.equal(got.exact, true)
-  /* ndkHeaderSource 在公开仓下必须与 fileSource 完全一致 */
+  /* nativeHeaderSource 在公开仓下必须与 fileSource 完全一致 */
   const viaFile = mod.fileSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.deepEqual(got, viaFile)
 })
 
-test('公开仓：无 head_commit 时 fileSource 退 revision，ndk 链接跟随', async () => {
+test('公开仓：无 head_commit 时 fileSource 退 revision，native 链接跟随', async () => {
   const repos = [{ ...publicRepos[0], head_commit: null }]
   const mod = await load(repos)
-  const got = mod.ndkHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+  const got = mod.nativeHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(got.ref, 'master')
   assert.equal(got.exact, false)
   assert.equal(
@@ -121,7 +121,7 @@ test('gitlab 系公开仓：保持 /-/blob/ 拼法', async () => {
     revision: 'master', head_commit: 'abc123',
   }]
   const mod = await load(repos)
-  const got = mod.ndkHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+  const got = mod.nativeHeaderSource(1, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
   assert.equal(
     got.url,
     'https://gitlab.example.com/oh/sdk/-/blob/abc123/AbilityKit/ability_base/ability_base_common.h')
@@ -129,8 +129,8 @@ test('gitlab 系公开仓：保持 /-/blob/ 拼法', async () => {
 
 test('空参/未匹配仓返回 null', async () => {
   const mod = await load(mirrorRepos)
-  assert.equal(mod.ndkHeaderSource(null, 'x.h'), null)
-  assert.equal(mod.ndkHeaderSource(2, ''), null)
-  const { ndkHeaderSource: empty } = await load([{ scan_id: 2, name: 'a', path: 'b', remote_url: null }])
+  assert.equal(mod.nativeHeaderSource(null, 'x.h'), null)
+  assert.equal(mod.nativeHeaderSource(2, ''), null)
+  const { nativeHeaderSource: empty } = await load([{ scan_id: 2, name: 'a', path: 'b', remote_url: null }])
   assert.equal(empty(2, 'x/y.h'), null)
 })

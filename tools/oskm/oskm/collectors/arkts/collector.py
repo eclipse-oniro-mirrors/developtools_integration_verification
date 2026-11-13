@@ -17,7 +17,7 @@ import oskm_schema.arkts
 from oskm_schema.arkts import TABLES
 
 # Source files whose content defines what the stored projection means. A change
-# here changes input_digest, which invalidates query cursors.
+# here changes input_digest, which invalidates query page_tokens.
 PROJECTION_SOURCES = ('collector.py', 'projection.py', 'discovery.py', 'linking.py',
                       'models.py', 'napi.py', 'quality.py', 'backend.py', 'ir.py')
 # 表结构已移到中立包 oskm_schema（采集与查询共用，见

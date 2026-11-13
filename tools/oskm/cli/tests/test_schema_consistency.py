@@ -55,7 +55,7 @@ def declared_tables():
     import importlib
     names = set()
     for module in ('args', 'arkts', 'base', 'components', 'elf_modules', 'hdi',
-                   'install_modules', 'links', 'ndk', 'repos', 'sas', 'services'):
+                   'install_modules', 'links', 'native', 'repos', 'sas', 'services'):
         m = importlib.import_module(f'oskm_schema.{module}')
         for const in dir(m):
             obj = getattr(m, const)
@@ -139,7 +139,7 @@ class SqlReferencesRealTables(unittest.TestCase):
         self.assertEqual(self._live_tables() - set(REQUIRED_COLUMNS), set(),
                          '库里有表不在 REQUIRED_COLUMNS；'
                          '检查 cli/oskm_cli/database.py 的 SCHEMA_MODULES')
-        # 反向也要校：契约里不该有库里不存在的表，否则 validate-db 永远失败。
+        # 反向也要校：契约里不该有库里不存在的表，否则 validate-db 始终失败。
         self.assertEqual(set(REQUIRED_COLUMNS) - self._live_tables(), set(),
                          'REQUIRED_COLUMNS 里有真库没有的表')
 

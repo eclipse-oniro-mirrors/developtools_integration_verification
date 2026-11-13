@@ -78,24 +78,21 @@ def verify_implementations(session, document, cpu_arch):
         assert row['dest'] == row['impl_so_path'], dict(row)
 
 
-def verify_domain(session, workspace, cpu_arch):
-    sdk = workspace/'interface/sdk-js'
+def _source_inventory_checks(session, workspace):
+    sdk = workspace / 'interface/sdk-js'
     expected = sorted(p.relative_to(sdk).as_posix() for root in ('api', 'arkts', 'kits')
-                      for p in (sdk/root).rglob('*') if p.is_file() and p.name.endswith(('.d.ts', '.d.ets')))
+                      for p in (sdk / root).rglob('*') if p.is_file() and p.name.endswith(('.d.ts', '.d.ets')))
     document = export_document(session)
     files = document['sources']
     key = lambda path: path.removeprefix(SDK_RELATIVE)
     assert sorted(key(f['source_path']) for f in files) == expected
-    # The module inventory is the file inventory with the language suffix
-    # removed, derived here from disk rather than from what the scan produced.
     suffixes = ('.static.d.ets', '.d.ets', '.d.ts')
     strip = lambda name: next(name[:-len(s)] for s in suffixes if name.endswith(s))
     assert sorted(m['module_key'] for m in document['modules']) == sorted(
         {strip(name) for name in expected if not name.startswith('kits/')})
     assert sorted(k['kit_key'] for k in document['kits'] if k['origin'] == 'entry_backed') == sorted(
         {Path(strip(name)).name for name in expected if name.startswith('kits/')})
-    data = {f['source_path']: (workspace/f['source_path']).read_bytes() for f in files}
-    # 逐文件摘要不再入库，改核对 scope 里的总摘要——它才是输入身份的凭据
+    data = {f['source_path']: (workspace / f['source_path']).read_bytes() for f in files}
     expected_digest = hashlib.sha256(canonical(sorted(
         (f['source_path'], hashlib.sha256(data[f['source_path']]).hexdigest(), f['read_status'])
         for f in files))).hexdigest()
@@ -103,13 +100,14 @@ def verify_domain(session, workspace, cpu_arch):
     for f in files:
         if 'header_span' in f:
             start, end = f['header_span']
-            # The header text is not stored; the span must still be a valid
-            # character-boundary slice of the file it points into.
             assert data[f['source_path']][start:end].decode()
     for r in document['kit_relations']:
         assert data[r['source_path']][r['start_byte']:r['end_byte']].decode() == r['record']
-    # Independent direct Compiler API traversal: no production adapters/extractors.
-    script = r'''
+    return sdk, document, files, data, key
+
+
+def _compiler_reference_oracle(workspace, sdk, files, document, key):
+    script = r"""
 const fs=require('fs'), path=require('path');
 const ts=require(path.join(process.argv[1],'build-tools/node_modules/typescript/lib/typescript.js'));
 const files=JSON.parse(fs.readFileSync(0,'utf8')), refs=[];
@@ -122,39 +120,50 @@ for(const name of files) {
   }
 }
 process.stdout.write(JSON.stringify(refs));
-'''
-    env = {k:v for k,v in os.environ.items() if k not in ('NODE_OPTIONS','NODE_PATH')}
+"""
+    env = {k: v for k, v in os.environ.items() if k not in ('NODE_OPTIONS', 'NODE_PATH')}
     entries = [key(f['source_path']) for f in files if f['role'] == 'kit_entry']
-    oracle = subprocess.run([str(workspace/NODE_PATH), '-e', script, str(sdk)], input=json.dumps(entries),
-                            capture_output=True, text=True, check=True, timeout=30, env=env)
+    oracle = subprocess.run(
+        [str(workspace / NODE_PATH), '-e', script, str(sdk)], input=json.dumps(entries),
+        capture_output=True, text=True, check=True, timeout=30, env=env)
     expected_refs = sorted(json.loads(oracle.stdout))
-    actual_refs = sorted([key(r['source_path']),r['target_text'],r['start_byte'],r['end_byte']]
-                         for r in document['kit_relations'] if r['relation_type']=='entry_reference')
+    actual_refs = sorted(
+        [key(r['source_path']), r['target_text'], r['start_byte'], r['end_byte']]
+        for r in document['kit_relations'] if r['relation_type'] == 'entry_reference')
     assert expected_refs == actual_refs
-    # Every entry reference must now land on exactly one module: the dual
-    # dynamic/static declaration is the same module, not two candidates.
-    unresolved = [r for r in document['kit_relations'] if r['relation_type']=='entry_reference'
-                  and r['resolution_status']=='ambiguous']
+
+
+def _query_and_integrity_checks(session, document, cpu_arch):
+    unresolved = [r for r in document['kit_relations']
+                  if r['relation_type'] == 'entry_reference'
+                  and r['resolution_status'] == 'ambiguous']
     assert not unresolved, unresolved[:3]
     q = ArktsQuery(session)
-    # Independent manual reference samples, separate from the AST oracle.
     assert '@kit.AbilityKit' in {r['kit_key'] for r in q.module_kits('api/@ohos.app.ability.UIAbility')['items']}
     assert '@kit.ArkUI' in {r['kit_key'] for r in q.module_kits('api/@internal/component/ets/button')['items']}
     assert [d['read_status'] for d in q.get_module('api/@internal/ets/global')['declarations']['items']] == ['encoding_failed']
-    # A module with both language variants exposes both of its files.
     dual = q.list_modules(language_coverage='both')['items'][0]['module_key']
     assert sorted(d['language_variant'] for d in q.get_module(dual)['declarations']['items']) == ['dynamic', 'static']
     verify_implementations(session, document, cpu_arch)
     assert session.connection.execute('PRAGMA foreign_key_check').fetchall() == []
-    assert session.connection.execute('SELECT count(*) FROM arkts_kit_relations r '
+    assert session.connection.execute(
+        'SELECT count(*) FROM arkts_kit_relations r '
         'JOIN arkts_sources s ON s.id=r.source_id WHERE r.scan_id!=s.scan_id '
         "OR (r.relation_type='entry_reference' AND r.kit_id IS NOT s.kit_id) "
-        "OR (r.relation_type='declared_membership' AND r.module_id IS NOT s.module_id)").fetchone()[0] == 0
-    return dict(counts=q.scope['counts'], quality=q.scope['quality'], coverage=q.scope['coverage'],
+        "OR (r.relation_type='declared_membership' AND r.module_id IS NOT s.module_id)"
+    ).fetchone()[0] == 0
+    return q
+
+
+def _verification_summary(session, document, data, q):
+    return dict(
+        counts=q.scope['counts'], quality=q.scope['quality'], coverage=q.scope['coverage'],
         statements=dict(Counter(r['statement_kind'] for r in document['kit_relations'])),
-        resolution=dict(Counter(r['resolution_status'] for r in document['kit_relations'] if r['relation_type']=='entry_reference')),
-        conditions=dict(Counter(r['condition_state'] for r in document['kit_relations'] if r['relation_type']=='entry_reference')),
-        input_bytes=sum(len(v) for v in data.values()), largest_file_bytes=max(map(len,data.values())),
+        resolution=dict(Counter(r['resolution_status'] for r in document['kit_relations']
+                                if r['relation_type'] == 'entry_reference')),
+        conditions=dict(Counter(r['condition_state'] for r in document['kit_relations']
+                                if r['relation_type'] == 'entry_reference')),
+        input_bytes=sum(len(v) for v in data.values()), largest_file_bytes=max(map(len, data.values())),
         evidence_bytes=q.scope['evidence_bytes'], input_digest=q.scope['input_digest'],
         implementations=dict(zip(('rows', 'resolved'), session.connection.execute(
             'SELECT COUNT(impl_so_path), COUNT(impl_elf_id) FROM arkts_modules WHERE scan_id=?',
@@ -162,7 +171,16 @@ process.stdout.write(JSON.stringify(refs));
         kinds=dict(session.connection.execute(
             'SELECT implementation_kind, COUNT(*) FROM arkts_modules WHERE scan_id=? '
             'GROUP BY 1 ORDER BY 1', (session.scan_id,)).fetchall()),
-        issues=[dict(r) for r in session.connection.execute("SELECT code,count(*) n FROM issues WHERE scan_id=? AND collector='arkts' GROUP BY code", (session.scan_id,))])
+        issues=[dict(r) for r in session.connection.execute(
+            "SELECT code,count(*) n FROM issues WHERE scan_id=? AND collector='arkts' "
+            'GROUP BY code', (session.scan_id,))])
+
+
+def verify_domain(session, workspace, cpu_arch):
+    sdk, document, files, data, key = _source_inventory_checks(session, workspace)
+    _compiler_reference_oracle(workspace, sdk, files, document, key)
+    q = _query_and_integrity_checks(session, document, cpu_arch)
+    return _verification_summary(session, document, data, q)
 
 
 def main():

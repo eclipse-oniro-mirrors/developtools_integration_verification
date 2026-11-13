@@ -45,9 +45,9 @@ export function loadElfModules(scanId) {
      ORDER BY dependents DESC`, [scanId, scanId])
 }
 
-/* ------------------------------------------------------------ NDK 头文件 */
+/* ------------------------------------------------------------ Native SDK 头文件 */
 /* 映射表本身只有库外键和头文件路径；所有可读字段都经 ELF 一次 JOIN 出来。 */
-export function loadNdkHeaders(scanId) {
+export function loadNativeHeaders(scanId) {
   if (!scanId) return []
   return useDatabase().rawQuery(`
     SELECT n.id, n.elf_module_id, n.header_path, n.match_strategy,
@@ -55,7 +55,7 @@ export function loadNdkHeaders(scanId) {
            e.install_module_id, e.component_id,
            t.dest, c.name AS component, c.subsystem,
            m.label
-      FROM ndk_headers n
+      FROM native_headers n
       JOIN elf_modules e
              ON e.scan_id = n.scan_id AND e.id = n.elf_module_id
       JOIN install_targets t

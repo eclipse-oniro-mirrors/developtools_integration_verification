@@ -134,7 +134,7 @@ class FieldPredicate:
 @dataclass(frozen=True)
 class PageRequest:
     limit: int = 100
-    cursor: str | None = None
+    page_token: str | None = None
 
 
 @dataclass(frozen=True)
@@ -142,7 +142,7 @@ class Page:
     items: tuple
     positions: tuple[int, ...]
     total: int
-    next_cursor: str | None
+    next_page_token: str | None
 
 
 @dataclass(frozen=True)

@@ -67,32 +67,19 @@ _DEFAULT_LIMIT, _MAX_LIMIT = 200, 1000
     },
     'required': ['dest'],
 })
-def elf_dependencies(params, manager):
-    """可达节点的闭包，每个节点一行，距离取最短。
-
-    原实现用 `UNION ALL` + 累加 path 字符串做**路径枚举**，而工具名与描述
-    说的是"闭包"。两者的差距实测很大：根 libace_engine_pa_ark.z.so、
-    max_distance=3 时返回 3,586 行却只有 297 个不同节点（92% 重复），
-    耗时 90.6 秒、1.27 MB——没有哪个上下文装得下，而且 AGENTS.md 推荐的
-    正是这个调用。
-
-    改成节点级闭包后，递归里不再带 path（那串东西正是组合爆炸的来源），
-    `via` 改为出 CTE 后用边表在内存里回溯一条最短路径，语义不变。
-    顺带去掉了逐行查部件名的 N+1。
-    """
-    session = manager.get_active()
+def _elf_arguments(params):
     dest = params['dest']
     direction = params.get('direction', 'forward')
     max_dist = params.get('max_distance')
     depth = _MAX_DEPTH if max_dist is None else max(0, int(max_dist))
-    # 显式判 None，不用 `or`：`limit=0` 是假值，会被静默当成"没传"而变成 200，
-    # 而 `limit=-5` 又会落到下面的校验报错——同一个参数两种行为。
     raw = params.get('limit')
     limit = _DEFAULT_LIMIT if raw is None else int(raw)
     if limit < 1:
         raise ToolError('INVALID_PARAM', 'limit must be >= 1')
-    limit = min(limit, _MAX_LIMIT)
+    return dest, direction, depth, min(limit, _MAX_LIMIT)
 
+
+def _root_elf(session, dest):
     root = session.sql(
         'SELECT e.id, t.dest, e.soname, e.partition, e.component_id '
         'FROM elf_modules e '
@@ -101,52 +88,69 @@ def elf_dependencies(params, manager):
         'WHERE e.scan_id = ? AND t.dest = ?', (session.scan_id, dest))
     if not root:
         raise ToolError('NOT_FOUND', f'ELF module not found: {dest}')
-    root_id = root[0]['id']
+    return root[0]['id']
 
-    if direction == 'reverse':
-        caller_col, callee_col = 'callee_id', 'caller_id'
-    else:
-        caller_col, callee_col = 'caller_id', 'callee_id'
 
-    distance = _bfs(session, root_id, depth, caller_col, callee_col)
-
+def _dependency_meta(session, distance):
+    if not distance:
+        return {}
+    ids = list(distance)
+    marks = ','.join('?' for _ in ids)
     meta = {}
-    if distance:
-        ids = list(distance)
-        marks = ','.join('?' for _ in ids)
-        # 一次 JOIN 取齐元数据与部件名。原来是逐行 SELECT components，
-        # 3,586 行就是 3,586 次查询。
-        for r in session.sql(
-                f'SELECT e.id, t.dest, e.soname, e.partition, e.component_id, '
-                f'c.name AS component FROM elf_modules e '
-                f'JOIN install_targets t ON t.scan_id = e.scan_id '
-                f'AND t.id = e.install_target_id '
-                f'LEFT JOIN components c ON c.id = e.component_id '
-                f'WHERE e.scan_id = ? AND e.id IN ({marks})',
-                (session.scan_id, *ids)):
-            meta[r['id']] = dict(r)
+    for row in session.sql(
+            f'SELECT e.id, t.dest, e.soname, e.partition, e.component_id, '
+            f'c.name AS component FROM elf_modules e '
+            f'JOIN install_targets t ON t.scan_id = e.scan_id '
+            f'AND t.id = e.install_target_id '
+            f'LEFT JOIN components c ON c.id = e.component_id '
+            f'WHERE e.scan_id = ? AND e.id IN ({marks})',
+            (session.scan_id, *ids)):
+        meta[row['id']] = dict(row)
+    return meta
 
-    reachable = [dict(meta[i], distance=d) for i, d in distance.items() if i in meta]
-    reachable.sort(key=lambda r: (r['distance'], r['dest']))
-    total = len(reachable)
-    truncated = total > limit
-    reachable = reachable[:limit]
 
-    for row in reachable:
-        row['via'] = ' → '.join(_shortest_path(
-            session, row['id'], root_id, distance, meta, dest, caller_col, callee_col))
-        row.pop('id', None)
-
-    unresolved = session.sql(
+def _unresolved_forward(session, root_id, direction):
+    if direction != 'forward':
+        return []
+    return session.sql(
         'SELECT d.needed_name, t.dest AS caller_dest '
         'FROM elf_module_dependencies d '
         'JOIN elf_modules caller ON caller.scan_id = d.scan_id AND caller.id = d.caller_id '
         'JOIN install_targets t ON t.scan_id = caller.scan_id '
         'AND t.id = caller.install_target_id '
         'WHERE d.scan_id = ? AND d.caller_id = ? '
-        'AND d.callee_id IS NULL',
-        (session.scan_id, root_id)) if direction == 'forward' else []
+        'AND d.callee_id IS NULL', (session.scan_id, root_id))
 
+
+def _reachable_rows(session, root_id, distance, meta, dest, caller_col, callee_col, limit):
+    reachable = [dict(meta[node], distance=value)
+                 for node, value in distance.items() if node in meta]
+    reachable.sort(key=lambda row: (row['distance'], row['dest']))
+    total = len(reachable)
+    truncated = total > limit
+    reachable = reachable[:limit]
+    for row in reachable:
+        row['via'] = ' → '.join(_shortest_path(
+            session, row['id'], root_id, distance, meta, dest,
+            caller_col, callee_col))
+        row.pop('id', None)
+    return reachable, total, truncated
+
+
+def elf_dependencies(params, manager):
+    """可达节点的闭包，每个节点一行，距离取最短。"""
+    session = manager.get_active()
+    dest, direction, depth, limit = _elf_arguments(params)
+    root_id = _root_elf(session, dest)
+    if direction == 'reverse':
+        caller_col, callee_col = 'callee_id', 'caller_id'
+    else:
+        caller_col, callee_col = 'caller_id', 'callee_id'
+    distance = _bfs(session, root_id, depth, caller_col, callee_col)
+    meta = _dependency_meta(session, distance)
+    reachable, total, truncated = _reachable_rows(
+        session, root_id, distance, meta, dest, caller_col, callee_col, limit)
+    unresolved = _unresolved_forward(session, root_id, direction)
     return {
         'root': dest,
         'direction': direction,
@@ -154,7 +158,7 @@ def elf_dependencies(params, manager):
         'total': total,
         'truncated': truncated,
         'reachable': reachable,
-        'unresolved': [dict(r) for r in unresolved],
+        'unresolved': [dict(row) for row in unresolved],
     }
 
 
@@ -181,26 +185,26 @@ def _adjacency(session, caller_col, callee_col):
     return cached
 
 
-def _bfs(session, root_id, depth, caller_col, callee_col):
-    """从根逐层展开，返回 {节点: 最短距离}，不含根本身。
+def _expand_frontier(successors, frontier, seen, distance, step):
+    next_frontier = []
+    for node in frontier:
+        for target in successors.get(node, ()):
+            if target not in seen:
+                seen.add(target)
+                distance[target] = step
+                next_frontier.append(target)
+    return next_frontier
 
-    逐层而不是递归 CTE：节点一旦定距就不再展开，所以是 O(边) 而非
-    O(深度 × 边)。有环也自然终止——已访问过的节点不入队。
-    """
-    succ, _ = _adjacency(session, caller_col, callee_col)
+
+def _bfs(session, root_id, depth, caller_col, callee_col):
+    """从根逐层展开，返回 {节点: 最短距离}，不含根本身。"""
+    successors, _ = _adjacency(session, caller_col, callee_col)
     distance, frontier = {}, [root_id]
     seen = {root_id}
     for step in range(1, depth + 1):
-        nxt = []
-        for node in frontier:
-            for target in succ.get(node, ()):
-                if target not in seen:
-                    seen.add(target)
-                    distance[target] = step
-                    nxt.append(target)
-        if not nxt:
+        frontier = _expand_frontier(successors, frontier, seen, distance, step)
+        if not frontier:
             break
-        frontier = nxt
     return distance
 
 

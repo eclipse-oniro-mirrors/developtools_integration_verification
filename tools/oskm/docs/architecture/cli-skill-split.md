@@ -37,7 +37,7 @@
 | 现状文件 | 性质 | 谁需要它 |
 |---|---|---|
 | `cli.py` + `query/**` | 只读查询 | 任何有 `knowledge.db` 的人／CI／脚本 |
-| `db_download.py` `environment.py` | 网络下载与端点配置 | 只有首次安装的人 |
+| `db_download.py` `environment.py` | 网络下载与端点配置 | 只有初次安装的人 |
 | `runtime.py` | 运行时状态、自动刷新、schema 校验 | 只有托管安装的人 |
 | `scripts/build_bundle.py` | 打包 | 维护者 |
 
@@ -52,7 +52,7 @@
    `cli.open_session()` → `runtime.ensure_runtime()` → `needs_refresh()` →
    `schema_problem()`。这是纯粹的浪费：库是上一次 `install` 校验通过后才落盘的。
 3. **schema 契约有两份。** `runtime.REQUIRED_COLUMNS` 从 `oskm_schema` 现算一份，
-   `query/` 层又直接 import `oskm_schema.arkts*` / `oskm_schema.ndk`。改一张表要同时
+   `query/` 层又直接 import `oskm_schema.arkts*` / `oskm_schema.native`。改一张表要同时
    想到两处。
 
 拆开后：CLI 是**纯函数式的只读工具**（给它一个库路径，它给答案，不联网、不写盘、
@@ -212,7 +212,7 @@ $OSKM --db /tmp/x.db sql --sql "SELECT 1"
 
 | # | 候选 | sha256 校验 | 需要网络 |
 |---|---|---|---|
-| 1 | `$OSKM_CLI`（`.pyz` 或源码目录） | **不校验**——显式覆盖即"我知道我在干什么" | 否 |
+| 1 | `$OSKM_CLI`（`.pyz` 或源码目录） | **不校验**——显式覆盖即"本文知道本文在干什么" | 否 |
 | 2 | `<runtime-root>/cli/oskm-cli-<pinned>.pyz` | 必须与 `cli_pin.json` 一致 | 否 |
 | 3 | **源码树**：向上找 `cli/oskm_cli/__init__.py` | 版本必须 == pin，否则**硬失败** | 否 |
 | 4 | `$OSKM_CLI_ENDPOINT/oskm-cli-<version>.pyz` | 下载后校验再原子装入 `<runtime-root>/cli/` | **是** |
@@ -275,7 +275,7 @@ CLI 仍然是能独立 `python3 oskm-cli-1.0.0.pyz …` 或 `oskm-cli …` 运�
 
   > 实施时修正了本文初稿的一个设计错误：初稿写的是"缺 `cli` → 视为需要安装
   > → 触发刷新"。那会让所有 2.5.6 用户在升级后的第一次查询撞一次注定失败的
-  > 全量下载（他们的 DB 和 SDK 明明都好着）。`needs_refresh()` 因此**只看
+  > 全量下载（相关用户的 DB 和 SDK 明明都好着）。`needs_refresh()` 因此**只看
   > db / sdk / date**，CLI 的补齐是独立一步。
 - `_state_source()` 的报错文案里 `python3 -m agentic.runtime install` 改成
   `python3 bootstrap.py install`。
@@ -377,7 +377,7 @@ python3 skills/ohos-design-architecture-evidence-query/scripts/build_skill.py
 
 ```
 fixture.py testdb.py                                    # ROOT 推导改一层
-test_cli test_e2e test_elf_tools test_ndk_tools
+test_cli test_e2e test_elf_tools test_native_tools
 test_arkts_implementation_paths test_search_totals
 test_security test_readonly_session test_every_tool_runs
 test_mr380_review test_schema_consistency
@@ -422,7 +422,7 @@ test_docs_links.py      # ← 从 test_docs_match_registry.py 拆出（见 §7.4
 
 | 产物 | 版本 | 理由 |
 |---|---|---|
-| CLI | `1.0.0` | 首个独立版本；查询接口（子命令、退出码、输出格式）相对 2.5.6 不变 |
+| CLI | `1.0.0` | 第一个独立版本；查询接口（子命令、退出码、输出格式）相对 2.5.6 不变 |
 | Skill | `3.0.0` | **breaking**：入口命令从 `python3 -m agentic` 变成 `python3 bootstrap.py`，`agentic/` 目录消失 |
 
 ## 9. 需要改的外部引用
@@ -553,7 +553,7 @@ bootstrap 的托管命令与透传边界、skill 归档"不含查询引擎 / 不
 | test_no_collector_dependency | 11 | | test_runtime_install | 16 |
 | test_elf_tools | 10 | | test_db_download | 11 |
 | test_search_totals | 7 | | test_environment | 9 |
-| test_ndk_tools | 6 | | test_docs_links ★ | 4 |
+| test_native_tools | 6 | | test_docs_links ★ | 4 |
 | test_readonly_session | 6 | | | |
 | test_docs_match_registry | 5 | | | |
 | test_schema_consistency | 5 | | | |
@@ -600,7 +600,7 @@ skill 归档小了 **37%**，而且这次它连查询引擎都不带了。
 | CLI 定位**四**级 | 仍是**四**级（中途加过第 3 级 npm，又去掉） | npm 通道做完并实测通过后按需求撤掉：pyz 自带 shebang 本来就能直接执行，多一条通道就多一处会漂的版本、一份要维护的启动器，还要为定位它起 `npm root -g` 子进程并缓存。它没带来 pyz 给不了的能力。相关代码/测试/文档已全部清除，只在 §0 与 `cli_install.py` docstring 留一句"曾经有过、为什么去掉" |
 | 共用一个 `packages/oskm/dist/` | **每个产物写自己目录的 `dist/`**（`cli/dist/`、`skills/…/dist/`） | 共用一个输出目录等于在文件系统层面把两个"独立产物"又绑回去，而且 `.gitignore` 要为它们各写一条锚定规则、漏一条就提交二进制。副作用是 `stage_bundle` 会看到自己的输出目录——必须显式排除 `dist`，否则归档每构建一次长一截（已实测，见 §6.2） |
 | 两个 builder 合并写一份 `SHA256SUMS` | 各写各的 | 同上；顺带去掉了 `build_skill.py` 对 `build_cli.py` 的 import，两个产物连构建期都不互相依赖 |
-| 缺 `cli` 段 → 触发刷新 | 缺 `cli` 段 → `ensure_cli()` 单独补齐，**不触发 DB/SDK 重下** | 初稿那样会让所有 2.5.6 用户升级后第一次查询撞一次注定失败的全量下载（他们的 DB/SDK 明明都好着）。见 §5.2 的修订说明 |
+| 缺 `cli` 段 → 触发刷新 | 缺 `cli` 段 → `ensure_cli()` 单独补齐，**不触发 DB/SDK 重下** | 初稿那样会让所有 2.5.6 用户升级后第一次查询撞一次注定失败的全量下载（相关用户的 DB/SDK 明明都好着）。见 §5.2 的修订说明 |
 | `validate-db` 走 CLI **子进程** | 走**同进程** import（`cli_install.load_database()`） | 子进程每次多 100–200 ms 启动开销，而"契约只有一处"这个目标由 import 同样能保证；有门禁盯着 skill 侧不许出现 `REQUIRED_COLUMNS` 或 `import oskm_schema` |
 | `doctor` 里下载配置缺失一律 FAIL | 运行时已完整时降为 **WARN**，退出码 0 | 一个能正常查询的只读环境被判"未就绪"，会让人去修一个没坏的东西 |
 | pyz 直接可执行即可 | pyz `__main__.py` 加 **Python 版本守卫** | 本机 `python3` 是 3.9.14；没有守卫时 `./oskm-cli-1.0.0.pyz` 炸出的是 `oskm_schema/base.py` 里 `str | None` 的 TypeError，完全看不出真因是解释器太老 |
@@ -646,7 +646,7 @@ skill 归档小了 **37%**，而且这次它连查询引擎都不带了。
 3,687 ELF（32,076 依赖边）· 171 服务 / 166 SA / 59 HDI
 3,004 编译参数 · 1,385 特性 · 310 SysCap · 1,763 InnerAPI
 50 Kit · 1,328 SDK 模块（935 个定位到实现 .so = napi 526 + arkui 409）
-1,577 份声明文件 · 444 条 NDK 映射 · 21 行 collector_tables
+1,577 份声明文件 · 444 条 Native SDK 映射 · 21 行 collector_tables
 Kit 成员配对：1,282 对（both 614 / declared_only 667 / referenced_only 1）
 @kit.AbilityKit：member_routes 239 / 107 / 132 / 0；
                  entry_reference 195 条 → 107 个模块
@@ -759,7 +759,7 @@ required - live  ∅
 负控（把 `arkts*` 从 `REQUIRED_COLUMNS` 里抹掉）能准确报出缺的 5 张表
 （`arkts_kit_relations` / `arkts_kits` / `arkts_links_run` / `arkts_modules` /
 `arkts_sources`），所以这条断言不是空转。反向那一半同样必要：契约里出现真库
-没有的表，`validate-db` 会**永远失败**。
+没有的表，`validate-db` 会**始终失败**。
 
 ### 14.10 测试的净增删（含删除）
 
@@ -780,7 +780,7 @@ required - live  ∅
 `cli_pin.json` 改写成现场构建那一份的摘要，只测自己该测的事；pin 是否最新
 由 `PinStaysCurrent` 单独负责。
 
-> `PinStaysCurrent` **差点被当成"失败的测试"删掉**。它失败的原因是我自己
+> `PinStaysCurrent` **差点被当成"失败的测试"删掉**。它失败的原因是本文自己
 > 5 分钟前改了 `cli.py` / `catalog.py` 却没重跑 `--update-pin`——这正是它存在
 > 的理由。一条门禁只有在它第一次抓到真问题时才算被验证过。
 
@@ -819,8 +819,8 @@ elf=3,687`，文档与用例都还写着 `528 / 5,943 / 7,034 / 3,694`，**两�
 配套的选择器在 `oskm_testing/testdb.py`：`sample_component(with_features=/with_repo=/
 with_dependents=/…)`、`sample_repo`、`sample_gn_arg(with_features=)`、`sample_service`、
 `sample_service_with_sa`、`sample_sa_id`、`sample_install_dest`、`sample_install_label`、
-`sample_elf(with_dependencies=/with_dependents=)`、`sample_ndk_library`、
-`sample_ndk_mapping`、`ndk_strategies`、`sample_arkts_kit`、`sample_arkts_module`、
+`sample_elf(with_dependencies=/with_dependents=)`、`sample_native_library`、
+`sample_native_mapping`、`native_strategies`、`sample_arkts_kit`、`sample_arkts_module`、
 `sample_names`、`count`。
 
 三条设计约束：
@@ -837,7 +837,7 @@ with_dependents=/…)`、`sample_repo`、`sample_gn_arg(with_features=)`、`samp
 |---|---|
 | `aggregate` 分组数 `>= 10`（假设大库） | 分组互不重复 **且各组之和 == `count('components')`**（能抓住漏分组） |
 | `arch trace` 的 component/subsystem/repo/sdk_modules 全钉字面量 | 链条每一环都在，且 `trace` 报的部件与 `owner_of` **独立报出的一致** |
-| `get_ndk_headers` 的 `component == 'audio_framework'`、`search` 的 `total == 2` | `search` 与 `get` 对同一个 dest 给出**同一个** component；过滤后的 `total` == 直接数库里的行数 |
+| `get_native_headers` 的 `component == 'audio_framework'`、`search` 的 `total == 2` | `search` 与 `get` 对同一个 dest 给出**同一个** component；过滤后的 `total` == 直接数库里的行数 |
 | `git_url` 的 `'bundle.json' in url` | 键齐全、`url` 由 `ref` 构成、`repo` 真能在库里找到（合成库的 manifest 是目录不是文件，原断言直接红） |
 | 依赖闭包 `== [25,175,301,394]` | 跳数**单调不减**（算法性质）+ 文档写着这四个实测值 |
 | `len(collectors) == 12` | 每个采集器都带 `status`；`12` 是采集器注册表的规模，钉它反而与 SKILL.md 自己那句"degraded 数量随库、产品与采集器版本变化"矛盾 |
@@ -848,12 +848,12 @@ with_dependents=/…)`、`sample_repo`、`sample_gn_arg(with_features=)`、`samp
 |---|---|
 | `test_search_totals.py::test_examples_track_current_database_snapshot`<br>`test_search_totals.py::test_eval_tracks_current_database_snapshot` | §15.1 的反门禁。替换为 `test_examples_and_evals_declare_their_measurement_baseline`：只校"声明了 `runtime date=YYYYMMDD`"与"说明了自己是冻结记录"，与库内容无关 |
 | `test_e2e.py::TestToolRegistry::test_tool_names_are_unique` | 与 `test_no_duplicate_names` 是同一条断言的两种写法（`sorted(x)==sorted(set(x))` vs `len(x)==len(set(x))`） |
-| `test_ndk_tools.py::test_registry_contains_ndk_tools` | "某两个工具在 REGISTRY 里"已被 `test_every_tool_runs.py::test_every_tool_is_probed_or_explicitly_skipped`（校**全部** 52 个）覆盖 |
+| `test_native_tools.py::test_registry_contains_native_tools` | "某两个工具在 REGISTRY 里"已被 `test_every_tool_runs.py::test_every_tool_is_probed_or_explicitly_skipped`（校**全部** 52 个）覆盖 |
 
 新增两条防空转的门禁（这类断言删多了会静默失效）：
 - `test_every_tool_runs.py::test_every_present_domain_is_actually_probed`
   ——**按域**判：某张表非空，依赖它的工具就必须拿到探针参数。
-  不用"探到 N 个工具"的绝对阈值，那会把"库小"误判成"选择器坏了"
+  不用"探到 N 个工具"的明确阈值，那会把"库小"误判成"选择器坏了"
   （合成库只有 35/52 个工具能探到，但它一切正常）。
   这条**上线当天就抓到一个真缺口**：`owner_of` 被错挂在 `sample_elf` 上，
   于是"有 `install_targets` 但 `elf_modules` 降级为空"的库会漏探它。
@@ -876,7 +876,7 @@ with_dependents=/…)`、`sample_repo`、`sample_gn_arg(with_features=)`、`samp
 ### 15.6 验证：换一个完全不同的库跑同一套测试
 
 `/tmp/fixture-knowledge.db` 是 `oskm_testing.fixture.create_fixture_db` 造的合成库：
-2 个部件、1 个仓、3 条 install_targets、**没有** elf_modules / ndk_headers /
+2 个部件、1 个仓、3 条 install_targets、**没有** elf_modules / native_headers /
 arkts / sas / hdis / services 的真实内容。
 
 | 套件 | wukong100 真库 | 合成库 |

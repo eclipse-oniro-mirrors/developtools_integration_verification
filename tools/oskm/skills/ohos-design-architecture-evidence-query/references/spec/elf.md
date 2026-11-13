@@ -111,7 +111,7 @@ ELF 二进制模块的 DT_NEEDED 依赖图遍历。
 `total` 是闭包的真实大小，`truncated=true` 表示 `reachable` 被 `limit` 截断——
 **截断是显式的，别把截断后的条数当成闭包大小**。
 
-`reverse` 方向返回"谁依赖了 root"的闭包——回答"如果我改了 libfoo，谁会受影响"。
+`reverse` 方向返回"谁依赖了 root"的闭包——回答"如果本文改了 libfoo，谁会受影响"。
 
 **错误码**
 
@@ -151,4 +151,4 @@ ELF 二进制模块的 DT_NEEDED 依赖图遍历。
 }
 ```
 
-比 `elf_dependencies(direction='reverse', max_distance=1)` 更直接——只返回直接边，不带 path/via。适合"谁直接引用了我"的快速查询。
+比 `elf_dependencies(direction='reverse', max_distance=1)` 更直接——只返回直接边，不带 path/via。适合"谁直接引用了本文"的快速查询。

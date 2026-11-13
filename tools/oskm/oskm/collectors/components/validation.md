@@ -6,7 +6,7 @@
 
 已实现 `collectors/components` 的单索引读取、源码定位、bundle/ohos.build 适配、诊断、不可变结果和查询；命令入口为 `scan_parts.py`。复用公共 JSON 持久化，并增加 parts 类型分派与验证。
 
-逻辑根为 snapshot/parts。支持身份、源码清单路径、deps、build（包含完整 inner_kits 与 conditions）、features、syscap；不填充源码不存在的字段。查询包括单部件、筛选、分页、反向依赖与子系统计数。没有读取其他 out 过程文件，没有修改 build 仓或部件源清单。
+逻辑根为 snapshot/parts。支持身份、源码清单路径、deps、build（包含完整 inner_kits 与 conditions）、features、syscap；不填充源码不存在的字段。查询包括单部件、筛选、分页、反向依赖与子系统计数。没有读取其余 out 过程文件，没有修改 build 仓或部件源清单。
 
 ## 2. 自动化验证
 
@@ -29,7 +29,7 @@ python3.12 -m oskm_cli --db "$DB" ask list_issues
 - 单元测试 **93 项通过**：部件 20 项，已有 services/SA/HDI 共 73 项。
 - 覆盖单一 out 输入、禁止摘要兜底、嵌套声明保真、只读结果、缺省/null/空集合、重复键、清单歧义、多部件共享 ohos.build、子系统差异、路径/符号链接边界、预算和缓存、取消及回调。
 - 查询验证包括清单外依赖、重复依赖去重、第三方依赖谓词、分页游标跨格式复用、错游标拒绝和聚合计数。
-- 持久化验证包括JSON 文件与 API、旧文件覆盖、失败/取消保留旧文件、输入保护、产物篡改拒绝以及 CLI 对其他领域产物的拒绝。
+- 持久化验证包括JSON 文件与 API、旧文件覆盖、失败/取消保留旧文件、输入保护、产物篡改拒绝以及 CLI 对其余领域产物的拒绝。
 - 产品验收采用独立 JSON 解码与字段对照，并通过 Python 文件打开审计核对扫描的真实输入集合；不调用扫描器提取函数生成期望结果。
 
 运行验证使用标准库；JSON Schema 文件提供给外部消费者，结构及跨字段约束由本项目 validation.py 校验，本次未依赖第三方 JSON Schema 引擎。
@@ -67,7 +67,7 @@ python3.12 -m oskm_cli --db "$DB" ask list_issues
 }
 ```
 
-该记录仍保留 name、subsystem、manifest；deps/build/features/syscap 不从有歧义的清单导入。部件没有被删除，也没有用索引的 deps_components/innerapis 摘要替代。其他部件继续正常提取。
+该记录仍保留 name、subsystem、manifest；deps/build/features/syscap 不从有歧义的清单导入。部件没有被删除，也没有用索引的 deps_components/innerapis 摘要替代。其余部件继续正常提取。
 
 消除该降级需要由源码维护方确认预期 features 集合、合并为唯一属性后重新扫描。此次开发没有修改该源码文件，也未放宽重复键规则。
 

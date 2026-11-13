@@ -30,7 +30,7 @@ from urllib.request import Request, urlopen
 
 from .environment import (
     DOWNLOAD_SOURCES,
-    HARMONYOS_CI,
+    INTERNAL_CI,
     OPENHARMONY_CI,
     OPENHARMONY_COMPONENT,
     SOURCE_ENV,
@@ -206,7 +206,7 @@ def _download_archive(
     retry_delay: float,
 ) -> Path:
     """Download the dated runtime archive into ``work_dir``."""
-    if config.source == HARMONYOS_CI:
+    if config.source == INTERNAL_CI:
         url = f'{config.endpoint}/{date}'
         archive = work_dir / 'knowledge.tar.gz'
     elif config.source == OPENHARMONY_CI:
@@ -310,7 +310,7 @@ def _runtime_symlink_target(
     target = link_name.replace('\\', '/')
     if PurePosixPath(target).is_absolute():
         raise DownloadError(
-            f'运行时归档包含绝对符号链接: {member_name} -> {link_name}')
+            f'运行时归档包含指向完整路径的符号链接: {member_name} -> {link_name}')
     joined = posixpath.normpath(f'{member_name.parent}/{target}')
     resolved = _runtime_relative_path(joined)
     if _runtime_area(resolved) != _runtime_area(member_name):
@@ -319,133 +319,98 @@ def _runtime_symlink_target(
     return target
 
 
-def extract_runtime(archive: Path, destination: Path) -> Path:
-    """Securely extract a complete runtime archive into ``destination``.
+def _runtime_members(bundle):
+    members = []
+    names = set()
+    non_directory_names = set()
+    for member in bundle.getmembers():
+        path = _runtime_relative_path(member.name)
+        if member.isfile() and (path.name == '.DS_Store' or path.name.startswith('._')):
+            continue
+        area = _runtime_area(path)
+        allowed_container = member.isdir() and path in (
+            PurePosixPath('.'), PurePosixPath('interface'))
+        if area is None and not allowed_container:
+            if path.parent == PurePosixPath('.') and member.isfile():
+                continue
+            raise DownloadError(f'运行时归档包含未允许的顶层路径: {member.name}')
+        if path in names and not member.isdir():
+            raise DownloadError(f'运行时归档包含重复路径: {member.name}')
+        names.add(path)
+        if not member.isdir():
+            non_directory_names.add(path)
+        if member.isdir():
+            kind = 'dir'
+        elif member.isfile():
+            kind = 'file'
+        elif member.issym():
+            kind = 'symlink'
+            _runtime_symlink_target(path, member.linkname)
+        else:
+            raise DownloadError(f'运行时归档包含不支持的文件类型: {member.name}')
+        members.append((path, kind, member))
+    return members, names, non_directory_names
 
-    The accepted layout is ``knowledge.db`` (required) plus
-    ``interface/sdk-js/`` and ``interface/sdk_c/`` at the archive root, and
-    optionally ``oskm-cli.pyz``.*/
-    Additional regular files at the archive root are ignored and never
-    extracted, so build logs and metadata emitted by packaging jobs do not
-    invalidate an otherwise complete runtime bundle.
-    Symlinks are allowed when their target stays inside the same SDK tree.
-    """
+
+def _validate_runtime_members(members, names, non_directory_names):
+    db_found = [member for path, kind, member in members
+                if path == PurePosixPath(RUNTIME_DB_NAME)
+                and kind in ('file', 'symlink')]
+    if len(db_found) != 1 or db_found[0].islnk():
+        raise DownloadError(f'运行时归档根目录必须恰有一个 {RUNTIME_DB_NAME}')
+    if not db_found[0].isfile():
+        raise DownloadError(f'运行时归档中的 {RUNTIME_DB_NAME} 必须是普通文件')
+    cli_found = [member for path, kind, member in members
+                 if path == PurePosixPath(RUNTIME_CLI_NAME)
+                 and kind in ('file', 'symlink')]
+    if len(cli_found) > 1:
+        raise DownloadError(f'运行时归档根目录只能有一个 {RUNTIME_CLI_NAME}')
+    if cli_found and not cli_found[0].isfile():
+        raise DownloadError(f'运行时归档中的 {RUNTIME_CLI_NAME} 必须是普通文件')
+    for directory in RUNTIME_SDK_DIRS:
+        prefix = PurePosixPath(directory)
+        if not any(path != prefix and prefix in path.parents for path in names):
+            raise DownloadError(f'运行时归档缺少非空的 {directory}/ 目录')
+    symlink_names = {path for path, kind, _ in members if kind == 'symlink'}
+    for path in non_directory_names:
+        if any(parent in symlink_names for parent in path.parents):
+            raise DownloadError(f'运行时归档在符号链接下写入文件: {path}')
+
+
+def _write_runtime_members(bundle, destination, members):
+    destination.mkdir(parents=True, exist_ok=True)
+    for path, kind, _ in members:
+        if kind == 'dir':
+            (destination / path).mkdir(parents=True, exist_ok=True)
+    for path, kind, member in members:
+        if kind != 'file':
+            continue
+        target = destination / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        source = bundle.extractfile(member)
+        if source is None:
+            raise DownloadError(f'无法读取运行时归档成员: {member.name}')
+        with source, target.open('wb') as output:
+            shutil.copyfileobj(source, output)
+        target.chmod((member.mode or 0o644) & 0o777)
+    for path, kind, member in members:
+        if kind != 'symlink':
+            continue
+        target = destination / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        os.symlink(member.linkname, target)
+
+
+def extract_runtime(archive: Path, destination: Path) -> Path:
+    """Securely extract a complete runtime archive into ``destination``."""
     if not archive.name.lower().endswith(TAR_SUFFIXES):
         raise DownloadError(f'运行时归档必须是 tar 格式: {archive.name}')
-
     destination = Path(destination)
     try:
         with tarfile.open(archive, 'r:*') as bundle:
-            members = []
-            names = set()
-            non_directory_names = set()
-            for member in bundle.getmembers():
-                path = _runtime_relative_path(member.name)
-                # macOS 的 `tar` 会给每个文件加一条 AppleDouble（`._name`）；
-                # 打包脚本留下的 `.DS_Store` 同理。它们是打包噪音，不是运行时
-                # 内容——直接丢掉，否则在 macOS 上打的包会被自己的校验器拒收。
-                if member.isfile() and (
-                        path.name == '.DS_Store'
-                        or path.name.startswith('._')):
-                    continue
-                area = _runtime_area(path)
-                # ``tar czf knowledge.tar.gz .`` emits ``.`` and ``interface/``
-                # directory entries in addition to the payload.  They are
-                # harmless containers and should not make an otherwise valid
-                # archive fail validation.
-                allowed_container = member.isdir() and path in (
-                    PurePosixPath('.'), PurePosixPath('interface'))
-                if area is None and not allowed_container:
-                    if path.parent == PurePosixPath('.') and member.isfile():
-                        # Daily build jobs commonly add logs/manifests beside
-                        # the runtime payload.  They are not part of the
-                        # runtime and are deliberately skipped below.
-                        continue
-                    raise DownloadError(
-                        f'运行时归档包含未允许的顶层路径: {member.name}')
-                if path in names and not member.isdir():
-                    raise DownloadError(f'运行时归档包含重复路径: {member.name}')
-                names.add(path)
-                if not member.isdir():
-                    non_directory_names.add(path)
-                if member.isdir():
-                    kind = 'dir'
-                elif member.isfile():
-                    kind = 'file'
-                elif member.issym():
-                    kind = 'symlink'
-                    _runtime_symlink_target(path, member.linkname)
-                else:
-                    raise DownloadError(
-                        f'运行时归档包含不支持的文件类型: {member.name}')
-                members.append((path, kind, member))
-
-            # knowledge.db 是**必需**的，且必须恰有一个普通文件。
-            db_found = [
-                member for path, kind, member in members
-                if path == PurePosixPath(RUNTIME_DB_NAME)
-                and kind in ('file', 'symlink')
-            ]
-            if len(db_found) != 1 or db_found[0].islnk():
-                raise DownloadError(
-                    f'运行时归档根目录必须恰有一个 {RUNTIME_DB_NAME}')
-            if not db_found[0].isfile():
-                raise DownloadError(
-                    f'运行时归档中的 {RUNTIME_DB_NAME} 必须是普通文件')
-
-            # CLI 是**可选**的：归档里有就一起装，没有就沿用已装的/源码树的。
-            # 这条兼容是有期限的——服务器端还在往归档里补 `oskm-cli.pyz`，
-            # 补完之前旧归档必须照样能装。（`install` 会在状态里记下到底装没装。）
-            cli_found = [
-                member for path, kind, member in members
-                if path == PurePosixPath(RUNTIME_CLI_NAME)
-                and kind in ('file', 'symlink')
-            ]
-            if len(cli_found) > 1:
-                raise DownloadError(
-                    f'运行时归档根目录只能有一个 {RUNTIME_CLI_NAME}')
-            if cli_found and not cli_found[0].isfile():
-                raise DownloadError(
-                    f'运行时归档中的 {RUNTIME_CLI_NAME} 必须是普通文件')
-
-            for directory in RUNTIME_SDK_DIRS:
-                prefix = PurePosixPath(directory)
-                if not any(
-                        path != prefix and prefix in path.parents
-                        for path in names):
-                    raise DownloadError(
-                        f'运行时归档缺少非空的 {directory}/ 目录')
-
-            symlink_names = {
-                path for path, kind, _ in members if kind == 'symlink'}
-            for path in non_directory_names:
-                if any(parent in symlink_names for parent in path.parents):
-                    raise DownloadError(
-                        f'运行时归档在符号链接下写入文件: {path}')
-
-            destination.mkdir(parents=True, exist_ok=True)
-            for path, kind, member in members:
-                if kind == 'dir':
-                    (destination / path).mkdir(parents=True, exist_ok=True)
-            for path, kind, member in members:
-                if kind != 'file':
-                    continue
-                target = destination / path
-                target.parent.mkdir(parents=True, exist_ok=True)
-                source = bundle.extractfile(member)
-                if source is None:
-                    raise DownloadError(f'无法读取运行时归档成员: {member.name}')
-                with source, target.open('wb') as output:
-                    shutil.copyfileobj(source, output)
-                # 保留归档里的权限位：`oskm-cli.pyz` 在包里是 0755，直接用
-                # `open('wb')` 落盘会变成 0644，装完就 permission denied。
-                target.chmod((member.mode or 0o644) & 0o777)
-            for path, kind, member in members:
-                if kind != 'symlink':
-                    continue
-                target = destination / path
-                target.parent.mkdir(parents=True, exist_ok=True)
-                os.symlink(member.linkname, target)
+            members, names, non_directory_names = _runtime_members(bundle)
+            _validate_runtime_members(members, names, non_directory_names)
+            _write_runtime_members(bundle, destination, members)
     except DownloadError:
         raise
     except (OSError, tarfile.TarError, RuntimeError) as exc:

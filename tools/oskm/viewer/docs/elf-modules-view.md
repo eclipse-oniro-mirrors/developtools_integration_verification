@@ -52,7 +52,7 @@
 | 与运行镜头的连通性 | services.executable 命中 162/164；sas.libpath 命中 161/165；hdis.library 命中 46/46 | ELF 能接回"谁把这个 so 装进了进程" |
 
 目录分布（107 个目录，前 7）：`system/lib` 1,113 · `system/lib/platformsdk` 733 · `vendor/lib` 258 ·
-`system/lib/module` 149 · `system/lib/module/ani` 125 · `system/bin` 111 · `system/lib/ndk` 111。
+`system/lib/module` 149 · `system/lib/module/ani` 125 · `system/bin` 111 · `system/lib/native` 111。
 
 ---
 
@@ -122,7 +122,7 @@ musl 把 libc 合进了动态链接器本体，镜像里不存在名为 `libc.so
 | `libutils.z.so` | `system/lib/chipset-sdk-sp/` · 1000 · **1,906** · c_utils | `system/lib/module/arkts/` · 1000 · 0 · ets_utils |
 | `libconfiguration.z.so` | `system/lib/platformsdk/` · 6 · 108 · ability_base | `system/lib/module/` · 9 · 0 · ace_engine |
 | `libsms.z.so` | `system/lib/platformsdk/` · 6 · 3 · window_manager | `system/lib/module/telephony/` · 1000 · 0 · sms_mms |
-| `libhid.z.so` | `system/lib/ndk/` · 3 · 0 · external_device_manager | `system/lib/module/bluetooth/` · 1000 · 0 · bluetooth |
+| `libhid.z.so` | `system/lib/native/` · 3 · 0 · external_device_manager | `system/lib/module/bluetooth/` · 1000 · 0 · bluetooth |
 | `liboverlay.z.so` | `system/lib/module/` · 9 · 0 · ace_engine | `system/lib/module/bundle/` · 1000 · 0 · bundle_framework |
 | `libdeviceinfo.z.so` | `system/lib/module/` · 9 · 0 · init | `system/lib/module/enterprise/` · 1000 · 0 · enterprise_device_management |
 | `libbluetoothmanager.z.so` | `system/lib/module/` · 9 · 0 · bluetooth | `system/lib/module/enterprise/` · 1000 · 0 · enterprise_device_management |
