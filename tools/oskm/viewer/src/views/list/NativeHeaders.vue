@@ -7,13 +7,13 @@ import { COLUMNS, GROUPS, MATCH_STRATEGIES } from '../../model/columns/native_he
 import { useQueryState } from '../../composables/useQueryState.js'
 import EntityTable from '../../components/EntityTable.vue'
 
-const store = useViewerStore()
-const all = shallowRef([])
-const strategy = useQueryState('strategy', '')
-const subsystem = useQueryState('subsystem', '')
+const store = useViewerStore();
+const all = shallowRef([]);
+const strategy = useQueryState('strategy', '');
+const subsystem = useQueryState('subsystem', '');
 
 const subsystems = computed(() =>
-  [...new Set(all.value.map(r => r.subsystem).filter(Boolean))].sort())
+  [...new Set(all.value.map(r => r.subsystem).filter(Boolean))].sort());
 const libraryCount = computed(() => new Set(all.value.map(r => `${r.elf_module_id}/${r.dest}`)).size);
 const rows = computed(() => all.value
   .filter(r => !strategy.value || r.match_strategy === strategy.value)
