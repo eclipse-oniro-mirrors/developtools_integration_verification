@@ -17,6 +17,7 @@ from oskm_runtime.environment import (
     OPENHARMONY_CI,
     SOURCE_ENV,
 )
+import build_cli
 from oskm_testing.fixture import create_schema, write_minimal_pyz
 
 # tests -> skill root（oskm_runtime）-> skills -> packages/oskm
@@ -29,6 +30,20 @@ _OSKM = _HERE.parents[2]
 
 
 class RuntimeInstallTests(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # 本地运行时用真实 CLI：它必须自带 `oskm_cli.database` 契约。
+        # `write_minimal_pyz` 只用于“结构合法但不可查询”的异常分支。
+        cls.cli_temp = tempfile.TemporaryDirectory(prefix='oskm source cli ')
+        cls.source_cli = Path(
+            build_cli.build_pyz(
+                Path(cls.cli_temp.name) /
+                cli_install.ARTIFACT_NAME)['archive'])
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cli_temp.cleanup()
 
     @staticmethod
     def drop_scan_cpu_arch(path):
@@ -133,6 +148,10 @@ class RuntimeInstallTests(unittest.TestCase):
             source / 'out' / relative / 'oskm/knowledge.db',
             cpu_arch=cpu_arch,
         )
+        # 本地运行时的三件套必须齐全；缺 CLI 的场景由专门用例替换或删除它。
+        source_cli = source / 'cli/dist' / cli_install.ARTIFACT_NAME
+        source_cli.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(self.source_cli, source_cli)
         return source
 
 
@@ -240,6 +259,106 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertNotIn('cli', document)
 
 
+    def test_source_runtime_with_databaseless_cli_falls_back_to_download(self):
+        """结构合法但缺 schema 模块的 CLI 不能当作完整本地运行时。"""
+        source = self.write_source_runtime(Path('wukong100'))
+        write_minimal_pyz(
+            source / 'cli/dist' / cli_install.ARTIFACT_NAME)
+        bundle = self.write_bundle(marker='databaseless-source-cli')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_called_once()
+        self.assertEqual(
+            cli_install.installed_path(self.root).read_bytes(),
+            (bundle / cli_install.ARTIFACT_NAME).read_bytes())
+
+
+    def test_source_runtime_without_cli_falls_back_to_download(self):
+        """源码根缺少 CLI 时本地候选不完整，必须下载归档补齐 CLI。"""
+        source = self.write_source_runtime(Path('wukong100'))
+        (source / 'cli/dist' / cli_install.ARTIFACT_NAME).unlink()
+        bundle = self.write_bundle(marker='missing-source-cli')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_called_once()
+        self.assertEqual(
+            cli_install.installed_path(self.root).read_bytes(),
+            (bundle / cli_install.ARTIFACT_NAME).read_bytes())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], OPENHARMONY_CI)
+        self.assertNotEqual(document['source'], 'local')
+
+
+    def test_install_uses_source_cli_when_default_validator_is_unavailable(self):
+        """源码根 CLI 应能独立提供 schema 校验器，不依赖 skill 所在源码树。"""
+        source = self.write_source_runtime(Path('wukong100'))
+        source_cli = source / 'cli/dist' / cli_install.ARTIFACT_NAME
+        missing_default = cli_install.CliInstallError('skill 不在 CLI 源码树内')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'default_validator',
+                    side_effect=missing_default), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle') as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        self.assertEqual(
+            cli_install.installed_path(self.root).read_bytes(),
+            source_cli.read_bytes())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+
+
+    def test_install_downloads_when_source_runtime_has_no_cli_validator(self):
+        """全新源码环境没有 CLI 时，install 应先下载归档再用归档校验。"""
+        source = self.write_source_runtime(Path('wukong100'))
+        (source / 'cli/dist' / cli_install.ARTIFACT_NAME).unlink()
+        bundle = self.write_bundle(marker='fresh-download')
+        missing_cli = cli_install.CliInstallError('CLI 尚未下载')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'default_validator', side_effect=missing_cli), \
+                mock.patch.object(
+                    install, 'bundle_validator',
+                    return_value=lambda path: None), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_called_once()
+        self.assertTrue((self.root / 'knowledge.db').is_file())
+        for relative in state.SDK_PATHS.values():
+            self.assertTrue((self.root / relative / 'marker.txt').is_file())
+        self.assertEqual(
+            cli_install.installed_path(self.root).read_bytes(),
+            (bundle / cli_install.ARTIFACT_NAME).read_bytes(),
+        )
+
+
     def test_install_prefers_one_level_source_runtime_without_download(self):
         source = self.write_source_runtime(Path('wukong100'))
         bundle = self.write_bundle(marker='fallback')
@@ -265,6 +384,104 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(document['source_root'], str(source.resolve()))
 
 
+    def test_install_uses_explicit_source_root_from_outside_the_tree(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        elsewhere = Path(self.temp.name) / 'elsewhere'
+        elsewhere.mkdir()
+        bundle = self.write_bundle(marker='fallback')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=elsewhere), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102',
+                source_root=source)
+
+        download.assert_not_called()
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['source_root'], str(source.resolve()))
+
+
+    def test_install_finds_source_root_from_a_cwd_subdirectory(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        subdir = source / 'foundation' / 'ace_engine'
+        subdir.mkdir(parents=True)
+        bundle = self.write_bundle(marker='fallback')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=subdir), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['source_root'], str(source.resolve()))
+
+
+    def test_explicit_source_root_does_not_silently_fall_back(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        invalid = Path(self.temp.name) / 'not-an-oh-tree'
+        invalid.mkdir()
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle') as download:
+            with self.assertRaisesRegex(ValueError, 'OpenHarmony 源码根'):
+                install.install_runtime(
+                    self.root, OPENHARMONY_CI, '20261102',
+                    source_root=invalid)
+
+        download.assert_not_called()
+
+
+    def test_install_uses_the_source_tree_cli_with_a_local_runtime(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        source_cli = source / 'cli/dist' / cli_install.ARTIFACT_NAME
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(install, 'download_runtime_bundle') as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        installed_cli = cli_install.installed_path(self.root)
+        self.assertEqual(installed_cli.read_bytes(), source_cli.read_bytes())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['cli']['path'], cli_install.ARTIFACT_NAME)
+
+
+    def test_install_uses_cli_beside_nested_source_runtime(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        source_cli = source / 'out/wukong100/oskm' / cli_install.ARTIFACT_NAME
+        shutil.copy2(self.source_cli, source_cli)
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(install, 'download_runtime_bundle') as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        installed_cli = cli_install.installed_path(self.root)
+        self.assertEqual(installed_cli.read_bytes(), source_cli.read_bytes())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['cli']['path'], cli_install.ARTIFACT_NAME)
+
     def test_install_prefers_two_level_source_runtime_without_download(self):
         source = self.write_source_runtime(
             Path('generic_generic_arm_64only/general_all_phone_standard'))
@@ -282,6 +499,30 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertTrue((self.root / 'knowledge.db').is_file())
         for relative in state.SDK_PATHS.values():
             self.assertTrue((self.root / relative / 'marker.txt').is_file())
+
+
+    def test_install_prefers_artifacts_database_without_download(self):
+        source = Path(self.temp.name) / 'source'
+        source.mkdir()
+        (source / '.gn').write_text('buildconfig = "//build/config/BUILDCONFIG.gn"\n')
+        (source / 'out').mkdir()
+        self.write_sdks(source)
+        self.write_db(source / 'artifacts/wukong100/knowledge.db')
+        source_cli = source / 'cli/dist' / cli_install.ARTIFACT_NAME
+        source_cli.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(self.source_cli, source_cli)
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(install, 'download_runtime_bundle') as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        self.assertTrue((self.root / 'knowledge.db').is_file())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
 
 
     def test_install_prefers_newest_source_runtime_db(self):

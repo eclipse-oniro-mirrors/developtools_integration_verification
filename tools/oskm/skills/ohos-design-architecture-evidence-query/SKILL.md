@@ -3,7 +3,7 @@ name: ohos-design-architecture-evidence-query
 description: "当用户需要安装或更新 OpenHarmony 架构证据运行时，或询问产品顶层架构证据时使用：安装 DB、两套 SDK 与 oskm-cli，再用 CLI 查询子系统、部件、代码仓、镜像文件归属、影响面、SysCap/InnerAPI/SDK 接口和 GN 编译开关。只读已有库；不扫描、不编译、不改库。"
 metadata:
   author: "oskm team"
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 
 # OpenHarmony 架构证据运行时与 CLI 使用
@@ -51,9 +51,11 @@ refresh / cli-path」，以及「这个产品由哪些子系统/部件构成」�
 `download-db` · `validate-db` · `cli-path`）；查询**直接调 CLI**。CLI 是独立产物，
 但随发布归档交付：固定名 `oskm-cli.pyz`、不记版本、不锁摘要（版本问 `--version`）。
 数据过期时显式 `refresh`，**查询不会自动触发下载**。
-
+当前目录是 OpenHarmony 源码根或其子目录时，**源码树优先**：向上探测本地 `out/**/oskm/knowledge.db`（或 `artifacts/*/knowledge.db`）、源码树 `oskm-cli.pyz`、`interface/sdk-js`、`interface/sdk_c` 可用则不下载；不在源码树内时用 `--source-root <OH源码根>`。
 ```bash
-python3 bootstrap.py install --runtime-root ~/.oskm   # 装 DB + 两套 SDK + CLI
+AGENT_CWD="$PWD"; SKILL_DIR=/path/to/ohos-design-architecture-evidence-query
+python3 "$SKILL_DIR/bootstrap.py" install --runtime-root ~/.oskm; cd "$AGENT_CWD"  # 安装完成后回到 Agent 启动目录
+python3 "$SKILL_DIR/bootstrap.py" install --runtime-root ~/.oskm --source-root <OH源码根>  # cwd 不在源码树内
 CLI=~/.oskm/oskm-cli.pyz; DB=~/.oskm/knowledge.db   # 实际位置问 cli-path
 python3 $CLI --db $DB arch overview
 ```

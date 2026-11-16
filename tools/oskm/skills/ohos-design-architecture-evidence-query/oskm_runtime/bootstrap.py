@@ -136,19 +136,32 @@ def _install_arguments(prog: str, description: str) -> argparse.ArgumentParser:
                         help='下载方式；默认读 OSKM_DOWNLOAD_SOURCE，'
                              '未配置时为 OPENHARMONY_CI')
     parser.add_argument('--date', help='YYYYMMDD；缺省取系统当天')
+    parser.add_argument(
+        '--source-root', default=None,
+        help='OpenHarmony 源码根；指定后只优先使用该源码根的本地构建。'
+             '不指定时从 cwd 向上探测最近的源码根')
     return parser
 
 
 def _do_install(root: Path, args, *, skip_db: bool, skip_sdk: bool) -> int:
     try:
         source = args.source or download_source()
+        source_root = (Path(args.source_root).expanduser()
+                       if args.source_root else None)
         # 归档自带 CLI，所以没有"先装 CLI 再下载 DB"的必要，也没有单独的
         # CLI 下载端点（2026-11-12 之前有，已删）。
         install.install_runtime(
             root, source, args.date or state.today(),
             download_db=not skip_db, download_sdk=not skip_sdk,
+            source_root=source_root,
         )
-    except (DownloadError, cli_install.CliInstallError, OSError, RuntimeError,
+    except DownloadError as exc:
+        print(f'错误: {exc}', file=sys.stderr)
+        print('提示: 未检测到可用的源码根本地运行时。若源码根在别处，'
+              '用 --source-root <path> 指定，或在源码根及其子目录执行 install。',
+              file=sys.stderr)
+        return EXIT_ERROR
+    except (cli_install.CliInstallError, OSError, RuntimeError,
             ValueError) as exc:
         print(f'错误: {exc}', file=sys.stderr)
         return EXIT_ERROR

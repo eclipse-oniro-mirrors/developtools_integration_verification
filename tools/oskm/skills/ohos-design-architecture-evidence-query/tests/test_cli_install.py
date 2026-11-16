@@ -169,7 +169,10 @@ class ResolutionOrder(unittest.TestCase):
 
     def test_env_override_that_points_at_nothing_falls_through(self):
         installed = real_pyz(cli_install.installed_path(self.root))
-        with mock.patch.dict('os.environ', {CLI_PATH_ENV: '/nonexistent/x.pyz'}):
+        with mock.patch.dict(
+                'os.environ', {CLI_PATH_ENV: '/nonexistent/x.pyz'}), \
+                mock.patch.object(cli_install, 'find_source_tree',
+                                  return_value=None):
             location = cli_install.resolve_cli(self.root)
         self.assertEqual(location.kind, cli_install.INSTALLED)
         self.assertEqual(location.path, installed.resolve())
@@ -204,9 +207,22 @@ class ResolutionOrder(unittest.TestCase):
         self.assertIn('不是有效 zip', message)
         self.assertIn(str(self.root / 'bad.pyz'), message)
 
-    def test_installed_artifact_beats_the_source_tree(self):
+    def test_source_tree_beats_the_installed_artifact(self):
         installed = real_pyz(cli_install.installed_path(self.root))
         location = cli_install.resolve_cli(self.root)
+        self.assertEqual(location.path, _OSKM.resolve())
+        self.assertEqual(location.kind, cli_install.SOURCE)
+        self.assertEqual(
+            location.sys_path,
+            (str(_OSKM / 'cli'), str(_OSKM)),
+        )
+        self.assertNotEqual(location.path, installed.resolve())
+
+    def test_installed_artifact_is_used_when_no_source_tree_exists(self):
+        installed = real_pyz(cli_install.installed_path(self.root))
+        with mock.patch.object(cli_install, 'find_source_tree',
+                               return_value=None):
+            location = cli_install.resolve_cli(self.root)
         self.assertEqual(location.path, installed.resolve())
         self.assertEqual(location.kind, cli_install.INSTALLED)
         self.assertEqual(location.sys_path, (str(installed.resolve()),))
@@ -216,7 +232,7 @@ class ResolutionOrder(unittest.TestCase):
         with mock.patch.object(cli_install, 'find_source_tree',
                                return_value=None):
             with self.assertRaisesRegex(cli_install.CliInstallError,
-                                        r'2\. .*oskm-cli\.pyz'):
+                                        r'3\. .*oskm-cli\.pyz'):
                 cli_install.resolve_cli(self.root, allow_download=False)
 
     def test_falls_back_to_the_source_tree_when_nothing_is_installed(self):
@@ -256,7 +272,9 @@ class EnsureAndRecordTests(unittest.TestCase):
         """状态里的 `cli` 段是**出处记录**，不是期望值——与 `db.sha256` 同性质。"""
         path = real_pyz(cli_install.installed_path(self.root))
         self.write_managed_state()
-        location = cli_install.ensure_cli(self.root)
+        with mock.patch.object(cli_install, 'find_source_tree',
+                               return_value=None):
+            location = cli_install.ensure_cli(self.root)
 
         self.assertEqual(location.kind, cli_install.INSTALLED)
         document = json.loads(
@@ -268,7 +286,9 @@ class EnsureAndRecordTests(unittest.TestCase):
 
     def test_ensure_does_not_touch_an_unmanaged_runtime(self):
         real_pyz(cli_install.installed_path(self.root))
-        cli_install.ensure_cli(self.root)
+        with mock.patch.object(cli_install, 'find_source_tree',
+                               return_value=None):
+            cli_install.ensure_cli(self.root)
         self.assertFalse((self.root / state.STATE_NAME).exists())
 
     def test_a_source_tree_cli_is_not_recorded_as_installed(self):
@@ -287,7 +307,9 @@ class EnsureAndRecordTests(unittest.TestCase):
             'version': 2, 'source': 'OPENHARMONY_CI', 'date': '20261111',
             'db': {'path': 'knowledge.db'},
         })
-        cli_install.ensure_cli(self.root)
+        with mock.patch.object(cli_install, 'find_source_tree',
+                               return_value=None):
+            cli_install.ensure_cli(self.root)
         document = json.loads(
             (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
         self.assertEqual(document['version'], 2)     # 只补 cli，不改版本号
@@ -323,7 +345,9 @@ class LoadCliModuleTests(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory(prefix='oskm pyz ') as temp:
             archive = real_pyz(Path(temp) / 'oskm-cli.pyz')
-            location = cli_install.resolve_cli(Path(temp))
+            with mock.patch.object(cli_install, 'find_source_tree',
+                                   return_value=None):
+                location = cli_install.resolve_cli(Path(temp))
             self.assertEqual(location.kind, cli_install.INSTALLED)
             self.assertEqual(location.sys_path, (str(archive.resolve()),))
 

@@ -11,7 +11,8 @@
     db_download.py   HTTP、安全解压、SQLite 校验、原子替换
     cli_install.py   定位 / 下载 / 结构校验 / 载入 CLI 产物
     state.py         .oskm-runtime.json 读写、廉价刷新判定
-    install.py       安装与回滚、源码树探测
+    install.py       安装与回滚、源码树探测（向上找 OpenHarmony 源码根）、
+                     源码树内 DB/CLI/SDK 本地运行时候选
     doctor.py        环境自检
     bootstrap.py     唯一入口：只负责装，不负责查
 

@@ -357,6 +357,22 @@ class DoctorCommand(unittest.TestCase):
         self.assertIn('非托管', output)
 
 
+    def test_doctor_hints_local_runtime_when_uninstalled(self):
+        local = install.LocalRuntime(
+            source_root=Path('/fake/source'),
+            db_path=Path('/fake/source/out/wukong100/oskm/knowledge.db'))
+        stdout = io.StringIO()
+        with mock.patch.object(
+                install, 'find_local_runtime', return_value=local), \
+                contextlib.redirect_stdout(stdout):
+            code = doctor.main([str(self.root)])
+
+        output = stdout.getvalue()
+        self.assertEqual(code, 0, output)
+        self.assertIn('检测到源码根本地构建', output)
+        self.assertIn('--source-root', output)
+
+
     def _complete_runtime(self):
         create_fixture_db(self.root / 'knowledge.db')
         for name, relative in state.SDK_PATHS.items():
@@ -394,7 +410,7 @@ class InstallCommand(unittest.TestCase):
         self.assertEqual(code, 0, err)
         install_runtime.assert_called_once_with(
             self.root.resolve(), OPENHARMONY_CI, '20261102',
-            download_db=False, download_sdk=True)
+            download_db=False, download_sdk=True, source_root=None)
 
     def test_install_forwards_source_and_date(self):
         with mock.patch.object(install, 'install_runtime') as install_runtime:
@@ -405,7 +421,20 @@ class InstallCommand(unittest.TestCase):
         self.assertEqual(code, 0, err)
         install_runtime.assert_called_once_with(
             self.root.resolve(), INTERNAL_CI, '20261102',
-            download_db=True, download_sdk=False)
+            download_db=True, download_sdk=False, source_root=None)
+
+
+    def test_install_forwards_explicit_source_root(self):
+        with mock.patch.object(install, 'install_runtime') as install_runtime:
+            code, _, err = capture([
+                'install', '--source-root', '/oh/source',
+                '--runtime-root', str(self.root), '--date', '20261102',
+                '--skip-db'])
+        self.assertEqual(code, 0, err)
+        install_runtime.assert_called_once_with(
+            self.root.resolve(), OPENHARMONY_CI, '20261102',
+            download_db=False, download_sdk=True,
+            source_root=Path('/oh/source'))
 
     def test_install_does_not_resolve_a_cli_beforehand(self):
         """CLI 是归档的一部分，install 没有"先装 CLI"这一步。
@@ -431,6 +460,7 @@ class InstallCommand(unittest.TestCase):
                  '--date', '20261102'])
         self.assertEqual(code, 1)
         self.assertIn('no archive anywhere', err)
+        self.assertIn('--source-root', err)
 
     def test_install_rejects_both_skip_flags(self):
         stderr = io.StringIO()
@@ -507,7 +537,7 @@ class RefreshCommand(unittest.TestCase):
         # CLI 随归档一起来，所以 refresh 不单独传 cli_location。
         install_runtime.assert_called_once_with(
             self.root.resolve(), OPENHARMONY_CI, '20261112',
-            download_db=True, download_sdk=True)
+            download_db=True, download_sdk=True, source_root=None)
 
 
     def test_explicit_date_is_honoured(self):

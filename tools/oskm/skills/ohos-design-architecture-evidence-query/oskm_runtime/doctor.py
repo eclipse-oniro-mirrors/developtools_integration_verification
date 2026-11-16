@@ -73,12 +73,26 @@ def runtime_is_complete(root: Path) -> bool:
     return True
 
 
+def _hint_local_runtime_candidate() -> None:
+    """Point at a reusable source-tree build when the runtime is missing."""
+    from . import install
+    try:
+        local = install.find_local_runtime()
+    except Exception:
+        return
+    if local is not None:
+        print(f'提示: 检测到源码根本地构建: {local.db_path}')
+        print('      在源码根或其子目录执行 bootstrap.py install，或传 '
+              '--source-root <path>，将优先使用本地构建，不联网。')
+
+
 def _report_runtime(root: Path) -> bool:
     print(f'Runtime root: {root}')
     db_path = root / 'knowledge.db'
     if not db_path.is_file():
         print('Runtime state: 未安装（没有 knowledge.db）；'
               '执行 bootstrap.py install 安装')
+        _hint_local_runtime_candidate()
         # 没装不是"环境坏了"，doctor 仍然算 ready，install 会去装。
         return True
     try:
@@ -131,7 +145,7 @@ def check_environment(root=None) -> bool:
     print('提示: 运行时来自单个 knowledge.tar.gz——里面就是 knowledge.db + '
           f'{cli_install.ARTIFACT_NAME} + 两套 SDK，install 一次装齐；'
           '不要求 Git。CLI 按三级候选解析'
-          f'（$OSKM_CLI → <runtime-root>/{cli_install.ARTIFACT_NAME} → 源码树），'
+          f'（$OSKM_CLI → 源码树 → <runtime-root>/{cli_install.ARTIFACT_NAME}），'
           '全程不单独下载 CLI。')
     print('提示: bootstrap.py 不跑查询。查询直接调 '
           f'<runtime-root>/{cli_install.ARTIFACT_NAME} --db '
