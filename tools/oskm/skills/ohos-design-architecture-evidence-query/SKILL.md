@@ -3,7 +3,7 @@ name: ohos-design-architecture-evidence-query
 description: "当用户需要安装或更新 OpenHarmony 架构证据运行时，或询问产品顶层架构证据时使用：安装 DB、两套 SDK 与 oskm-cli，再用 CLI 查询子系统、部件、代码仓、镜像文件归属、影响面、SysCap/InnerAPI/SDK 接口和 GN 编译开关。只读已有库；不扫描、不编译、不改库。"
 metadata:
   author: "oskm team"
-  version: "3.0.0"
+  version: "3.0.1"
 ---
 
 # OpenHarmony 架构证据运行时与 CLI 使用

@@ -1,8 +1,8 @@
 # 上库清单
 
 - Skill：`ohos-design-architecture-evidence-query`
-- 版本：3.0.0
-- 检查日期：2026-11-12
+- 版本：3.0.1
+- 检查日期：2026-11-16
 
 | # | 检查项 | 结果 | 证据 |
 |---:|---|---|---|
@@ -16,3 +16,5 @@
 | 8 | with skill 评估全部通过 | Pass | `with-skill-report.md`，8/8 通过 |
 | 9 | 上传 with/without 最终评估报告 | Pass | `with-skill-report.md`、`without-skill-report.md` |
 | 10 | skill-judge 达到 B 级或以上 | Pass | `skill-judge-report.md`，109/120（90.8%），A 级 |
+
+> 3.0.1 修复：全新源码树缺少 CLI 时先下载归档；本地运行时必须同时具备 DB、两套 SDK 和可校验 schema 的 CLI。

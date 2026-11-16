@@ -521,7 +521,7 @@ class SkillStaysSmall(unittest.TestCase):
             head,
             r'(?m)^name:\s*ohos-design-architecture-evidence-query\s*$')
         self.assertRegex(head, r'(?m)^  author:\s*["\']oskm team["\']\s*$')
-        self.assertRegex(head, r'(?m)^  version:\s*["\']3\.0\.0["\']\s*$')
+        self.assertRegex(head, r'(?m)^  version:\s*["\']3\.0\.1["\']\s*$')
         self.assertNotRegex(head, r'(?m)^author:')
         self.assertNotRegex(head, r'(?m)^version:')
 

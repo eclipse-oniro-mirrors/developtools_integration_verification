@@ -50,6 +50,18 @@ def default_validator() -> Validator:
     return cli_install.load_database().validate_db
 
 
+def validator_from_pyz(path) -> Validator | None:
+    """Load the schema gate from a specific CLI artifact when it has one."""
+    pyz = Path(path)
+    location = cli_install.CliLocation(
+        path=pyz, kind=cli_install.SOURCE,
+        version=cli_install.pyz_version(pyz), sys_path=(str(pyz),))
+    try:
+        return cli_install.load_database(location).validate_db
+    except cli_install.CliInstallError:
+        return None
+
+
 def bundle_validator(bundle_root) -> Validator:
     """校验器取自**下载下来的那个归档**自带的 `oskm-cli.pyz`。
 
@@ -160,7 +172,7 @@ def find_local_runtime(
         source_root=None, *, validate: Validator | None = None,
 ) -> LocalRuntime | None:
     """Find a complete source-tree runtime, preferring the newest valid DB."""
-    validate = validate or default_validator()
+    validator = validate
 
     def modified(path: Path) -> int:
         try:
@@ -175,14 +187,25 @@ def find_local_runtime(
             continue
         for db_path in sorted(
                 _source_db_candidates(root), key=modified, reverse=True):
+            cli_path = _source_cli_candidate(root, db_path)
+            if cli_path is None:
+                # CLI 是托管运行时的一部分。没有源码 CLI 就复用 DB/SDK，
+                # 会装出一个无法查询的运行时；这里必须回退下载归档。
+                continue
+            source_validator = validator_from_pyz(cli_path)
+            if source_validator is None:
+                # 结构校验不包含 `oskm_cli.database`。这个 CLI 无法执行
+                # schema 契约，同样不能进入托管运行时。
+                continue
+            validator = validate or source_validator
             try:
-                validate(db_path)
+                validator(db_path)
             except ValueError:
                 continue
             return LocalRuntime(
                 source_root=root,
                 db_path=db_path,
-                cli_path=_source_cli_candidate(root, db_path),
+                cli_path=cli_path,
             )
     return None
 
@@ -351,7 +374,12 @@ def _try_local_runtime(work_dir, *, download_db, download_sdk, validate,
             install_sdk=download_sdk,
         )
         if download_db:
-            (validate or default_validator())(bundle_root / 'knowledge.db')
+            validator = validate
+            if validator is None:
+                validator = validator_from_pyz(local_runtime.cli_path)
+            if validator is None:
+                raise ValueError('源码树 CLI 无法提供 schema 校验器')
+            validator(bundle_root / 'knowledge.db')
         return local_runtime, bundle_root
     except (shutil.Error, OSError, ValueError) as exc:
         shutil.rmtree(local_stage, ignore_errors=True)

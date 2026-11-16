@@ -51,7 +51,7 @@ skill 机器名、发布归档、解压根目录和安装目录叶子名统一�
 ## 快速开始
 
 ```bash
-tar -xzf ohos-design-architecture-evidence-query-3.0.0.tar.gz
+tar -xzf ohos-design-architecture-evidence-query-3.0.1.tar.gz
 AGENT_CWD="$PWD"; SKILL_DIR="$AGENT_CWD/ohos-design-architecture-evidence-query"
 
 # 初次使用时按需配置下载端点（也可放到 <runtime-root>/.env）
