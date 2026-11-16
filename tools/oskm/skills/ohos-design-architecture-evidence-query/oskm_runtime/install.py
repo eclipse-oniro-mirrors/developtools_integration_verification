@@ -107,14 +107,20 @@ def _source_db_candidates(source_root: Path) -> list[Path]:
     return sorted(candidates)
 
 
-def _source_cli_candidate(source_root: Path) -> Path | None:
-    """Find a built CLI alongside local source artifacts without building it."""
-    candidates = (
+def _source_cli_candidate(
+    source_root: Path,
+    db_path: Path | None = None,
+) -> Path | None:
+    """Find a built CLI alongside local artifacts without building it."""
+    candidates = []
+    if db_path is not None:
+        candidates.append(db_path.parent / cli_install.ARTIFACT_NAME)
+    candidates.extend((
         source_root / cli_install.ARTIFACT_NAME,
         source_root / 'cli' / 'dist' / cli_install.ARTIFACT_NAME,
         source_root / 'packages' / 'oskm' / 'cli' / 'dist' /
         cli_install.ARTIFACT_NAME,
-    )
+    ))
     for candidate in candidates:
         if not candidate.is_file():
             continue
@@ -156,7 +162,7 @@ def find_local_runtime(source_root=None, *, validate: Validator | None = None) -
         return LocalRuntime(
             source_root=root,
             db_path=db_path,
-            cli_path=_source_cli_candidate(root),
+            cli_path=_source_cli_candidate(root, db_path),
         )
     return None
 

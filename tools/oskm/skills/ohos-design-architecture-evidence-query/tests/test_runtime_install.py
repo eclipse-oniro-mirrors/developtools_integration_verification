@@ -285,6 +285,25 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(document['cli']['path'], cli_install.ARTIFACT_NAME)
 
 
+    def test_install_uses_cli_beside_nested_source_runtime(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        source_cli = write_minimal_pyz(
+            source / 'out/wukong100/oskm' / cli_install.ARTIFACT_NAME)
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(install, 'download_runtime_bundle') as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        installed_cli = cli_install.installed_path(self.root)
+        self.assertEqual(installed_cli.read_bytes(), source_cli.read_bytes())
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['cli']['path'], cli_install.ARTIFACT_NAME)
+
     def test_install_prefers_two_level_source_runtime_without_download(self):
         source = self.write_source_runtime(
             Path('generic_generic_arm_64only/general_all_phone_standard'))
