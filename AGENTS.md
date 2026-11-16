@@ -204,26 +204,31 @@ Most tools require a connected device or build output that is unavailable in a d
 SDK 接口）用 **`ohos-design-architecture-evidence-query` skill**，它会按需加载
 用法与陷阱说明。
 
-skill 与查询 CLI 是两个独立产物：skill 负责下载 DB / SDK / CLI 并教 Agent
+skill 与查询 CLI 是**两个独立产物**：skill 负责下载 DB / SDK / CLI 并教 Agent
 怎么问；`oskm-cli`（pyz）只读封装 `knowledge.db`，自己不下载任何数据。
-初次使用先配端点再安装：
+初次使用先配端点再安装，不读取 `viewer/` 下的数据库文件；安装使用绝对路径，
+结束后回到 Agent 启动目录，避免后续源码树探测受 `cd` 影响：
 
 ```bash
-cd tools/oskm/skills/ohos-design-architecture-evidence-query
-cp oskm_runtime/.env.example oskm_runtime/.env   # 填 OSKM_DOWNLOAD_ENDPOINT
-python3 bootstrap.py doctor
-python3 bootstrap.py install --runtime-root "$HOME/.oskm"
+AGENT_CWD="$PWD"; SKILL_DIR="$AGENT_CWD/tools/oskm/skills/ohos-design-architecture-evidence-query"
+cp "$SKILL_DIR/oskm_runtime/.env.example" "$SKILL_DIR/oskm_runtime/.env"   # 填 OSKM_DOWNLOAD_ENDPOINT
+# OSKM_DOWNLOAD_SOURCE 可选：OPENHARMONY_CI（默认，component 固定为
+# dayu600_7885_ai）或 INTERNAL_CI；CLI 随 knowledge.tar.gz 一起发布。
+python3 "$SKILL_DIR/bootstrap.py" doctor
+python3 "$SKILL_DIR/bootstrap.py" install --runtime-root "$HOME/.oskm"
+cd "$AGENT_CWD"   # skill 安装完成后回到 Agent 启动目录
+# 查询**直接调 CLI**（bootstrap 只负责装）；固定文件名，不带版本
 CLI="$HOME/.oskm/oskm-cli.pyz"; DB="$HOME/.oskm/knowledge.db"
-python3 "$CLI" --db "$DB" arch overview
+python3 "$CLI" --db "$DB" arch overview   # 这个产品由什么构成
 python3 "$CLI" ask --list                 # 52 个查询工具
-```
-
-扫描是另一个入口，与查询侧没有共同命令：
-
-```bash
-cd tools/oskm && python3 -m oskm.cli scan --workspace-root <OH源码根> --product wukong100
+python3 "$CLI" --help
+# 扫描（采集侧，另一个入口，与查询侧没有共同命令）：
+PYTHONPATH="$AGENT_CWD/tools/oskm" python3 -m oskm.cli scan \
+  --workspace-root <OH源码根> --product wukong100 \
+  --db "$AGENT_CWD/artifacts/wukong100/knowledge.db"
 ```
 
 完整用法见
 [usage.md](tools/oskm/skills/ohos-design-architecture-evidence-query/references/usage.md)；
-拆分设计与职责边界见 [cli-skill-split.md](tools/oskm/docs/architecture/cli-skill-split.md)。
+拆分设计与职责边界见
+[cli-skill-split.md](tools/oskm/docs/architecture/cli-skill-split.md)。

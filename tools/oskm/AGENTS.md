@@ -62,7 +62,7 @@ python3.12 -m unittest discover -s skills/ohos-design-architecture-evidence-quer
 - 唯一入口是 `bootstrap.py`（自举 `sys.path`，不要求 `PYTHONPATH`、不要求 Bash）
 - CLI 随 `knowledge.tar.gz` 一起发布（归档里四样东西：`knowledge.db` +
   `oskm-cli.pyz` + 两套 SDK），`install` 一次装齐
-- CLI 按三级候选解析：`$OSKM_CLI` → `<runtime-root>/oskm-cli.pyz` → 源码树
+- CLI 按三级候选解析：`$OSKM_CLI` → 源码树（存在时优先）→ `<runtime-root>/oskm-cli.pyz`
 - CLI 与 `knowledge.db` 同类：**固定文件名 `oskm-cli.pyz`、不记版本、不锁摘要**；
   完整性靠结构校验（`verify_pyz`：shebang + 有效 zip + 必需条目 + CRC）
 - 刷新判定只做廉价检查，**不跑 `PRAGMA integrity_check`**（见

@@ -53,20 +53,6 @@ _MAX_DEPTH = 16
 _DEFAULT_LIMIT, _MAX_LIMIT = 200, 1000
 
 
-@register('elf_dependencies', 'ELF 依赖闭包（按最短距离去重的可达节点，不是路径枚举）', {
-    'type': 'object',
-    'properties': {
-        'dest': {'type': 'string', 'description': 'Image ELF file path'},
-        'direction': {'type': 'string', 'default': 'forward',
-                      'description': 'forward or reverse'},
-        'max_distance': {'type': 'integer',
-                         'description': f'跳数上限，省略时按 {_MAX_DEPTH} 封顶。'
-                                        '规模涨得很快：1 跳 27 个节点、2 跳 169、3 跳 297'},
-        'limit': {'type': 'integer', 'default': _DEFAULT_LIMIT,
-                  'description': f'最多返回几个节点，上限 {_MAX_LIMIT}；截断时置 truncated'},
-    },
-    'required': ['dest'],
-})
 def _elf_arguments(params):
     dest = params['dest']
     direction = params.get('direction', 'forward')
@@ -137,6 +123,20 @@ def _reachable_rows(session, root_id, distance, meta, dest, caller_col, callee_c
     return reachable, total, truncated
 
 
+@register('elf_dependencies', 'ELF 依赖闭包（按最短距离去重的可达节点，不是路径枚举）', {
+    'type': 'object',
+    'properties': {
+        'dest': {'type': 'string', 'description': 'Image ELF file path'},
+        'direction': {'type': 'string', 'default': 'forward',
+                      'description': 'forward or reverse'},
+        'max_distance': {'type': 'integer',
+                         'description': f'跳数上限，省略时按 {_MAX_DEPTH} 封顶。'
+                                        '规模涨得很快：1 跳 27 个节点、2 跳 169、3 跳 297'},
+        'limit': {'type': 'integer', 'default': _DEFAULT_LIMIT,
+                  'description': f'最多返回几个节点，上限 {_MAX_LIMIT}；截断时置 truncated'},
+    },
+    'required': ['dest'],
+})
 def elf_dependencies(params, manager):
     """可达节点的闭包，每个节点一行，距离取最短。"""
     session = manager.get_active()

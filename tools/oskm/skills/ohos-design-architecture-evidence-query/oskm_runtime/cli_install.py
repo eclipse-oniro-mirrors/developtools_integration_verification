@@ -4,8 +4,11 @@ skill 归档里**不包含查询引擎**（2.5.6 时代打包整个 `agentic/`�
 "CLI 从哪来"是 skill 的一项职责。三级候选，按序尝试，第一个命中的就用：
 
 1. `$OSKM_CLI`                    显式给定的 `.pyz` 或源码目录
-2. `<runtime-root>/oskm-cli.pyz`  `install` 从 `knowledge.tar.gz` 里解出来的那一份
-3. **源码树**                     从本文件向上找 `cli/oskm_cli/__init__.py`
+2. **源码树**                     从本文件向上找 `cli/oskm_cli/__init__.py`
+3. `<runtime-root>/oskm-cli.pyz`  `install` 从 `knowledge.tar.gz` 里解出来的那一份
+
+源码树存在时优先用源码树，便于采集器、CLI 与 skill 同一工作区联调；发布包里
+没有 CLI 源码，于是自然回退到已安装产物。
 
 **CLI 不单独下载。** 它和 `knowledge.db` 一起打在 `knowledge.tar.gz` 里
 （归档根目录有 `knowledge.db`、`oskm-cli.pyz`、`interface/sdk-js`、
@@ -209,23 +212,23 @@ def resolve_cli(runtime_root=None, *, allow_download: bool = True) -> CliLocatio
     else:
         attempts.append(f'1. ${CLI_PATH_ENV} 未设置')
 
+    location = _location_from_source()
+    if location is not None:
+        return location
+    attempts.append('2. 源码树 —— 向上没找到 ' + SOURCE_LAYOUT.as_posix())
+
     installed = installed_path(root)
     try:
         location = _location_from_installed(root)
     except CliInstallError as exc:
         # 文件在但不是个能用的产物：比"不存在"更值得原样报出来。
-        attempts.append(f'2. {installed} —— {exc}')
+        attempts.append(f'3. {installed} —— {exc}')
         location = None
     else:
         if location is None:
-            attempts.append(f'2. {installed} —— 不存在')
+            attempts.append(f'3. {installed} —— 不存在')
     if location is not None:
         return location
-
-    location = _location_from_source()
-    if location is not None:
-        return location
-    attempts.append('3. 源码树 —— 向上没找到 ' + SOURCE_LAYOUT.as_posix())
 
     raise CliInstallError(
         '找不到可用的 oskm-cli 产物。它随 knowledge.tar.gz 一起发布，'

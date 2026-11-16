@@ -11,6 +11,7 @@ test_arch_writes_no_sql）。这条约束不检查的话，`arch` 迟早会长�
 
 import _path_setup
 import io
+import inspect
 import json
 import os
 import re
@@ -44,6 +45,23 @@ def run(*argv):
         except SystemExit as exc:          # argparse 自己退出（参数错）
             code = exc.code
     return code, out.getvalue(), err.getvalue()
+
+
+class RegisteredHandlers(unittest.TestCase):
+    def test_every_handler_accepts_the_tool_call_signature(self):
+        """Registry 的 handler 必须能接收 (params, manager)。
+
+        `@register` 错贴到只收一个参数的内部 helper 上时，CLI 仍会生成子命令，
+        但真正调用会在进入工具前抛 TypeError。这里不依赖数据库，直接拦住。
+        """
+        invalid = []
+        for tool in REGISTRY:
+            try:
+                inspect.signature(tool.handler).bind({}, object())
+            except TypeError as exc:
+                invalid.append(
+                    f'{tool.name} -> {tool.handler.__name__}: {exc}')
+        self.assertEqual(invalid, [], '注册的 handler 签名不匹配')
 
 
 @unittest.skipUnless(os.path.isfile(DB), f'test database not found: {DB}')

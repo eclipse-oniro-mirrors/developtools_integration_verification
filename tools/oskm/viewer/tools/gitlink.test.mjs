@@ -7,22 +7,23 @@ import { readFile } from 'node:fs/promises'
    原样加载，测的是生产代码本身。 */
 const source = await readFile(new URL('../src/model/gitlink.js', import.meta.url), 'utf8')
 
-const mockSource = (repos) => `const __REPOS__ = ${JSON.stringify(repos)}
+const mockSource = (repos, product) => `const __REPOS__ = ${JSON.stringify(repos)}
 ` +
   `export function useDatabase() {
      return {
        rawQuery(sql, params) {
          if (sql.includes('FROM repos')) return __REPOS__.filter(r => r.scan_id === params[0])
+         if (sql.includes('FROM scans')) return [{ product: ${JSON.stringify(product)} }]
          return []
        },
      }
    }
 `
 
-const load = async (repos) => {
+const load = async (repos, product = null) => {
   const patched = source.replace(
     "import { useDatabase } from '../composables/useDatabase.js'",
-    mockSource(repos))
+    mockSource(repos, product))
   return import('data:text/javascript;base64,' + Buffer.from(patched).toString('base64'))
 }
 
@@ -111,6 +112,52 @@ test('公开仓：无 head_commit 时 fileSource 退 revision，native 链接跟
   assert.equal(
     got.url,
     'https://gitcode.com/openharmony/interface_sdk_c/blob/master/AbilityKit/ability_base/ability_base_common.h')
+})
+
+/* ---- 单层产品：本地 VPCEP remote 必须映射回公开 gitcode 地址 ---- */
+const vpcepRepos = [{
+  scan_id: 3, name: 'openharmony/interface_sdk_c',
+  path: 'interface/sdk_c',
+  remote_url: 'https://vpcep-f2878022-9474-4e70-80e2-86fdcbb5ca6d.cn-north-4.huaweicloud.com/openharmony/interface_sdk_c',
+  revision: 'master',
+  head_commit: '473efc4105695a4d28392a82a02b6c9f5994fd54',
+}]
+
+test('单层产品：Native SDK 头文件映射 VPCEP 到 gitcode', async () => {
+  for (const product of ['wukong100', 'rk3568']) {
+    const mod = await load(vpcepRepos, product)
+    const got = mod.nativeHeaderSource(3, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+    assert.equal(
+      got.url,
+      'https://gitcode.com/openharmony/interface_sdk_c/blob/' +
+        '473efc4105695a4d28392a82a02b6c9f5994fd54/AbilityKit/ability_base/ability_base_common.h')
+  }
+})
+
+test('单层产品：ArkTS 声明文件映射 VPCEP 到 gitcode', async () => {
+  const repos = [{
+    scan_id: 4, name: 'openharmony/interface_sdk-js',
+    path: 'interface/sdk-js',
+    remote_url: 'https://vpcep-f2878022-9474-4e70-80e2-86fdcbb5ca6d.cn-north-4.huaweicloud.com/openharmony/interface_sdk-js',
+    revision: 'master',
+    head_commit: '3e89347128c05663847871c850c4e47f271680fb',
+  }]
+  const mod = await load(repos, 'wukong100')
+  const got = mod.fileSource(4, 'interface/sdk-js/api/@ohos.app.ability.UIAbility.d.ts')
+  assert.equal(
+    got.url,
+    'https://gitcode.com/openharmony/interface_sdk-js/blob/' +
+      '3e89347128c05663847871c850c4e47f271680fb/api/@ohos.app.ability.UIAbility.d.ts')
+})
+
+test('两层产品：保留 VPCEP remote 拼法', async () => {
+  const mod = await load(vpcepRepos, 'generic_generic_arm_64only/general_all_phone_standard')
+  const got = mod.nativeHeaderSource(3, 'interface/sdk_c/AbilityKit/ability_base/ability_base_common.h')
+  assert.equal(
+    got.url,
+    'https://vpcep-f2878022-9474-4e70-80e2-86fdcbb5ca6d.cn-north-4.huaweicloud.com/' +
+      'openharmony/interface_sdk_c/blob/473efc4105695a4d28392a82a02b6c9f5994fd54/' +
+      'AbilityKit/ability_base/ability_base_common.h')
 })
 
 /* ---- gitlab 系（/-/blob/）也不受影响 ---- */

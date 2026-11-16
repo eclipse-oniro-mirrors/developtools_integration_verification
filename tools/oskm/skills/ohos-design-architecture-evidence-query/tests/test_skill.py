@@ -44,6 +44,7 @@ BOOTSTRAP = SKILL_ROOT / 'bootstrap.py'
 #   `python3 $CLI …`          查询命令，走 CLI（$DB 换成合成库）
 # 查询透传已于 2026-11-12 删除，所以 SKILL.md 里的查询示例直接调 CLI。
 BOOTSTRAP_PREFIX = 'python3 bootstrap.py '
+BOOTSTRAP_ABS_PREFIX = 'python3 "$SKILL_DIR/bootstrap.py" '
 CLI_PREFIX = 'python3 $CLI '
 # 托管命令（doctor / cli-path / validate-db …）在临时 runtime root 里跑，
 # 绝不碰真实的 ~/.oskm——门禁不该在用户家目录里留痕。
@@ -73,15 +74,24 @@ def commands(*, include_mutating=False):
     """
     text = SKILL.read_text(encoding='utf-8')
     found = []
+    in_code = False
     for line in text.splitlines():
         line = line.strip()
+        if line.startswith('```'):
+            in_code = not in_code
+            continue
+        if not in_code:
+            continue
         if any(token in line for token in SKIP) or PLACEHOLDER.search(line):
             continue
         for prefix, kind in ((BOOTSTRAP_PREFIX, 'bootstrap'),
+                             (BOOTSTRAP_ABS_PREFIX, 'bootstrap'),
                              (CLI_PREFIX, 'cli')):
-            if not line.startswith(prefix):
+            start = line.find(prefix)
+            if start < 0:
                 continue
-            command = line.split('#')[0].strip()
+            body = line[start + len(prefix):].split('#')[0].split(';')[0].strip()
+            command = prefix + body
             tokens = command[len(prefix):].split()
             if kind == 'bootstrap' and not include_mutating and \
                     any(token in MUTATING for token in tokens[:3]):
@@ -114,7 +124,9 @@ def run(pair):
         command = command.replace(documented, synthetic)
     # 用 shlex 而不是 split()：`sql --sql "SELECT COUNT(*) …"` 里的引号
     # 一旦被按空白切开，argparse 会报 unrecognized arguments。
-    prefix = BOOTSTRAP_PREFIX if kind == 'bootstrap' else CLI_PREFIX
+    prefixes = ((BOOTSTRAP_PREFIX, BOOTSTRAP_ABS_PREFIX)
+                if kind == 'bootstrap' else (CLI_PREFIX,))
+    prefix = next(item for item in prefixes if command.startswith(item))
     text = command[len(prefix):].replace('$DB', str(_FIXTURE_DB))
     argv = shlex.split(text)
     out, err = io.StringIO(), io.StringIO()
@@ -179,7 +191,10 @@ class SkillCommandsRun(unittest.TestCase):
             kind, command = pair
             if kind != 'bootstrap':
                 return False
-            return command[len(BOOTSTRAP_PREFIX):].split()[0] in (
+            prefix = next(item for item in (BOOTSTRAP_PREFIX,
+                                            BOOTSTRAP_ABS_PREFIX)
+                          if command.startswith(item))
+            return command[len(prefix):].split()[0] in (
                 'install', 'download-db', 'update-cli')
 
         expected = [pair for pair in everything if is_mutating(pair)]
@@ -312,8 +327,14 @@ class SkillRuntimeContract(unittest.TestCase):
     def test_first_use_bootstrap_is_explicit(self):
         text = ' '.join(SKILL.read_text(encoding='utf-8').split())
         self.assertIn('~/.oskm/knowledge.db', text)
-        self.assertIn('bootstrap.py install --runtime-root ~/.oskm', text)
+        self.assertIn('bootstrap.py" install --runtime-root ~/.oskm', text)
         self.assertIn('不要对任意缺失的 `--db` 路径自动下载', text)
+
+    def test_install_keeps_the_agent_start_directory(self):
+        text = ' '.join(SKILL.read_text(encoding='utf-8').split())
+        self.assertIn('AGENT_CWD', text)
+        self.assertIn('安装完成后回到 Agent 启动目录', text)
+        self.assertIn('源码树优先', text)
 
     def test_runtime_inputs_are_one_archive_with_database_cli_and_two_sdk_trees(self):
         text = SKILL.read_text(encoding='utf-8')

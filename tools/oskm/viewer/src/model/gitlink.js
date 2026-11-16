@@ -30,14 +30,20 @@ const FILE_HOSTS = [
    前缀。这里只识别 URL 形态，不绑定具体主机名。 */
 const CODEHUB_MIRROR_HOST = /^https?:\/\/szv-[^/]+/i
 
+/* 单层产品（out/wukong100）使用公开版本，但工作区 Git remote 可能仍指向
+   VPCEP 镜像。两层产品（out/x/b）属于内部构建，保留工作区原始 remote。 */
+const VPCEP_OPENHARMONY = /^https?:\/\/vpcep-[^/]+\.cn-north-4\.huaweicloud\.com\/openharmony\//i
+
 const cache = new Map()   // scanId -> { repos, memo }
 
 function indexOf(scanId) {
   if (cache.has(scanId)) return cache.get(scanId)
-  const repos = useDatabase()
+  const db = useDatabase()
+  const product = db.rawQuery('SELECT product FROM scans WHERE id = ?', [scanId])[0]?.product || null
+  const repos = db
     .rawQuery(`SELECT name, path, remote_url, revision, head_commit FROM repos
                 WHERE scan_id = ? AND path IS NOT NULL AND path != ''`, [scanId])
-    .map(r => ({ ...r, path: String(r.path).replace(/^\/+|\/+$/g, '') }))
+    .map(r => ({ ...r, product, path: String(r.path).replace(/^\/+|\/+$/g, '') }))
     /* 长路径在前：`foundation/ability/ability_runtime` 必须先于 `foundation` 命中 */
     .sort((a, b) => b.path.length - a.path.length)
   const entry = { repos, memo: new Map() }
@@ -100,7 +106,10 @@ export function fileSource(scanId, path) {
   if (!repo?.remote_url) return null
   const rel = clean.slice(repo.path.length).replace(/^\/+/, '')
   if (!rel) return null
-  const base = repo.remote_url.replace(/\.git$/, '').replace(/\/+$/, '')
+  let base = repo.remote_url.replace(/\.git$/, '').replace(/\/+$/, '')
+  if (repo.product && !repo.product.includes('/')) {
+    base = base.replace(VPCEP_OPENHARMONY, 'https://gitcode.com/openharmony/')
+  }
   const codehubOpen = CODEHUB_MIRROR_HOST.test(base)
   /* codehub 开源镜像的 files 链接只认分支名；其余托管站优先用扫描时的提交号。 */
   const ref = codehubOpen ? repo.revision : (repo.head_commit || repo.revision)

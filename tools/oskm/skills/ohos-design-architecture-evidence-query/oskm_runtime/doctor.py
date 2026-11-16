@@ -131,7 +131,7 @@ def check_environment(root=None) -> bool:
     print('提示: 运行时来自单个 knowledge.tar.gz——里面就是 knowledge.db + '
           f'{cli_install.ARTIFACT_NAME} + 两套 SDK，install 一次装齐；'
           '不要求 Git。CLI 按三级候选解析'
-          f'（$OSKM_CLI → <runtime-root>/{cli_install.ARTIFACT_NAME} → 源码树），'
+          f'（$OSKM_CLI → 源码树 → <runtime-root>/{cli_install.ARTIFACT_NAME}），'
           '全程不单独下载 CLI。')
     print('提示: bootstrap.py 不跑查询。查询直接调 '
           f'<runtime-root>/{cli_install.ARTIFACT_NAME} --db '

@@ -16,13 +16,6 @@ def get_tables(params, manager):
     return {'tables': names}
 
 
-@register('get_schema', '表结构自描述', {
-    'type': 'object',
-    'properties': {
-        'table': {'type': 'string', 'description': 'Table name; omit for all tables'}
-    },
-    'additionalProperties': False
-})
 def _schema_columns(cols):
     columns = []
     for column in cols:
@@ -78,6 +71,13 @@ def _describe_table(connection, all_tables, table_name):
     }
 
 
+@register('get_schema', '表结构自描述', {
+    'type': 'object',
+    'properties': {
+        'table': {'type': 'string', 'description': 'Table name; omit for all tables'}
+    },
+    'additionalProperties': False
+})
 def get_schema(params, manager):
     session = manager.get_active()
     all_tables = list(catalog.table_names(session))

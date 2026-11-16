@@ -42,6 +42,7 @@ Validator = Callable[[Path], None]
 class LocalRuntime:
     source_root: Path
     db_path: Path
+    cli_path: Path | None = None
 
 
 def default_validator() -> Validator:
@@ -94,12 +95,37 @@ def is_openharmony_source_root(source_root) -> bool:
 
 
 def _source_db_candidates(source_root: Path) -> list[Path]:
-    """Find source build databases in supported one/two-level out/ layouts."""
+    """Find source databases in build and managed artifact layouts."""
     out = source_root / 'out'
     candidates = set()
     for pattern in ('*/oskm/knowledge.db', '*/*/oskm/knowledge.db'):
         candidates.update(path for path in out.glob(pattern) if path.is_file())
+    candidates.update(
+        path for path in (source_root / 'artifacts').glob('*/knowledge.db')
+        if path.is_file()
+    )
     return sorted(candidates)
+
+
+def _source_cli_candidate(source_root: Path) -> Path | None:
+    """Find a built CLI alongside local source artifacts without building it."""
+    candidates = (
+        source_root / cli_install.ARTIFACT_NAME,
+        source_root / 'cli' / 'dist' / cli_install.ARTIFACT_NAME,
+        source_root / 'packages' / 'oskm' / 'cli' / 'dist' /
+        cli_install.ARTIFACT_NAME,
+    )
+    for candidate in candidates:
+        if not candidate.is_file():
+            continue
+        try:
+            cli_install.verify_pyz(candidate)
+        except cli_install.CliInstallError as exc:
+            print(f'==> 忽略无效的源码树 CLI: {candidate}: {exc}',
+                  file=sys.stderr)
+            continue
+        return candidate
+    return None
 
 
 def find_local_runtime(source_root=None, *, validate: Validator | None = None) -> LocalRuntime | None:
@@ -127,7 +153,11 @@ def find_local_runtime(source_root=None, *, validate: Validator | None = None) -
             validate(db_path)
         except ValueError:
             continue
-        return LocalRuntime(source_root=root, db_path=db_path)
+        return LocalRuntime(
+            source_root=root,
+            db_path=db_path,
+            cli_path=_source_cli_candidate(root),
+        )
     return None
 
 
@@ -149,6 +179,8 @@ def _stage_local_runtime(
             shutil.copytree(local.source_root / relative, destination)
             if not _directory_has_entries(destination):
                 raise OSError(f'源码 SDK 目录为空: {local.source_root / relative}')
+    if local.cli_path is not None:
+        shutil.copy2(local.cli_path, output / cli_install.ARTIFACT_NAME)
     return output
 
 
@@ -293,7 +325,7 @@ def _try_local_runtime(work_dir, *, download_db, download_sdk, validate):
         if download_db:
             (validate or default_validator())(bundle_root / 'knowledge.db')
         return local_runtime, bundle_root
-    except (shutil.Error, ValueError) as exc:
+    except (shutil.Error, OSError, ValueError) as exc:
         shutil.rmtree(local_stage, ignore_errors=True)
         print(f'==> 源码本地运行时不可用，回退下载: {exc}', file=sys.stderr)
         return None, None
@@ -310,9 +342,9 @@ def _download_bundle(work_dir, source, date, validate):
     return bundle_root
 
 
-def _bundled_cli(bundle_root, installed_local):
+def _bundled_cli(bundle_root):
     candidate = bundle_root / cli_install.ARTIFACT_NAME
-    return candidate if installed_local is None and candidate.is_file() else None
+    return candidate if candidate.is_file() else None
 
 
 def install_runtime(
@@ -343,7 +375,7 @@ def install_runtime(
             validate=validate)
         if bundle_root is None:
             bundle_root = _download_bundle(work_dir, source, date, validate)
-        bundle_cli = _bundled_cli(bundle_root, installed_local)
+        bundle_cli = _bundled_cli(bundle_root)
         document = build_state(
             source=source, date=date, bundle_root=bundle_root,
             download_db=download_db, download_sdk=download_sdk,

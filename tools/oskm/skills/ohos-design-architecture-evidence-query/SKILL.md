@@ -52,8 +52,10 @@ refresh / cli-path」，以及「这个产品由哪些子系统/部件构成」�
 但随发布归档交付：固定名 `oskm-cli.pyz`、不记版本、不锁摘要（版本问 `--version`）。
 数据过期时显式 `refresh`，**查询不会自动触发下载**。
 
+当前目录是 OpenHarmony 源码根时，**源码树优先**：本地 `out/**/oskm/knowledge.db`（或 `artifacts/*/knowledge.db`）、源码树 `oskm-cli.pyz`、`interface/sdk-js`、`interface/sdk_c` 可用则不下载。
 ```bash
-python3 bootstrap.py install --runtime-root ~/.oskm   # 装 DB + 两套 SDK + CLI
+AGENT_CWD="$PWD"; SKILL_DIR=/path/to/ohos-design-architecture-evidence-query
+python3 "$SKILL_DIR/bootstrap.py" install --runtime-root ~/.oskm; cd "$AGENT_CWD"  # 安装完成后回到 Agent 启动目录
 CLI=~/.oskm/oskm-cli.pyz; DB=~/.oskm/knowledge.db   # 实际位置问 cli-path
 python3 $CLI --db $DB arch overview
 ```

@@ -185,13 +185,13 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn(name, [item['name'] for item in r['results']] or [name])
 
     # Q14: "某个部件有哪些 syscap？"
-    def test_14_componentsyscaps(self):
-        name = sample_component(DB, withsyscaps=True)
+    def test_14_component_syscaps(self):
+        name = sample_component(DB, with_syscaps=True)
         if not name:
             self.skipTest('selected database has no component with syscaps')
         comp = dispatch('get_component', {'name': name}, self.mgr)
         self.assert_no_error(comp)
-        r = dispatch('componentsyscaps', {'component_id': comp['id']}, self.mgr)
+        r = dispatch('component_syscaps', {'component_id': comp['id']}, self.mgr)
         self.assert_no_error(r)
         self.assertIn('syscaps', r)
         self.assertGreater(len(r['syscaps']), 0)

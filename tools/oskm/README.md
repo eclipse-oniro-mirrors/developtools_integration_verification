@@ -39,15 +39,16 @@ packages/oskm/
 ## 快速上手
 
 ```bash
-cd packages/oskm/skills/ohos-design-architecture-evidence-query
+AGENT_CWD="$PWD"; SKILL_DIR="$AGENT_CWD/packages/oskm/skills/ohos-design-architecture-evidence-query"
 
 # ④ 安装运行时（DB + interface/sdk-js + interface/sdk_c + CLI）
-cp oskm_runtime/.env.example oskm_runtime/.env
+cp "$SKILL_DIR/oskm_runtime/.env.example" "$SKILL_DIR/oskm_runtime/.env"
 # OSKM_DOWNLOAD_SOURCE 选择 OPENHARMONY_CI（默认）或 INTERNAL_CI；
 # OSKM_DOWNLOAD_ENDPOINT 提供归档端点。归档里就是 DB + CLI + 两套 SDK，
 # 没有单独的 CLI 下载端点。
-python3 bootstrap.py doctor
-python3 bootstrap.py install --runtime-root "$HOME/.oskm"
+python3 "$SKILL_DIR/bootstrap.py" doctor
+python3 "$SKILL_DIR/bootstrap.py" install --runtime-root "$HOME/.oskm"
+cd "$AGENT_CWD"   # skill 安装完成后回到 Agent 启动目录
 
 # ④ 查询：**直接调 CLI**，bootstrap 只负责装
 CLI="$HOME/.oskm/oskm-cli.pyz"; DB="$HOME/.oskm/knowledge.db"
@@ -56,15 +57,17 @@ python3 "$CLI" --db "$DB" arch trace system/lib64/module/multimedia/libimage.z.s
 python3 "$CLI" ask --list                                # 52 个查询工具
 
 # ③ 不经 skill 直接用 CLI（它自己不下载任何数据）
-cd ../.. && python3.12 cli/dist/oskm-cli.pyz --db "$HOME/.oskm/knowledge.db" arch overview
+python3.12 "$AGENT_CWD/packages/oskm/cli/dist/oskm-cli.pyz" --db "$HOME/.oskm/knowledge.db" arch overview
 
 # ① 扫描：写出一个快照（12 个采集器）。**采集侧是另一个入口**，
 #    两个产物没有共同命令——`oskm.py` 那个分派壳已于 2026-11-12 删除。
-python3 -m oskm.cli scan --workspace-root <OH源码根> --product wukong100 \
-    --db ../../artifacts/wukong100/knowledge.db
+PYTHONPATH="$AGENT_CWD/packages/oskm" python3 -m oskm.cli scan \
+    --workspace-root <OH源码根> --product wukong100 \
+    --db "$AGENT_CWD/artifacts/wukong100/knowledge.db"
 
 # ⑤ 浏览
-cd viewer && npm install && npm run dev
+npm --prefix "$AGENT_CWD/packages/oskm/viewer" install
+npm --prefix "$AGENT_CWD/packages/oskm/viewer" run dev
 ```
 
 wukong100 实测（`date=20261111`，`cpu_arch=arm64`）：527 仓 · 57 子系统 ·

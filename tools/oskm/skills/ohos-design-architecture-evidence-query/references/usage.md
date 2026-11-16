@@ -78,13 +78,14 @@ CLI 是**独立构建产物**，随 `knowledge.tar.gz` 一起发布（不是 ski
 不锁摘要**。安装在 `<runtime-root>/` 下与 `knowledge.db` 并排，所以文档与调用方
 始终不用钉版本号；版本问产物自己（`oskm-cli.pyz --version`）。
 
-`bootstrap.py` 按**三级**候选定位，第一个命中的就用（三步都不联网）：
+`bootstrap.py` 按**三级**候选定位，第一个命中的就用（三步都不联网）。源码树
+存在时优先使用本地 CLI，发布包没有 CLI 源码时自然回退到已安装产物：
 
 | # | 候选 | 校验 |
 |---|---|---|
 | 1 | `$OSKM_CLI`（`.pyz` 或源码目录） | 结构校验 |
-| 2 | `<runtime-root>/oskm-cli.pyz`（`install` 从 `knowledge.tar.gz` 解出来的那份） | 结构校验 |
-| 3 | 源码树 `packages/oskm/cli` | 无（开发路径） |
+| 2 | 源码树 `packages/oskm/cli` 或 `cli/oskm_cli` | 无（开发路径） |
+| 3 | `<runtime-root>/oskm-cli.pyz`（`install` 从 `knowledge.tar.gz` 解出来的那份） | 结构校验 |
 
 **结构校验**（`cli_install.verify_pyz`）= shebang + 是有效 zip + 含
 `__main__.py` 与 `oskm_cli/cli.py` + CRC 完好。它与 DB 那侧的 `verify_sqlite`
@@ -234,20 +235,24 @@ $env:OSKM_DOWNLOAD_ENDPOINT = "https://<CI API 或归档前缀>"
 #### 源码根优先使用本地构建
 
 当当前工作目录是 OpenHarmony 源码根，即同时存在 `.gn`、`interface/sdk-js/`、
-`interface/sdk_c/`、`out/` 时，`install` 会先检查两套 SDK 和源码构建里的 DB：
+`interface/sdk_c/`、`out/` 时，`install` 会先检查两套 SDK、源码构建里的 DB
+和源码树 CLI：
 
 ```text
 <source-root>/interface/sdk-js/                       # 必须存在且非空
 <source-root>/interface/sdk_c/                        # 必须存在且非空
 <source-root>/out/<product>/oskm/knowledge.db          # 一层布局
 <source-root>/out/<abi>/<device>/oskm/knowledge.db     # 两层布局
+<source-root>/artifacts/<product>/knowledge.db         # 扫描产物布局
+<source-root>/cli/dist/oskm-cli.pyz                    # 可选；存在则一起装入
 ```
 
 布局按 `product` 路径自动判断，只匹配上述一至两层 `out` 布局，不递归扫描整个 `out/`；有多个候选时按数据库文件
-修改时间选择最新者。DB 必须通过当前查询层 schema 校验。命中的 DB 与两套 SDK 会先
-复制到安装事务的临时目录，再装入 `<runtime-root>/`，因此源码树中的文件只读，不会被
-移动或修改。任一文件缺失、SDK 目录为空、DB 损坏或 schema 不兼容时，自动回退到
-按 `OSKM_DOWNLOAD_SOURCE` 选择的下载流程；成功状态会记录 `"source": "local"` 与源码根路径。
+修改时间选择最新者。DB 必须通过当前查询层 schema 校验。命中的 DB、CLI 与两套 SDK
+会先复制到安装事务的临时目录，再装入 `<runtime-root>/`，因此源码树中的文件只读，
+不会被移动或修改。任一文件缺失、SDK 目录为空、DB 损坏或 schema 不兼容时，自动
+回退到按 `OSKM_DOWNLOAD_SOURCE` 选择的下载流程；成功状态会记录 `"source": "local"`
+与源码根路径。
 
 给 Agent 或日常查询使用托管运行时，一次安装 DB、CLI 和两套 SDK：
 
@@ -302,7 +307,7 @@ py -3 bootstrap.py install --source INTERNAL_CI `
 下载安装的托管运行时只要 DB 或任一 SDK 的日期不是当天，`refresh` / `install`
 就会刷新到当天；
 源码树本地运行时（`"source": "local"`）不因日期变化刷新，显式执行 `install` 才会
-重新选择并复制源码树中的最新 DB/SDK。托管运行时**只覆盖最新一份**，不建立按日期
+重新选择并复制源码树中的最新 DB/CLI/SDK。托管运行时**只覆盖最新一份**，不建立按日期
 命名的历史目录。状态文件是托管标记：没有该文件的 `artifacts/*/knowledge.db`
 视为用户自管，始终不会自动联网。
 
