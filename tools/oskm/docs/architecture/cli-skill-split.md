@@ -910,7 +910,8 @@ skill 的核心就三件事：**下载**（`knowledge.db` / `interface/sdk-js` /
 | 托管命令入口 | `bootstrap.py` 的 `cmd_*` + `main` | 107 | ✓ |
 | CLI 及功能描述 | SKILL.md + references + examples + evals | 3,294 | ✓ |
 | **查询透传 + argv 解析** | `bootstrap.run_query` 等 | **119** | ✗ 已删 |
-| 源码树探测 | `install.find_local_runtime` 等 | 67 | ✓（是"安装"的另一条来源） |
+| 源码树探测（OpenHarmony 源码根） | `install.is_openharmony_source_root` / `_candidate_source_roots` | 33 | ✓ |
+| 源码树内 DB/CLI/SDK 本地运行时候选 | `install.find_local_runtime` 等 | 82 | ✓（是"安装"的另一条来源） |
 | `doctor` 自检 | `doctor.py` | 154 | ✓（回答"为什么装不上"） |
 
 ### 16.2 删掉查询透传

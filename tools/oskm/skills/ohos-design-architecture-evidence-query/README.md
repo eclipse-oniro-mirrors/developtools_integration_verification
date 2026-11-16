@@ -113,7 +113,7 @@ ohos-design-architecture-evidence-query/
     cli_install.py         CLI 三级定位（源码树优先）、结构校验与载入
     environment.py         端点与 .env（DB/SDK 归档 + CLI 产物）
     db_download.py         HTTP、安全解压、SQLite 校验、原子替换
-    install.py             安装与回滚、源码树探测、显式刷新
+    install.py             安装与回滚、源码树探测（OpenHarmony 源码根）、显式刷新
     state.py               .oskm-runtime.json、廉价刷新判定（供 refresh 用）
     doctor.py              环境自检
     .env.example           配置模板（真实 .env 不发布）
