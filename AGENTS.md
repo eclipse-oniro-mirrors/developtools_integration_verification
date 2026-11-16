@@ -216,6 +216,7 @@ cp "$SKILL_DIR/oskm_runtime/.env.example" "$SKILL_DIR/oskm_runtime/.env"   # 填
 # dayu600_7885_ai）或 INTERNAL_CI；CLI 随 knowledge.tar.gz 一起发布。
 python3 "$SKILL_DIR/bootstrap.py" doctor
 python3 "$SKILL_DIR/bootstrap.py" install --runtime-root "$HOME/.oskm"
+# cwd 不在 OH 源码树内时：--source-root <OH源码根>
 cd "$AGENT_CWD"   # skill 安装完成后回到 Agent 启动目录
 # 查询**直接调 CLI**（bootstrap 只负责装）；固定文件名，不带版本
 CLI="$HOME/.oskm/oskm-cli.pyz"; DB="$HOME/.oskm/knowledge.db"

@@ -234,9 +234,13 @@ $env:OSKM_DOWNLOAD_ENDPOINT = "https://<CI API 或归档前缀>"
 
 #### 源码根优先使用本地构建
 
-当当前工作目录是 OpenHarmony 源码根，即同时存在 `.gn`、`interface/sdk-js/`、
-`interface/sdk_c/`、`out/` 时，`install` 会先检查两套 SDK、源码构建里的 DB
-和源码树 CLI：
+`install` 先探测源码根本地构建，命中就用本地 DB + SDK + CLI，不联网。不传
+`--source-root` 时从 cwd 向上找最近的 OpenHarmony 源码根，因此在源码根或其任意
+子目录执行都能命中。不在源码树内时传 `--source-root <path>`；显式路径必须是
+OpenHarmony 源码根，否则直接报错，不会静默改用 cwd 或下载。
+
+源码根必须同时存在 `.gn`、`interface/sdk-js/`、`interface/sdk_c/`、`out/`；
+`install` 会检查两套 SDK、源码构建里的 DB 和源码树 CLI：
 
 ```text
 <source-root>/interface/sdk-js/                       # 必须存在且非空
@@ -262,6 +266,8 @@ date=20261102
 
 # OpenHarmony CI（component 固定为 dayu600_7885_ai）
 python3 bootstrap.py install --source OPENHARMONY_CI --runtime-root "$RUNTIME_ROOT" --date "$date"
+python3 bootstrap.py install --source OPENHARMONY_CI --runtime-root "$RUNTIME_ROOT" \
+    --source-root <OH源码根> --date "$date"
 
 # Internal platform CI（GET <endpoint>/<YYYYMMDD>）
 python3 bootstrap.py install --source INTERNAL_CI --runtime-root "$RUNTIME_ROOT" --date "$date"

@@ -48,6 +48,7 @@ cp "$SKILL_DIR/oskm_runtime/.env.example" "$SKILL_DIR/oskm_runtime/.env"
 # 没有单独的 CLI 下载端点。
 python3 "$SKILL_DIR/bootstrap.py" doctor
 python3 "$SKILL_DIR/bootstrap.py" install --runtime-root "$HOME/.oskm"
+# cwd 不在 OH 源码树内时：install ... --source-root <OH源码根>
 cd "$AGENT_CWD"   # skill 安装完成后回到 Agent 启动目录
 
 # ④ 查询：**直接调 CLI**，bootstrap 只负责装

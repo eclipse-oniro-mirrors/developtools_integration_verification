@@ -93,9 +93,11 @@ Skill 要解决的正是"这类知识没地方放"。
 - 运行时不是三个数据库，而是一个统一 `knowledge.tar.gz`，解压后为**一个
   `knowledge.db` 加两套 SDK 源码**。安装不再从 Git 仓库拉取 SDK，也不要求
   Git/SDK 分支凭据；下载端点由本地环境提供。
-- 在 OpenHarmony 源码根安装时，自动探测 `out/<product>/oskm/` 或
-  `out/<abi>/<device>/oskm/` 下的源码 DB（布局只由 `product` 的相对路径决定），并复用 `interface/sdk-js`、
-  `interface/sdk_c`；三者完整且 schema 兼容时复制安装，不联网、不移动源码。
+- 在 OpenHarmony 源码根或其任意子目录安装时，从 cwd 向上探测源码根，再查
+  `out/<product>/oskm/`、`out/<abi>/<device>/oskm/` 或
+  `artifacts/<product>/knowledge.db` 下的源码 DB，并复用 `interface/sdk-js`、
+  `interface/sdk_c` 与同目录源码 CLI；三者完整且 schema 兼容时复制安装，不联网、
+  不移动源码。cwd 不在源码树内时用 `--source-root <path>` 显式指定。
   本地运行时不按日期自动刷新，显式 `install` 才会重新复制源码产物。
 - DB 保存关系事实和证据位置；`sdk-js` 用来核对 ArkTS `source_path` 与实现 `.so`，
   `sdk_c` 用来核对 Native SDK `header_path`。

@@ -265,6 +265,66 @@ class RuntimeInstallTests(unittest.TestCase):
         self.assertEqual(document['source_root'], str(source.resolve()))
 
 
+    def test_install_uses_explicit_source_root_from_outside_the_tree(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        elsewhere = Path(self.temp.name) / 'elsewhere'
+        elsewhere.mkdir()
+        bundle = self.write_bundle(marker='fallback')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=elsewhere), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102',
+                source_root=source)
+
+        download.assert_not_called()
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['source_root'], str(source.resolve()))
+
+
+    def test_install_finds_source_root_from_a_cwd_subdirectory(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        subdir = source / 'foundation' / 'ace_engine'
+        subdir.mkdir(parents=True)
+        bundle = self.write_bundle(marker='fallback')
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=subdir), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle',
+                    side_effect=self.copy_bundle(bundle)) as download:
+            install.install_runtime(
+                self.root, OPENHARMONY_CI, '20261102')
+
+        download.assert_not_called()
+        document = json.loads(
+            (self.root / state.STATE_NAME).read_text(encoding='utf-8'))
+        self.assertEqual(document['source'], 'local')
+        self.assertEqual(document['source_root'], str(source.resolve()))
+
+
+    def test_explicit_source_root_does_not_silently_fall_back(self):
+        source = self.write_source_runtime(Path('wukong100'))
+        invalid = Path(self.temp.name) / 'not-an-oh-tree'
+        invalid.mkdir()
+
+        with mock.patch.object(
+                install.Path, 'cwd', return_value=source), \
+                mock.patch.object(
+                    install, 'download_runtime_bundle') as download:
+            with self.assertRaisesRegex(ValueError, 'OpenHarmony 源码根'):
+                install.install_runtime(
+                    self.root, OPENHARMONY_CI, '20261102',
+                    source_root=invalid)
+
+        download.assert_not_called()
+
+
     def test_install_uses_the_source_tree_cli_with_a_local_runtime(self):
         source = self.write_source_runtime(Path('wukong100'))
         source_cli = write_minimal_pyz(

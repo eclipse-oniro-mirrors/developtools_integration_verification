@@ -134,17 +134,32 @@ def _source_cli_candidate(
     return None
 
 
-def find_local_runtime(source_root=None, *, validate: Validator | None = None) -> LocalRuntime | None:
-    """Find a complete source-tree runtime, preferring the newest valid DB."""
-    root = Path(source_root if source_root is not None else Path.cwd())
-    root = root.expanduser().resolve()
-    if not is_openharmony_source_root(root):
-        return None
-    if not all(
-            _directory_has_entries(root / relative)
-            for relative in state.SDK_PATHS.values()):
-        return None
+def _candidate_source_roots(source_root=None):
+    """Yield valid source roots in preference order.
 
+    An explicit ``source_root`` is authoritative: an invalid path is an error,
+    not a reason to silently use cwd or the network. Without one, use cwd and
+    then its OpenHarmony source-tree ancestors.
+    """
+    if source_root is not None:
+        root = Path(source_root).expanduser().resolve()
+        if not is_openharmony_source_root(root):
+            raise ValueError(f'不是有效的 OpenHarmony 源码根: {root}')
+        yield root
+        return
+
+    cwd = Path.cwd().expanduser().resolve()
+    if is_openharmony_source_root(cwd):
+        yield cwd
+    for candidate in cwd.parents:
+        if is_openharmony_source_root(candidate):
+            yield candidate
+
+
+def find_local_runtime(
+        source_root=None, *, validate: Validator | None = None,
+) -> LocalRuntime | None:
+    """Find a complete source-tree runtime, preferring the newest valid DB."""
     validate = validate or default_validator()
 
     def modified(path: Path) -> int:
@@ -153,17 +168,22 @@ def find_local_runtime(source_root=None, *, validate: Validator | None = None) -
         except OSError:
             return -1
 
-    for db_path in sorted(
-            _source_db_candidates(root), key=modified, reverse=True):
-        try:
-            validate(db_path)
-        except ValueError:
+    for root in _candidate_source_roots(source_root):
+        if not all(
+                _directory_has_entries(root / relative)
+                for relative in state.SDK_PATHS.values()):
             continue
-        return LocalRuntime(
-            source_root=root,
-            db_path=db_path,
-            cli_path=_source_cli_candidate(root, db_path),
-        )
+        for db_path in sorted(
+                _source_db_candidates(root), key=modified, reverse=True):
+            try:
+                validate(db_path)
+            except ValueError:
+                continue
+            return LocalRuntime(
+                source_root=root,
+                db_path=db_path,
+                cli_path=_source_cli_candidate(root, db_path),
+            )
     return None
 
 
@@ -315,8 +335,10 @@ def build_state(
     return document
 
 
-def _try_local_runtime(work_dir, *, download_db, download_sdk, validate):
-    local_runtime = find_local_runtime(validate=validate)
+def _try_local_runtime(work_dir, *, download_db, download_sdk, validate,
+                       source_root=None):
+    local_runtime = find_local_runtime(
+        source_root=source_root, validate=validate)
     if local_runtime is None:
         return None, None
     print(f'==> 使用源码本地运行时: {local_runtime.db_path}', file=sys.stderr)
@@ -361,8 +383,14 @@ def install_runtime(
     download_db: bool = True,
     download_sdk: bool = True,
     validate: Validator | None = None,
+    source_root=None,
 ) -> None:
-    """Install or refresh a managed runtime from one downloaded archive."""
+    """Install or refresh a managed runtime from local source or an archive.
+
+    ``source_root`` pins local discovery to one explicit OpenHarmony tree. It
+    must be valid; without it, discovery walks upward from cwd. A complete
+    local runtime is preferred, otherwise the downloaded archive is used.
+    """
     runtime_root = Path(runtime_root).expanduser().resolve()
     _validate_install_options(
         source, download_db=download_db, download_sdk=download_sdk)
@@ -378,7 +406,7 @@ def install_runtime(
         work_dir = Path(temp)
         installed_local, bundle_root = _try_local_runtime(
             work_dir, download_db=download_db, download_sdk=download_sdk,
-            validate=validate)
+            validate=validate, source_root=source_root)
         if bundle_root is None:
             bundle_root = _download_bundle(work_dir, source, date, validate)
         bundle_cli = _bundled_cli(bundle_root)

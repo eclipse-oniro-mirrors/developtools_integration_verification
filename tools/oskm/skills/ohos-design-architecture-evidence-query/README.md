@@ -25,9 +25,10 @@ OpenHarmony 架构证据**运行时分发与 CLI 使用 skill**。核心职责�
   `<runtime-root>/oskm-cli.pyz`。源码树存在时优先使用本地 CLI；三步都不需要网络
 - `install` 下载一个 `knowledge.tar.gz`，把里面的 `knowledge.db`、`oskm-cli.pyz`、
   `interface/sdk-js/`、`interface/sdk_c/` 一起装到 `<runtime-root>/`
-- 在 OpenHarmony 源码根执行 `install` 时会优先使用 `out/` 或 `artifacts/` 下的 DB、
-  `interface/` SDK 和源码树 `cli/dist/oskm-cli.pyz`；本地候选不完整或
-  schema 不兼容时回退下载；
+- 在 OpenHarmony 源码根或其任意子目录执行 `install` 时会向上探测源码根，
+  优先使用 `out/` 或 `artifacts/` 下的 DB、`interface/` SDK 和源码树
+  `cli/dist/oskm-cli.pyz`；不在源码树内时可用 `--source-root <path>` 显式指定。
+  本地候选不完整或 schema 不兼容时回退下载；
   安装执行完整 schema 校验（转发给 CLI 的 `validate-db`）、不做列迁移，不匹配的
   旧库需要重新扫描；本地运行时不按日期自动刷新，显式 `install` 才会重新复制源码产物
 
@@ -64,6 +65,7 @@ python3.12 "$SKILL_DIR/bootstrap.py" doctor
 python3.12 "$SKILL_DIR/bootstrap.py" install --source OPENHARMONY_CI --runtime-root ~/.oskm
 # Internal platform CI（GET <endpoint>/<YYYYMMDD>）
 python3.12 "$SKILL_DIR/bootstrap.py" install --source INTERNAL_CI --runtime-root ~/.oskm
+# 不在源码树内但已有本地构建：加 --source-root <OH源码根>，优先本地、不联网
 cd "$AGENT_CWD"   # 安装完成后回到 Agent 启动目录
 
 python3.12 "$SKILL_DIR/bootstrap.py" cli-path  # 看它最终用了哪个 CLI
@@ -79,7 +81,9 @@ python3.12 "$CLI" ask --list
 `bootstrap.py refresh` 只对带 `.oskm-runtime.json` 的托管运行时检查是否过期，
 不会因为任意缺失的 `--db` 路径联网。
 
-`bootstrap.py` 自己补 `sys.path`，**不需要设 `PYTHONPATH`**，也不需要在特定目录下运行：
+`bootstrap.py` 自己补 `sys.path`，**不需要设 `PYTHONPATH`**，也不需要在特定目录下运行。
+本地 DB 探测从 cwd 向上找最近的 OpenHarmony 源码根；cwd 不在源码树内时传
+`--source-root <path>`：
 
 ```bash
 python3.12 /path/to/ohos-design-architecture-evidence-query/bootstrap.py doctor
