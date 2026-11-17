@@ -1,8 +1,0 @@
-{
-  "src": [
-    "testability/pages/Index",
-    "testability/pages/FocusDynamicEffect/FocusDynamicEffect023",
-    "testability/pages/DialogAlertInterface/DialogAlertInterface1600",
-    "testability/pages/DialogActionsheet/DialogActionsheet0600"
-  ]
-}
