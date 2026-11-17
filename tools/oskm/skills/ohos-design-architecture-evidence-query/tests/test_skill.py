@@ -37,6 +37,9 @@ _OSKM = _HERE.parents[2]
 SKILL_ROOT = _SKILL
 OSKM = _OSKM
 SKILL = SKILL_ROOT / 'SKILL.md'
+#: 发布版本，必须与 SKILL.md 的 `metadata.version` 一致。改版本时这里
+#: 要一起改，否则"忘了同步"会直接红，而不是发出去一个对不上的包。
+VERSION = '3.1.0'
 TOOLS_MD = SKILL_ROOT / 'references/tools.md'
 BOOTSTRAP = SKILL_ROOT / 'bootstrap.py'
 # 两类命令，两个执行者：
@@ -384,7 +387,11 @@ class SkillRuntimeContract(unittest.TestCase):
         self.assertIn('knowledge.tar.gz', text)
         self.assertIn('--source OPENHARMONY_CI', text)
         self.assertIn('--source INTERNAL_CI', text)
-        self.assertNotIn('--component', text)
+        # 禁止的是**bootstrap 下载参数** `--component`；查询 CLI 的
+        # `--component-id` / `--component` 过滤参数是另一回事，不能被这条误杀。
+        self.assertNotIn('bootstrap.py install --component', text)
+        self.assertNotIn('bootstrap.py download-db --component', text)
+        self.assertNotIn('--component dayu600_7885_ai', text)
         self.assertIn('interface/sdk-js', text)
         self.assertIn('interface/sdk_c', text)
         self.assertNotIn('└── interface/interface', text)
@@ -444,7 +451,11 @@ class SkillRuntimeContract(unittest.TestCase):
         self.assertIn('${date}235959', text)
         self.assertIn('.data.list.dataList[0].obsPath', text)
         self.assertIn('component 固定为 dayu600_7885_ai', normalized)
-        self.assertNotIn('--component', normalized)
+        # 禁止的是**bootstrap 下载参数** `--component`；查询 CLI 的
+        # `--component-id` / `--component` 过滤参数是另一回事，不能被这条误杀。
+        self.assertNotIn('bootstrap.py install --component', normalized)
+        self.assertNotIn('bootstrap.py download-db --component', normalized)
+        self.assertNotIn('--component dayu600_7885_ai', normalized)
         self.assertIn('不是两个独立时间输入', normalized)
 
     def test_independent_download_checks_integrity_and_runtime_checks_schema(self):
@@ -509,21 +520,44 @@ class SkillStaysSmall(unittest.TestCase):
         放宽是**有对价的**：同一批改动新增了
         `SkillMatchesOrgGuide`（七节齐全 + 参考文件全部可达 + 正文无平台专有
         依赖），净结果是更严而不是更松。超预算仍然要往 spec 挪。
+
+        2026-11-17 起预算只数**正文**：上库到 openharmony-skills `release`
+        分支要按《命名空间与目录放置规范》§9.2 在 frontmatter 里写
+        `metadata.scope/stage/domain/capability/status`，那是治理元数据，
+        不是给 Agent 读的指令，把它算进正文预算只会逼人删判断依据。
         """
-        lines = SKILL.read_text(encoding='utf-8').splitlines()
-        self.assertLessEqual(len(lines), 180, f'SKILL.md {len(lines)} 行')
+        text = SKILL.read_text(encoding='utf-8')
+        parts = text.split('---', 2)
+        self.assertEqual(len(parts), 3, 'SKILL.md 缺少成对的 frontmatter 分隔符')
+        body = parts[2].lstrip('\n').splitlines()
+        self.assertLessEqual(len(body), 175, f'SKILL.md 正文 {len(body)} 行')
+
+    #: openharmony-skills `release` 分支《命名空间与目录放置规范》§9.2 要求的
+    #: 治理字段，全部放在 `metadata` 下；顶层只许 name / description / metadata。
+    GOVERNANCE = {
+        'author': 'openharmony',
+        'scope': 'common',
+        'stage': 'design',
+        'domain': 'architecture',
+        'capability': 'evidence-query',
+        'version': VERSION,
+        'status': 'trial',
+    }
 
     def test_frontmatter_has_the_required_keys(self):
         head = SKILL.read_text(encoding='utf-8').split('---')[1]
-        for key in ('name:', 'description:', 'metadata:', 'author:', 'version:'):
+        for key in ('name:', 'description:', 'metadata:'):
             self.assertIn(key, head)
         self.assertRegex(
             head,
             r'(?m)^name:\s*ohos-design-architecture-evidence-query\s*$')
-        self.assertRegex(head, r'(?m)^  author:\s*["\']oskm team["\']\s*$')
-        self.assertRegex(head, r'(?m)^  version:\s*["\']3\.0\.1["\']\s*$')
-        self.assertNotRegex(head, r'(?m)^author:')
-        self.assertNotRegex(head, r'(?m)^version:')
+        for key, value in self.GOVERNANCE.items():
+            self.assertRegex(
+                head,
+                rf'(?m)^  {key}:\s*["\']?{re.escape(value)}["\']?\s*$',
+                f'metadata.{key} 必须是 {value}')
+            self.assertNotRegex(head, rf'(?m)^{key}:',
+                                f'{key} 不得出现在 frontmatter 顶层')
 
     def test_description_covers_installation_and_the_six_questions(self):
         """description 是 Tier 0 的全部，该用时想不起来就白做了。"""
@@ -568,14 +602,26 @@ class ReleaseChecklist(unittest.TestCase):
             path = SKILL_ROOT / 'evals' / name
             self.assertTrue(path.is_file(), f'缺少上库评估报告: {name}')
             self.assertIn(path.name, SKILL.read_text(encoding='utf-8'))
+        #: 报告里的结论必须和真实跑出来的数字一致；改数字就要改这里，
+        #: 免得报告悄悄退回一句"全过"而没有证据。
         with_skill = (SKILL_ROOT / 'evals' / 'with-skill-report.md').read_text(
             encoding='utf-8')
-        self.assertIn('**8/8 通过**', with_skill)
+        self.assertIn('**8/8 场景通过，自动断言 52/52 全过，人工断言 4/4 判定通过**',
+                      with_skill)
+        self.assertIn('runs/with-skill/', with_skill)
+        without_skill = (SKILL_ROOT / 'evals' / 'without-skill-report.md').read_text(
+            encoding='utf-8')
+        self.assertIn('**8/8 场景通过，自动断言 52/52', without_skill)
+        self.assertIn('runs/without-skill/', without_skill)
         judge = (SKILL_ROOT / 'evals' / 'skill-judge-report.md').read_text(
             encoding='utf-8')
-        self.assertIn('**Total Score**: 109/120 (90.8%)', judge)
+        self.assertIn('**Total Score**: 110/120 (91.7%)', judge)
         self.assertIn('**Grade**: A', judge)
-        self.assertIn('followed its five-step evaluation protocol', judge)
+        self.assertIn('五步协议', judge)
+        checklist = (SKILL_ROOT / 'evals' / 'release-checklist.md').read_text(
+            encoding='utf-8')
+        self.assertIn('skills/common/design/ohos-design-architecture-evidence-query',
+                      checklist)
 
     def test_initial_check_numbering_is_sequential(self):
         lines = SKILL.read_text(encoding='utf-8').splitlines()
@@ -629,8 +675,8 @@ class SkillMatchesOrgGuide(unittest.TestCase):
         for path in sorted(SKILL_ROOT.rglob('*.md')):
             if path.name in ('SKILL.md', 'README.md'):
                 continue                       # README 是给人看的入口
-            if any(part in ('tests', 'dist') for part in path.parts):
-                continue
+            if any(part in ('tests', 'dist', 'runs') for part in path.parts):
+                continue   # runs/ 是评估真跑出来的转录，不是给 Agent 读的参考
             if path.name not in text:
                 orphans.append(str(path.relative_to(SKILL_ROOT)))
         self.assertEqual(orphans, [], f'这些参考文件没在 SKILL.md 里登记: {orphans}')

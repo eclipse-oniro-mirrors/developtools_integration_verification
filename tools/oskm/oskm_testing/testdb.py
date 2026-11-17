@@ -253,8 +253,15 @@ def sample_sa_id(db_path=None):
 
 
 def sample_install_dest(db_path=None):
-    return _one('SELECT dest FROM install_targets WHERE scan_id=? AND dest IS NOT NULL '
-                'ORDER BY dest LIMIT 1', (_scan_id(db_path),), db_path)
+    """A dest installed by exactly one module.
+
+    `owner_of` 现在对多模块安装目标显式返回 AMBIGUOUS。通用 smoke probe 要测
+    “工具能跑”，不是要故意踩歧义路径，所以这里只选唯一安装落点。
+    """
+    return _one(
+        'SELECT dest FROM install_targets WHERE scan_id=? AND dest IS NOT NULL '
+        'GROUP BY dest HAVING COUNT(DISTINCT module_id)=1 '
+        'ORDER BY dest LIMIT 1', (_scan_id(db_path),), db_path)
 
 
 def sample_install_label(db_path=None):

@@ -10,6 +10,13 @@ OpenHarmony 架构证据**运行时分发与 CLI 使用 skill**。核心职责�
 时代内联的查询层目录与 `oskm_schema` 副本。分工与理由见源码仓
 `docs/architecture/cli-skill-split.md`。
 
+- 源码仓：`https://gitcode.com/openharmony-aiad/KnowledgeBase`（`packages/oskm`），
+  发布归档由 `scripts/build_skill.py` 构建。
+- 上库副本：`openharmony-skills` 的
+  `skills/common/design/ohos-design-architecture-evidence-query/`
+  （`metadata.scope=common`、`stage=design`、`domain=architecture`、
+  `capability=evidence-query`）。
+
 ## 环境要求
 
 - Python 3.10+（本次发布验收使用 Python 3.12）
@@ -51,7 +58,7 @@ skill 机器名、发布归档、解压根目录和安装目录叶子名统一�
 ## 快速开始
 
 ```bash
-tar -xzf ohos-design-architecture-evidence-query-3.0.1.tar.gz
+tar -xzf ohos-design-architecture-evidence-query-3.1.0.tar.gz
 AGENT_CWD="$PWD"; SKILL_DIR="$AGENT_CWD/ohos-design-architecture-evidence-query"
 
 # 初次使用时按需配置下载端点（也可放到 <runtime-root>/.env）
@@ -93,9 +100,13 @@ python3.12 /path/to/ohos-design-architecture-evidence-query/bootstrap.py doctor
 
 ```bash
 python3.12 ~/.oskm/oskm-cli.pyz --db ~/.oskm/knowledge.db ask --list
-~/.oskm/oskm-cli.pyz --db ~/.oskm/knowledge.db arch overview    # shebang 直接执行
+~/.oskm/oskm-cli.pyz --db ~/.oskm/knowledge.db arch overview    # shebang 直接执行，取决于 PATH 里的 python3
 python3.12 ~/.oskm/oskm-cli.pyz --version                       # 版本问产物自己
 ```
+
+`oskm-cli.pyz` 的 shebang 是 `#!/usr/bin/env python3`。如果系统默认 `python3`
+低于 3.10（例如 macOS 自带 3.9），直接执行会失败；此时显式使用
+`python3.12 ~/.oskm/oskm-cli.pyz ...`。
 
 CLI 与 `knowledge.db` 同类：**固定文件名、不记版本、不锁摘要**。`install` 把它装到
 `<runtime-root>/oskm-cli.pyz`，与 `knowledge.db` 并排；完整性靠结构校验
@@ -105,8 +116,9 @@ CLI 与 `knowledge.db` 同类：**固定文件名、不记版本、不锁摘要*
 
 ```text
 ohos-design-architecture-evidence-query/
-  SKILL.md                 Tier 1：运行时安装 + CLI 入口与误读边界（≤180 行）
+  SKILL.md                 Tier 1：运行时安装 + CLI 入口与误读边界（正文 ≤175 行）
   README.md                本文件
+  LICENSE                  Apache-2.0（与上库仓库其它 skill 一致）
   bootstrap.py             唯一入口：只负责安装，不执行查询
   oskm_runtime/
     bootstrap.py           命令分派、--runtime-root 摘取（**不跑查询**）
@@ -123,31 +135,59 @@ ohos-design-architecture-evidence-query/
     spec/                  Tier 2：14 模块 52 工具的字段级规格
   examples/                CLI 查询示例（运行时安装见 usage.md）
   evals/
-    evals.json            下载、安装、CLI 解析与回滚行为评估
+    evals.json            8 个场景：用户请求、期望结果与断言（评估规格）
+    README.md             评估怎么跑、三臂分别是什么、产物在哪
+    run_evals.py          执行器：夹具 + scripted / with-skill / without-skill 三臂
+    runs/                 真跑出来的逐场景转录（命令、输出、请求归因、agent 审计）
+    with-skill-report.md  with-skill 最终评估报告
+    without-skill-report.md without-skill 基线报告与差异分析
+    skill-judge-report.md skill-judge 设计质量评分
+    release-checklist.md  上库前置检查清单（逐项给证据）
 ```
 
 发布包**不包含**查询引擎（`oskm_cli/`）、表定义（`oskm_schema/`）、采集器
 （`oskm/`）、测试、构建脚本、维护者设计/打包文档或缓存文件。需要生成新库时，
 回到 `packages/oskm` 源码环境使用扫描器。
 
-## 规范评审记录（2026-11-12）
+## 规范评审记录（2026-11-17）
 
-依据《OpenHarmony Agent Skill 实践指导书》完成组织规范重构。已实际执行
-`skill-creator` 的 `scripts/quick_validate.py`：系统 Python 缺少 PyYAML，因此在
-临时虚拟环境安装 PyYAML 后运行，结果为 `Skill is valid!`。仓库内
-`test_frontmatter_passes_skill_creator_rules` 持续覆盖同一组 frontmatter 规则，
-`SkillMatchesOrgGuide` 另外校验七节职责、参考文件可达性和正文平台中立性。
+依据《OpenHarmony Agent Skill 实践指导书》与 `openharmony-skills` 的
+《命名空间与目录放置规范》§9.2 完成本次发布改造：
+
+- frontmatter 顶层只有 `name` / `description` / `metadata`；治理字段全部在
+  `metadata` 下（`author=openharmony`、`scope=common`、`stage=design`、
+  `domain=architecture`、`capability=evidence-query`、`version=3.1.0`、
+  `status=trial`）。`tests/test_skill.py` 的 `GOVERNANCE` 表逐项门禁，
+  改版本必须同时改测试里的 `VERSION`。
+- 正文预算改成只数**正文**（≤175 行，当前 173 行）：治理元数据不是给 Agent 读的
+  指令，把它算进正文预算只会逼人删判断依据。
+- 实测 `skill-creator` 的 `scripts/quick_validate.py`：`Skill is valid!`；
+  PyYAML 解析 frontmatter 与网站元数据 YAML 均通过。
+
+评估改为**三臂真跑**（见 `evals/README.md`）：
+
+| 臂 | 执行者 | 用途 |
+|---|---|---|
+| `scripted` | 本仓执行器按 `SKILL.md` 的命令逐条跑 | 确定性复现，判据是文件状态/sha256/请求日志/退出码 |
+| `with-skill` | 隔离的 `codex exec`（临时 `HOME`/`CODEX_HOME`，装好本 skill，不含 `evals/`） | 上库要求的 with-skill 评估 |
+| `without-skill` | 同上，但只给 `bootstrap.py` + `oskm_runtime/` 代码 | 基线，衡量知识增量 |
+
+外加 `--live-smoke`：真连 `OPENHARMONY_CI` 端点装一次运行时并查询，同时校对
+`references/tools.md` 与 `ask --list --markdown` 是否逐行一致。
+执行器带**越界守卫**：agent 命令里出现 `/Users/**`、别的评估工作区，或
+`ps`/`pgrep`/`lsof` 宿主进程探测，该场景直接判不通过（上一轮基线正是靠 `lsof`
+反查到源码仓，守卫加上后已拦住并重跑）。
 
 | 维度 | 结论 | 依据 |
 |---|---|---|
-| D1 知识增量 | 通过 | 保留运行时分发边界、CLI 解析顺序、证据降级与误读判据，删除通用教程和数据库统计 |
-| D2 心智模型 | 通过 | §3 给出固定判断顺序，§4 按 `arch` / `ask` / `diff` / `sql` 分支选择 |
-| D3 反模式质量 | 通过 | §5 每条均为真实高风险误判，并写明违反后的具体后果 |
-| D4 规范符合度 | 通过 | frontmatter、七节骨架、触发式 description 和条件引用均通过门禁 |
-| D5 渐进披露 | 通过 | `SKILL.md` 控制在 180 行；规格、示例、评估和完整用法按问题路由 |
-| D6 自由度校准 | 通过 | §4.5 明示为启发式；§5 明示为硬约束，违规后果可判断 |
-| D7 模式合理性 | 通过 | 结构服务于“先装运行时、再定位 CLI、后选查询入口”的真实使用流程 |
-| D-8 实用可用性 | 通过 | 命令可直接运行，异常、退出码和查询/安装排错均有回退路径 |
+| D1 知识增量 | 通过 | 运行时分发边界、CLI 三级解析、证据降级与误读判据；无通用教程与冻结业务数据 |
+| D2 心智模型 | 通过 | §3 固定判断顺序，§4 按 `arch` / `ask` / `diff` / `sql` 分支选择 |
+| D3 反模式质量 | 通过 | §5 七条硬约束，每条写明违反后的具体后果 |
+| D4 规范符合度 | 通过 | frontmatter、七节骨架、触发式 description、条件引用、治理元数据均有门禁 |
+| D5 渐进披露 | 通过 | 正文 173 行；规格、示例、评估与完整用法按问题路由，附 `Do NOT load` |
+| D6 自由度校准 | 通过 | §4.5 明示为启发式，§5 明示为硬约束 |
+| D7 模式合理性 | 通过 | 结构服务于"先装运行时、再定位 CLI、后选查询入口" |
+| D8 实用可用性 | 通过 | 命令可直接运行；异常、退出码、安装/查询排错都有回退路径 |
 
-准入检查无阻断项；`D1`、`D4`、`D-8` 均达到发布门槛。未发现开放规范、组织规范与
-`skill-creator` 工作流之间的冲突。
+准入检查无阻断项，`D1`、`D4`、`D8` 均达到发布门槛。详细评分见
+`evals/skill-judge-report.md`。

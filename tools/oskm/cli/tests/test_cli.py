@@ -64,6 +64,55 @@ class RegisteredHandlers(unittest.TestCase):
         self.assertEqual(invalid, [], '注册的 handler 签名不匹配')
 
 
+class GeneratedArgumentAliases(unittest.TestCase):
+    def test_underscore_tool_params_accept_hyphen_aliases(self):
+        """全局参数用连字符，工具 schema 用下划线；两种写法都要能解析。
+
+        design 文档里出现过 `--sa-id` / `--component-id`。argparse 的 dest 由
+        第一个长选项决定，所以 alias 不会污染 `tool_params()` 的 schema 键名。
+        """
+        parser = cli.build_parser()
+        cases = [
+            (['ask', 'get_sa', '--sa-id', '180'], 'get_sa', {'sa_id': 180}),
+            (['ask', 'get_sa', '--sa_id', '180'], 'get_sa', {'sa_id': 180}),
+            (['ask', 'component_attached', '--component-id', '3'],
+             'component_attached', {'component_id': 3}),
+            (['ask', 'component_attached', '--component_id', '3'],
+             'component_attached', {'component_id': 3}),
+            (['ask', 'elf_dependencies', '--dest', 'x', '--max-distance', '1'],
+             'elf_dependencies', {'dest': 'x', 'max_distance': 1}),
+        ]
+        for argv, tool_name, expected in cases:
+            args = parser.parse_args(argv)
+            params = cli.tool_params(args, tool_name)
+            for key, value in expected.items():
+                self.assertEqual(params[key], value, argv)
+
+
+class ArchErrorPropagation(unittest.TestCase):
+    def test_call_returns_none_only_for_not_found(self):
+        from unittest import mock
+
+        with mock.patch('oskm_cli.cli.dispatch',
+                        return_value={'error': {'code': 'NOT_FOUND', 'message': 'x'}}):
+            self.assertIsNone(cli._call(object(), 'get_component', {'name': 'x'}))
+
+        with mock.patch('oskm_cli.cli.dispatch',
+                        return_value={'error': {'code': 'SCHEMA_UNSUPPORTED', 'message': 'x'}}):
+            self.assertIsNone(cli._call(object(), 'list_arkts_modules', {},
+                                        tolerate=cli._OPTIONAL_EVIDENCE_UNSUPPORTED))
+            with self.assertRaises(cli.CliError):
+                cli._call(object(), 'owner_of', {'dest': 'x'})
+
+        for code in ('INVALID_PARAM', 'INTERNAL', 'TIMEOUT', 'AMBIGUOUS'):
+            with mock.patch('oskm_cli.cli.dispatch',
+                            return_value={'error': {'code': code, 'message': 'boom'}}):
+                with self.assertRaises(cli.CliError) as ctx:
+                    cli._call(object(), 'elf_dependencies', {'dest': 'x'})
+                self.assertEqual(ctx.exception.code, cli.EXIT_TOOL_ERROR)
+                self.assertIn(code, str(ctx.exception))
+
+
 @unittest.skipUnless(os.path.isfile(DB), f'test database not found: {DB}')
 class AskIsGenerated(unittest.TestCase):
     def test_every_tool_has_a_subcommand(self):

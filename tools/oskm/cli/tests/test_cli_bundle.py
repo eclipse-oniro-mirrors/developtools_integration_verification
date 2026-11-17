@@ -146,6 +146,40 @@ class PyzContents(unittest.TestCase):
                         source.index('from oskm_cli.cli import main'))
 
 
+class PyzRegistrationIntegrity(unittest.TestCase):
+    """真产物里的 registry 必须把每个工具绑定到同名 handler。
+
+    已发生过一次真实故障：`@register('get_schema', ...)` 被贴在内部 helper
+    `_schema_columns` 前，`ask --list` / `--help` 都正常，但真正调用时执行的是
+    helper，报 `_schema_columns() takes 1 positional argument but 2 were given`。
+    源码测试不一定能抓住**已打包产物**里的同类漂移，所以这里从构建出的 pyz
+    里重新 import registry，并检查每个 handler 的 `(params, manager)` 签名。
+    """
+
+    def test_bundled_registry_maps_each_tool_to_its_own_handler(self):
+        with tempfile.TemporaryDirectory(prefix='oskm-cli-registry-') as temp:
+            archive = build_cli.build_pyz(
+                Path(temp) / build_cli.artifact_name())['archive']
+            probe = subprocess.run(
+                [sys.executable, '-c',
+                 'import sys, json, inspect\n'
+                 'sys.path.insert(0, sys.argv[1])\n'
+                 'from oskm_cli.query.tools import REGISTRY\n'
+                 'bad = []\n'
+                 'for tool in REGISTRY:\n'
+                 '    try:\n'
+                 '        inspect.signature(tool.handler).bind({}, object())\n'
+                 '    except TypeError as exc:\n'
+                 '        bad.append([tool.name, tool.handler.__name__, str(exc)])\n'
+                 'print(json.dumps(bad))',
+                 str(archive)],
+                capture_output=True, text=True,
+                env={'PATH': os.environ.get('PATH', ''),
+                     'HOME': temp, 'PYTHONNOUSERSITE': '1'})
+            self.assertEqual(probe.returncode, 0, probe.stderr)
+            self.assertEqual(json.loads(probe.stdout.strip()), [])
+
+
 class PyzRunsStandalone(unittest.TestCase):
     """在干净子进程、空 cwd、无 PYTHONPATH 下真跑。"""
 
