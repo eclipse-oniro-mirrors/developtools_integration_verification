@@ -126,22 +126,38 @@ def open_session(args):
 
 # ---------------------------------------------------------------- 参数生成
 
+def _option_names(name):
+    """工具参数的规范名与连字符 alias。
+
+    schema 里的参数名是 `sa_id` / `component_id` 这类下划线名，但 CLI 的全局
+    参数是 `--scan-id` 这种连字符名。两种风格并存时，调用方很容易写出
+    `--sa-id`。这里为每个含下划线的参数同时注册规范名和连字符 alias；
+    argparse 的 dest 仍由第一个长选项决定，因此 `tool_params()` 不需要改。
+    """
+    names = [f'--{name}']
+    hyphenated = f'--{name.replace("_", "-")}'
+    if hyphenated not in names:
+        names.append(hyphenated)
+    return names
+
+
 def _add_argument(parser, name, spec, required):
     kind = spec.get('type')
     help_text = spec.get('description', '')
+    options = _option_names(name)
     if kind == 'boolean':
-        parser.add_argument(f'--{name}', action='store_true', help=help_text)
+        parser.add_argument(*options, action='store_true', help=help_text)
     elif kind == 'array':
         # nargs='+' 而不是逗号分隔：逗号在 GN label 和路径里都出现，
         # 拿它当分隔符迟早会把一个值劈成两半。
-        parser.add_argument(f'--{name}', nargs='+', required=required,
+        parser.add_argument(*options, nargs='+', required=required,
                             help=help_text or '(可给多个值)')
     elif kind == 'object':
-        parser.add_argument(f'--{name}', type=json.loads, required=required,
+        parser.add_argument(*options, type=json.loads, required=required,
                             help=(help_text + ' (JSON 对象)').strip())
     else:
         extra = {'choices': spec['enum']} if spec.get('enum') else {}
-        parser.add_argument(f'--{name}', type=_SCALARS.get(kind, str),
+        parser.add_argument(*options, type=_SCALARS.get(kind, str),
                             required=required, default=spec.get('default'),
                             help=help_text, **extra)
 
@@ -313,14 +329,29 @@ def run_sql(args):
 
 # ---------------------------------------------------------------- arch
 
-def _call(manager, name, params):
-    """编排用的内部调用：出错就返回 None，由各 arch 命令决定怎么表达。
+# `NOT_FOUND` 是调用方可以解释为“目标不存在/无该类证据”的正常空结果。
+# 某些可选证据域（例如旧库里的 ArkTS schema）可以显式加入 tolerate；
+# INVALID_PARAM / INTERNAL / TIMEOUT / AMBIGUOUS 等必须冒泡，否则会重演
+# `elf_dependencies` 注册错误被 `arch trace` 吞成 `direct_dependencies: null`
+# 的故障。
+_OPTIONAL_EVIDENCE_UNSUPPORTED = ('SCHEMA_UNSUPPORTED',)
+
+
+def _call(manager, name, params, tolerate=()):
+    """编排用的内部调用：可容忍的空证据返回 None，其它错误必须冒泡。
 
     arch 的硬约束之一是**只能编排已有工具，不得写新 SQL**。所有 arch 命令
     都只经过这里，这条约束就是可检查的（见 tests/test_arch.py）。
     """
     result = dispatch(name, params, manager)
-    return None if isinstance(result, dict) and 'error' in result else result
+    if isinstance(result, dict) and 'error' in result:
+        error = result['error']
+        code = error.get('code') or 'ERROR'
+        if code == 'NOT_FOUND' or code in tolerate:
+            return None
+        message = error.get('message') or code
+        raise CliError(f'{name}: [{code}] {message}', EXIT_TOOL_ERROR)
+    return result
 
 
 def _count(manager, table):
@@ -369,7 +400,8 @@ def arch_trace(manager, args):
     # get_component 同时返回 repo_id 与 repo 名字；_row 按数字 id 查 repos。
     repo = _row(manager, 'repos', component.get('repo_id')) or {}
     leaf = args.target.rsplit('/', 1)[-1]
-    sdk = _call(manager, 'list_arkts_modules', {'implemented_by': leaf, 'limit': 20}) or {}
+    sdk = _call(manager, 'list_arkts_modules', {'implemented_by': leaf, 'limit': 20},
+                tolerate=_OPTIONAL_EVIDENCE_UNSUPPORTED) or {}
     deps = _call(manager, 'elf_dependencies', {'dest': args.target, 'max_distance': 1}) or {}
     return {'file': args.target,
             'install_module': owner.get('install_module'),
@@ -402,10 +434,13 @@ def arch_provides(manager, args):
     if component is None:
         raise CliError(f'unknown component: {args.target}', EXIT_TOOL_ERROR)
     cid = component['id']
-    syscaps = _call(manager, 'component_syscaps', {'component_id': cid}) or {}
-    innerapis = _call(manager, 'component_innerapis', {'component_id': cid}) or {}
+    syscaps = _call(manager, 'component_syscaps', {'component_id': cid},
+                    tolerate=_OPTIONAL_EVIDENCE_UNSUPPORTED) or {}
+    innerapis = _call(manager, 'component_innerapis', {'component_id': cid},
+                      tolerate=_OPTIONAL_EVIDENCE_UNSUPPORTED) or {}
     sdk = _call(manager, 'list_arkts_modules',
-                {'component': args.target, 'limit': 200}) or {}
+                {'component': args.target, 'limit': 200},
+                tolerate=_OPTIONAL_EVIDENCE_UNSUPPORTED) or {}
     return {'component': args.target, 'subsystem': component.get('subsystem'),
             'syscaps': [s.get('name') for s in syscaps.get('syscaps', [])],
             'innerapi_count': len(innerapis.get('innerapis', [])),

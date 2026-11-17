@@ -12,9 +12,25 @@ from ..gitlink import git_url
 })
 def get_install_module(params, manager):
     session = manager.get_active()
-    mod = session.install_module(params['label'])
+    label = params['label']
+    duplicates = session.sql(
+        'SELECT m.id, m.label, m.type, c.name AS component '
+        'FROM install_modules m '
+        'LEFT JOIN components c ON c.scan_id = m.scan_id AND c.id = m.component_id '
+        'WHERE m.scan_id = ? AND m.label = ? ORDER BY m.ordinal',
+        (session.scan_id, label))
+    if not duplicates:
+        raise ToolError('NOT_FOUND', f'install module not found: {label}')
+    if len(duplicates) > 1:
+        candidates = '; '.join(
+            f"id={row['id']} type={row['type']} component={row['component'] or 'unattributed'}"
+            for row in duplicates)
+        raise ToolError(
+            'AMBIGUOUS',
+            f'label matches {len(duplicates)} install modules: {label}; {candidates}')
+    mod = session.install_module(label)
     if mod is None:
-        raise ToolError('NOT_FOUND', f'install module not found: {params["label"]}')
+        raise ToolError('NOT_FOUND', f'install module not found: {label}')
     targets = [{'dest': d} for d in mod.targets()]
     tags = list(mod.tags())
     comp = mod.component()
@@ -71,18 +87,34 @@ def search_install_modules(params, manager):
 })
 def owner_of(params, manager):
     session = manager.get_active()
-    comp = session.owner_of(params['dest'])
-    if comp is None:
-        raise ToolError('NOT_FOUND', f'no component owns: {params["dest"]}')
-    mods = session.installed_at(params['dest'])
-    mod_label = mods[0].label if mods else None
-    mod_id = mods[0].id if mods else None
+    dest = params['dest']
+    mods = session.installed_at(dest)
+    candidates = []
+    for module in mods:
+        comp = module.component()
+        candidates.append({
+            'module_id': module.id,
+            'label': module.label,
+            'component': comp.name if comp else None,
+            'component_id': module.get('component_id'),
+        })
+    attributed = [c for c in candidates if c['component_id'] is not None]
+    if not attributed:
+        raise ToolError('NOT_FOUND', f'no component owns: {dest}')
+    if len(candidates) > 1:
+        detail = '; '.join(
+            f"id={c['module_id']} label={c['label']} component={c['component'] or 'unattributed'}"
+            for c in candidates)
+        raise ToolError(
+            'AMBIGUOUS',
+            f'{dest} is installed by {len(candidates)} modules: {detail}')
+    chosen = attributed[0]
     return {
-        'component': comp.name,
-        'component_id': comp.id,
-        'dest': params['dest'],
-        'install_module': mod_label,
-        'install_module_id': mod_id,
+        'component': chosen['component'],
+        'component_id': chosen['component_id'],
+        'dest': dest,
+        'install_module': chosen['label'],
+        'install_module_id': chosen['module_id'],
     }
 
 

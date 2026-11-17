@@ -2,8 +2,13 @@
 name: ohos-design-architecture-evidence-query
 description: "当用户需要安装或更新 OpenHarmony 架构证据运行时，或询问产品顶层架构证据时使用：安装 DB、两套 SDK 与 oskm-cli，再用 CLI 查询子系统、部件、代码仓、镜像文件归属、影响面、SysCap/InnerAPI/SDK 接口和 GN 编译开关。只读已有库；不扫描、不编译、不改库。"
 metadata:
-  author: "oskm team"
-  version: "3.0.1"
+  author: "openharmony"
+  scope: "common"
+  stage: "design"
+  domain: "architecture"
+  capability: "evidence-query"
+  version: "3.1.0"
+  status: "trial"
 ---
 
 # OpenHarmony 架构证据运行时与 CLI 使用
@@ -64,7 +69,7 @@ python3 $CLI --db $DB arch overview
 `interface/sdk-js` + `interface/sdk_c`，`install` 一次装齐，没有单独下载物。下载方式
 和端点由 `OSKM_DOWNLOAD_SOURCE` / `OSKM_DOWNLOAD_ENDPOINT` 选择；`OPENHARMONY_CI`
 的 component 固定为 `dayu600_7885_ai`。底层只用 Python 标准库（3.10+），不要求 Git；
-装后先跑 `python3 bootstrap.py doctor`，配置与排错见 `references/usage.md`。
+装后先跑 `python3 bootstrap.py doctor`；`python3` 需 ≥3.10（macOS 默认 3.9 时用 `python3.12`），排错见 `references/usage.md`。
 
 ### 4.2 六类架构问题：`arch`
 
@@ -74,12 +79,12 @@ python3 $CLI --db $DB arch trace system/lib64/module/multimedia/libimage.z.so
 python3 $CLI --db $DB arch impact init                    # 3 改它影响谁（带 / 是库级）
 python3 $CLI --db $DB arch provides image_framework       # 4 某部件对外提供什么
 python3 $CLI --db $DB arch switch ace_engine_feature_asbng_path
-python3 $CLI --db $DB arch runtime foundation             # 6 某服务托管哪些 SA 与 HDI
+python3 $CLI --db $DB arch runtime foundation             # 6 服务名模糊搜索，可能返回多个
 ```
 
 回答 GN 开关问题时必须报告 `feature_count` 和关联 `features` 名称——只给当前值
 和声明文件说明不了影响面。示例路径随库走（`scans.cpu_arch` 决定 `system/lib/`
-还是 `system/lib64/`）；取真实 `dest` 用 `ask search_elf_modules --query <文件名>`。
+还是 `system/lib64/`）；`sas.libpath` 只是 profile 声明值，真实 `dest` 用 `ask search_elf_modules --query <文件名>` 或 `install_targets` 查。
 
 ### 4.3 更细的查询：`ask`
 
@@ -94,7 +99,7 @@ python3 $CLI --db $DB ask search_native_headers --query image    # 原生库 →
 ELF / Native SDK 证据问题先各做一次**宽搜索**，报告 ELF 与 Native SDK 宽搜索的 `total` 与
 `truncated`；精确命中数不是宽搜索总数，`truncated=true` 时先提高 `limit` 或说明
 截断。数组参数用空格分隔（逗号在 GN label 和路径里都出现），对象参数收 JSON，
-`component_*` 收 `component_id` 不是名字（先用 `get_component` 换 id）。
+`component_*` 收 `component_id` 不是名字（先用 `get_component` 换 id）；工具参数规范名是下划线、也接受等价连字符 alias；除 ELF / Native 外，多数 `search_*` 的 `total` 只是当前页数量，总量统计用 `sql` / `list_entities`。
 
 ### 4.4 对比与复杂 SQL
 
@@ -107,7 +112,7 @@ python3 $CLI --db $DB sql --sql "SELECT COUNT(*) AS n FROM components"
 
 `--db` 给两次是跨库；给一次加 `--scan-a/--scan-b` 是同库两快照，这两个参数写在
 `diff` 后面。多行 SQL 走 `--file`（可带注释）。只读校验要求第一个关键字为
-SELECT/WITH，表名走白名单，并自动注入 `scan_id` 与 `LIMIT`。
+SELECT/WITH，表名走白名单；执行用当前快照私有内存副本，默认 1000 行、`truncated` 与 5 秒超时，详见 `references/spec/query.md`。
 
 ### 4.5 判断经验：容易误读的六处
 
@@ -173,7 +178,7 @@ SDK 源码缺失、跨快照对不上这七种情形的判据，以及下载/`.e
 | 通用列表、聚合、复杂 SQL | `references/spec/query.md`、`schema.md`（**写复杂 SQL 前必须读完两份**） |
 | 会话与快照语义（`--scan-id`、`diff --scan-a/b`） | `references/spec/session.md` |
 | 安装、整体功能与 CLI 用法（人读） | `references/usage.md` |
-| 52 个工具的一行索引（自动生成，勿手改） | `references/tools.md` |
+| 45 个查询工具的一行索引（自动生成，勿手改；会话类 7 个由 `--db`/`--scan-id`/`diff` 代替） | `references/tools.md` |
 | 照着 CLI 查询流程走一遍 | `examples/architecture-trace.md`、`complex-sql.md`、`query-parts-by-subsystem.sql` |
 | 下载/安装评估、上库清单与最终报告 | `evals/evals.json`、`release-checklist.md`、`with-skill-report.md`、`without-skill-report.md`、`skill-judge-report.md` |
 

@@ -131,6 +131,17 @@ class DocumentLinksResolve(unittest.TestCase):
                 found.append(base)
             elif base.is_dir():
                 found.extend(sorted(base.rglob('*.md')))
+        # `evals/runs/` 是历史评估转录，不是给使用者读的指令文档；里面会保留
+        # 当时实际跑过的旧命令，用于复盘。把它们当用户文档会让“禁止旧入口”
+        # 这条门禁误杀历史记录。
+        def is_eval_run(path):
+            try:
+                parts = path.relative_to(SKILL_ROOT).parts
+            except ValueError:
+                return False
+            return len(parts) >= 2 and parts[0] == 'evals' and parts[1] == 'runs'
+
+        found = [path for path in found if not is_eval_run(path)]
         return sorted(set(found))
 
 

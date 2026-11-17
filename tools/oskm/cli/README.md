@@ -64,6 +64,11 @@ python3.12 cli/dist/oskm-cli.pyz validate-db "$HOME/.oskm/knowledge.db"
 注册一次，CLI 和 `--help` 自动就有。`arch` 只有六条，且只编排 `ask` 已有的工具、
 不自带 SQL。数组参数用空格分隔（逗号在 GN label 和路径里都出现）；对象参数收 JSON。
 
+工具参数的规范名来自 schema，是下划线形式；CLI 同时注册等价连字符 alias，因此
+`--sa_id` / `--sa-id`、`--component_id` / `--component-id` 都可接受。`owner_of`
+与 `get_install_module` 遇到多候选会返回 `AMBIGUOUS`，不会静默选择第一个；
+查看候选用 `installed_at` 或 SQL。
+
 ### 退出码
 
 | 码 | 含义 |
@@ -92,7 +97,7 @@ cli/
 │       ├── session.py       SessionManager：打开、活动会话、ATTACH
 │       ├── readonly_session.py  内联的只读实体 API（不依赖 oskm/core）
 │       ├── catalog.py       从库里的 collector_tables 读元数据（不 import 采集器）
-│       ├── security.py      只读 SQL 校验：关键字、表白名单、scan_id/LIMIT 注入
+│       ├── security.py      只读 SQL 执行：关键字、表白名单、私有 scan 快照、行数上限与超时
 │       ├── gitlink.py       git_url → 网页链接
 │       └── jsonutil.py errors.py
 ├── scripts/build_cli.py     构建 pyz（固定名 oskm-cli.pyz）+ SHA256SUMS
