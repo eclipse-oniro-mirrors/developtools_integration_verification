@@ -17,6 +17,7 @@
 #
 """Tests for the repos collector: manifest parsing, git metadata, and lookup."""
 import os
+import sqlite3
 import subprocess
 import tempfile
 import textwrap
@@ -24,8 +25,10 @@ import unittest
 from pathlib import Path
 
 from oskm.collectors.repos import manifest as manifest_parser
+from oskm.collectors.repos.collector import ReposCollector, ReposContext
 from oskm.collectors.repos.lookup import RepoIndex
 from oskm.collectors.repos.git_info import collect
+from oskm.core.models import ScanRequest
 
 
 def _write(path, content):
@@ -145,6 +148,59 @@ class GitInfoTest(unittest.TestCase):
             self.assertEqual(
                 info['remote_url'],
                 'https://scm.example.invalid/example/project')
+
+
+class ReposCollectorTest(unittest.TestCase):
+    VPCEP_URL = (
+        'https://vpcep-f2878022-9474-4e70-80e2-86fdcbb5ca6d.'
+        'cn-north-4.huaweicloud.com/openharmony/ability_base'
+    )
+
+    def _collect(self, product, remote_url=None):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        workspace = Path(temporary.name)
+        path = 'foundation/ability/ability_base'
+        _make_manifest(workspace, [{'name': 'ability_base', 'path': path}])
+        _init_git(workspace, path)
+        subprocess.check_call(
+            ['git', 'remote', 'add', 'gitcode', remote_url or self.VPCEP_URL],
+            cwd=workspace / path)
+
+        connection = sqlite3.connect(':memory:')
+        self.addCleanup(connection.close)
+        collector = ReposCollector()
+        ctx = ReposContext(
+            scan_id=1,
+            connection=connection,
+            request=ScanRequest(workspace, product),
+            collector=collector,
+        )
+        collector.collect(ctx)
+        return ctx.records['repos'][0]
+
+    def test_single_level_product_maps_vpcep_remote_to_gitcode(self):
+        record = self._collect('wukong100')
+        self.assertEqual(
+            record['remote_url'],
+            'https://gitcode.com/openharmony/ability_base')
+        # 只归一化 URL；remote 名称与 commit 是原样采集的事实
+        self.assertEqual(record['remote'], 'gitcode')
+        self.assertIsNotNone(record['head_commit'])
+
+    def test_two_level_product_keeps_vpcep_remote(self):
+        product = 'generic_generic_arm_64only/general_all_phone_standard'
+        record = self._collect(product)
+        self.assertEqual(record['remote_url'], self.VPCEP_URL)
+
+    def test_non_vpcep_remote_is_passed_through_untouched(self):
+        for url in ('https://gitcode.com/openharmony/ability_base.git',
+                    'https://gitlab.example.com/oh/ability_base',
+                    'https://szv-open.codehub.example.invalid/mirror/ability_base',
+                    'https://vpcep-x.cn-north-4.huaweicloud.com/openharmony-aiad/kb'):
+            with self.subTest(url=url):
+                record = self._collect('wukong100', remote_url=url)
+                self.assertEqual(record['remote_url'], url)
 
 
 class RepoIndexTest(unittest.TestCase):

@@ -24,6 +24,7 @@ metadata (HEAD commit, describe, dirty, remote URL).
 The lookup interface supports label/path matching with longest-path-first
 for nested repos.
 """
+import re
 from pathlib import Path
 
 from . import manifest as manifest_parser
@@ -35,6 +36,24 @@ from ...core.framework import BaseCollector, ScanContext, register
 from ...core.io import canonical
 from ...core.models import RequestError, ScanResult, ScanRequest
 from oskm_schema.repos import REPOS
+
+
+_VPCEP_OPENHARMONY = re.compile(
+    r'^https?://vpcep-[^/]+\.huaweicloud\.com/openharmony/',
+    re.IGNORECASE,
+)
+
+
+def _public_remote_url(remote_url, product):
+    """Use the public GitCode URL for single-level products.
+
+    OpenHarmony CI rewrites repo download URLs to a VPCEP endpoint. Two-level
+    products are internal builds and keep that endpoint unchanged.
+    """
+    if not remote_url or '/' in product:
+        return remote_url
+    return _VPCEP_OPENHARMONY.sub(
+        'https://gitcode.com/openharmony/', remote_url)
 
 
 class ReposContext(ScanContext):
@@ -92,7 +111,8 @@ class ReposCollector(BaseCollector):
                 name=name,
                 path=path,
                 remote=attrs.get('remote'),
-                remote_url=info.get('remote_url'),
+                remote_url=_public_remote_url(
+                    info.get('remote_url'), ctx.request.product),
                 revision=attrs.get('revision'),
                 groups=attrs.get('groups'),
                 clone_depth=int(clone_depth) if clone_depth and clone_depth.isdigit() else None,

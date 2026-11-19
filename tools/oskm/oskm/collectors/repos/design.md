@@ -11,7 +11,7 @@ schema 1.0.0 | 依赖：无
          path="foundation/ability/ability_base" remote="gitcode" revision="master"/>
 ```
 
-`<default>` 的 `remote`/`revision` 跨 include 继承。每仓的 HEAD commit 通过直接读 `.git/HEAD` 获取（跟随 gitdir 指针到 `.repo/projects/`），无子进程。remote URL 读取 `.git/config` 的第一个 `[remote "..."]` 段，因此 `gitcode`、`OH`、`TC`、`kirin_CR` 等不同 remote 命名都可采集。
+`<default>` 的 `remote`/`revision` 跨 include 继承。每仓的 HEAD commit 通过直接读 `.git/HEAD` 获取（跟随 gitdir 指针到 `.repo/projects/`），无子进程。remote URL 读取 `.git/config` 的第一个 `[remote "..."]` 段，因此 `gitcode`、`OH`、`TC`、`kirin_CR` 等不同 remote 命名都可采集。OpenHarmony CI 会把单层产品的下载地址改写为 VPCEP；采集器将其归一化为公开 GitCode URL，两层内部构建则保留 VPCEP 原值。
 
 无 `.repo/` 目录时静默产出零行，不降级。
 
