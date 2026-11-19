@@ -4,6 +4,30 @@
 
 日常使用分三步：**在源码根目录打开 OpenCode，等待索引加载，然后在对话框中描述要查询的问题。**
 
+## 使用前检查 bwrap（一般已安装）
+
+CodeSpace 环境一般已经安装 bwrap（软件包名为 `bubblewrap`），已安装时可以直接继续，无需重复安装。LSP 的可迁移索引通过 bwrap 保持流水线和当前工作区的路径视图一致。
+
+先在终端检查：
+
+```bash
+command -v bwrap
+```
+
+如果输出 bwrap 的可执行文件路径，说明已经安装。只有未找到命令时，才需要在 Ubuntu / Debian 环境中使用 sudo 安装：
+
+```bash
+sudo apt update && sudo apt install -y bubblewrap
+```
+
+安装完成后确认命令可用：
+
+```bash
+bwrap --version
+```
+
+如果没有 sudo 权限，请联系环境提供方安装。确认可用后，按下面的步骤从源码根目录启动 OpenCode。
+
 ## 1. 在源码根目录启动 OpenCode
 
 打开终端，进入 OpenHarmony 源码根目录，再启动 OpenCode：
