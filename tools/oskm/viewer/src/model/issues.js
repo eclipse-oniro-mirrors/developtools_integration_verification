@@ -33,6 +33,27 @@ export const ISSUES = {
          '根本没被本产品安装，却仍留着配置。',
   },
 
+  HDI_CHIP_PRODUCT_SELECTED: {
+    title: '本次 HDI 采用的芯片变体',
+    what: '镜像的 chip_prod 下有多棵变体树时，扫描只把其中一棵当分区：' +
+          'details 的 selected 是最终采用的 $chip_product，basis 是决策方式' +
+          '（requested 显式指定 / largest_hcb 取 HCB 最大者 / single_variant 唯一变体），' +
+          'hcb_bytes 是各变体的 HCB 字节数，skipped 是没被采用的变体。',
+    why: '这是一条留痕，不是缺陷：不读它不影响数据，但查"某个服务或库为什么不在清单里"' +
+         '时，第一步就是确认它是否落在 skipped 的变体里。',
+    fix: '无需处理。确需查看别的变体，用 hdi.chip_product 重新指定后重扫；' +
+         '若认为选择本身错了，核对 basis 与 hcb_bytes 再决定改规则还是改指定。',
+  },
+  HDI_CHIP_PRODUCT_MISSING: {
+    title: '指定的芯片变体不在镜像里',
+    what: 'hdi.chip_product 指定了一个变体，但 chip_prod/ 下没有同名目录；' +
+          'details 的 variants 列出了镜像里实际有的名字。',
+    why: '整个 chip_prod 的 HDF 声明不进清单，本域为空、扫描 degraded——' +
+         '不是读坏了，是要读的那一份根本不在。',
+    fix: '按 details 的 variants 核对变体名；若该镜像的 chip_prod 是单层分区' +
+         '（chip_prod/etc、chip_prod/lib64），本就不需要指定。',
+  },
+
   /* ---------------------------------------------- 数据一致性（advisory = 1，读到了但声明互相矛盾） */
   COMPONENT_DEP_UNRESOLVED: {
     title: '依赖指向一个本产品里不存在的部件',
@@ -184,6 +205,15 @@ const FAMILIES = [
    '该字段不会按预期生效。', '按字段约定改正。'],
   [/_MISSING$/, '缺少必填项',         '声明里缺少必需的字段。',
    '这条声明不完整。', '补齐字段。'],
+  [/_UNAVAILABLE$/, '这份输入整体不在', '扫描器要读的根或上游产物不存在，不是某一条读坏了。',
+   '依赖它的域整域为空，本次扫描会被标记为 degraded。',
+   '先确认这个产品/镜像本该带这份输入：本该带就是构建或打包漏了，' +
+   '本就不带则是正常的范围差异，看域内的 0 行即可。'],
+  [/_DEGRADED$/, '输入编码不符，按兜底解出', ' gn 回显的 vendor .gni 注释不是 UTF-8（GBK 常见），' +
+   '按 UTF-8 → GBK → 替换符 的顺序解码，details 记实际用到的编码。',
+   'encoding=gbk 表示注释完整还原，只是留痕；encoding=replace 表示有字节已被 ' +
+   'U+FFFD 替换，本次入库的注释文本不可逐字引用。',
+   'replace 时核对该 .gni 的输出编码；需要注释原文时按 gn_args 的 decl_file 回源码仓看。'],
   [/_INCOMPLETE$/, '索引没建全',      '用于匹配的索引没能完整建立。',
    '依赖这个索引的匹配会整体失准，受影响的条目可能远不止报出来的这些。',
    '先解决索引本身的来源问题，再看其余结论。'],

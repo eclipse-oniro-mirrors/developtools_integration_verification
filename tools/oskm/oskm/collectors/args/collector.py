@@ -49,6 +49,9 @@ class ArgsCollector(BaseCollector):
     RESULT_TYPE = ArgsResult
     RESULT_FIELD = 'gn_args'
     EXPORT_ORDER = 'name'
+    # The encoding finding is only actionable with the encoding that was used,
+    # so details travel with the issue like they do in arkts/elf_modules.
+    ISSUE_FIELDS = ('path', 'pointer', 'code', 'severity', 'advisory', 'details')
 
     def collect(self, ctx):
         if not ctx.gn_path:
@@ -58,10 +61,17 @@ class ArgsCollector(BaseCollector):
             ctx.issue(ctx.workspace, 'GN_BUILD_DIR_MISSING', advisory=True)
             return
         ctx.progress('gn-args', 0, 1)
-        output = run_gn_args(ctx.gn_path, ctx.out_dir, ctx.workspace)
-        if output is None:
+        decoded = run_gn_args(ctx.gn_path, ctx.out_dir, ctx.workspace)
+        if decoded is None:
             ctx.issue(ctx.workspace, 'GN_ARGS_TIMEOUT', advisory=True)
             return
+        output, encoding = decoded
+        if encoding is not None:
+            # gbk decoded cleanly: nothing lost, but worth saying which encoding
+            # the comments came from. 'replace' did lose bytes, so it warns.
+            ctx.issue(ctx.workspace, 'GN_ARGS_ENCODING_DEGRADED',
+                      severity='warning' if encoding == 'replace' else 'info',
+                      advisory=True, details={'encoding': encoding})
         data = extract_json(output)
         if not data:
             ctx.issue(ctx.workspace, 'GN_ARGS_PARSE_FAILED',

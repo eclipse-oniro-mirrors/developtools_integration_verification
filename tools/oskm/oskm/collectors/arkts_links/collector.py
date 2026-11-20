@@ -56,7 +56,13 @@ class ArktsLinksCollector(BaseCollector):
         for name in ('arkts', 'elf_modules'):
             if ctx.upstream.failed(name):
                 ctx.issue(ctx.workspace, 'ARKTS_LINK_UPSTREAM_UNAVAILABLE', advisory=True,
-                          details=dict(collector=name))
+                          details=dict(collector=name, reason='failed'))
+            elif ctx.upstream.ran(name) and not ctx.upstream.inventory_complete(name):
+                # Ran but fell short (e.g. the SDK root was absent, so arkts
+                # published zero rows): linked=0 below would otherwise be
+                # indistinguishable from "nothing needed linking".
+                ctx.issue(ctx.workspace, 'ARKTS_LINK_UPSTREAM_UNAVAILABLE', advisory=True,
+                          details=dict(collector=name, reason='incomplete'))
         if not (ctx.upstream.ran('arkts') and ctx.upstream.ran('elf_modules')):
             ctx.emit('arkts_links_run', dict(linked=0, unresolved=0, ambiguous=0))
             return

@@ -73,6 +73,15 @@ class WidgetContext(ScanContext):
         """可选 hook：解析领域专属输入根，校验失败抛 RequestError。"""
         if not self.package.is_dir():
             raise RequestError('INPUT_ROOT_MISSING')
+```
+
+**包根与包内子根的失败语义不同，别混用。** 包根（或越界的工作区根）缺失是坏请求：
+`RequestError`，整次请求失败。包根在而某个**可选子根**不在（arkts 的 SDK 根、sas 的
+`system/profile`、repos 的 `.repo/manifests`）是范围差异：记一条非 advisory 的 issue、
+本域产出 0 行、状态 degraded，让其余采集器继续跑——全量扫描时一个 selected 采集器抛
+`RequestError` 会把整次扫描拖死（`runner._execute_collector` 对 selected 域直接上抛），
+所以"这个产品没有该输入"绝不能用异常表达。降级要留痕：issue 说明为什么空，
+scope 里保留扫描器级身份（见 arkts design §7.4），别输出"完整空库"。
 
 
 @register

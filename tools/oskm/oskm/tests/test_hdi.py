@@ -221,6 +221,165 @@ class HDITest(unittest.TestCase):
             self.write(self.hcb, blob(tree))
             self.assertIn('HCB_MANAGER_COUNT', self.codes(self.scan()))
 
+    def with_chip_product(self, product):
+        self.request = replace(self.request, options={'hdi': {'chip_product': product}})
+        return self.request
+
+    def test_two_level_layout_uses_the_requested_chip_product(self):
+        # A two-level image packs every chip variant; only the one the device
+        # runs enters the inventory, and the choice is explicit.
+        # Variant directory names here are arbitrary.
+        self.library = self.package / 'chip_prod/va/lib64/libexample.so'
+        self.cfg = self.package / 'chip_prod/va/etc/init/host.cfg'
+        self.row = dict(self.row, dest=['chip_prod/va/lib64/libexample.so'])
+        self.install(partition='chip_prod/va')
+        self.service()
+        self.owner()
+        self.with_chip_product('va')
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/va/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(r.snapshot['status'], 'complete')
+        self.assertEqual(r.hdis[0]['library'], 'chip_prod/va/lib64/libexample.so')
+        # A packed-but-not-installed variant stays out of discovery and library
+        # lookup, and the exclusion is recorded rather than silent.
+        self.write(self.package / 'chip_prod/vb/etc/hdfconfig/hdf_default.hcb',
+                   blob(node('root')))
+        self.write(self.package / 'chip_prod/vb/lib64/libexample.so', b'\x7fELF')
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/va/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(r.snapshot['status'], 'complete')   # the packed copy is not an ambiguity
+        selected = [i for i in r.snapshot['issues']
+                    if i['code'] == 'HDI_CHIP_PRODUCT_SELECTED']
+        self.assertEqual(len(selected), 1)
+        details = dict(selected[0]['details'])
+        self.assertEqual(details['selected'], 'va')
+        self.assertEqual(details['skipped'], ('vb',))
+        self.assertEqual(details['basis'], 'requested')
+        self.assertEqual(selected[0]['severity'], 'info')
+        self.assertTrue(selected[0]['advisory'])
+
+    def test_single_chip_variant_needs_no_decision(self):
+        self.library = self.package / 'chip_prod/va/lib64/libexample.so'
+        self.cfg = self.package / 'chip_prod/va/etc/init/host.cfg'
+        self.row = dict(self.row, dest=['chip_prod/va/lib64/libexample.so'])
+        self.install(partition='chip_prod/va')
+        self.service()
+        self.owner()
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/va/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(r.snapshot['status'], 'complete')
+        # The single-variant choice is recorded too: one scan, one answer to
+        # "which chip product did HDI use".
+        chosen = [i for i in r.snapshot['issues']
+                  if i['code'] == 'HDI_CHIP_PRODUCT_SELECTED']
+        self.assertEqual(len(chosen), 1)
+        self.assertEqual(dict(chosen[0]['details'])['basis'], 'single_variant')
+        self.assertEqual(dict(chosen[0]['details'])['skipped'], ())
+
+    def test_default_selection_prefers_the_largest_hcb(self):
+        # The installed tree is the one carrying the full declaration set, so
+        # the largest HCB wins without any configuration.
+        self.install(partition='chip_prod/va')
+        self.install(partition='chip_prod/vb', raws=[dict(self.raw, note='x' * 128)])
+        self.service()
+        self.owner()
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/vb/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(r.snapshot['status'], 'complete')
+        chosen = [i for i in r.snapshot['issues']
+                  if i['code'] == 'HDI_CHIP_PRODUCT_SELECTED'][0]
+        details = dict(chosen['details'])
+        self.assertEqual((details['selected'], details['skipped'], details['basis']),
+                         ('vb', ('va',), 'largest_hcb'))
+        self.assertGreater(details['hcb_bytes']['vb'], details['hcb_bytes']['va'])
+
+    def test_variants_without_hcb_are_not_candidates(self):
+        self.write(self.package / 'chip_prod/va/lib64/libexample.so', b'\x7fELF')
+        self.install(partition='chip_prod/vb')
+        self.service()
+        self.owner()
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/vb/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(r.snapshot['status'], 'complete')
+
+    def test_equal_size_hcbs_are_reported_not_guessed(self):
+        # Identical HCBs give the size rule nothing to decide with: report,
+        # do not pick, until the product says which variant the device runs.
+        self.install(partition='chip_prod/va')
+        self.install(partition='chip_prod/vb')
+        r = self.scan()
+        self.assertEqual(r.hdis, ())
+        self.assertIn('HDI_CHIP_PRODUCT_AMBIGUOUS', self.codes(r))
+        self.assertEqual(r.snapshot['status'], 'degraded')
+        details = [dict(i['details']) for i in r.snapshot['issues']
+                   if i['code'] == 'HDI_CHIP_PRODUCT_AMBIGUOUS'][0]
+        self.assertEqual(details['variants'], ('va', 'vb'))
+        self.assertIsNone(details['requested'])
+        self.assertEqual(len(set(details['hcb_bytes'].values())), 1)
+        # Answering the question makes the same tree scannable.
+        self.with_chip_product('vb')
+        r = self.scan()
+        self.assertEqual([h['hcb'] for h in r.hdis],
+                         ['chip_prod/vb/etc/hdfconfig/hdf_default.hcb'])
+
+    def test_no_hcb_anywhere_with_several_variants_is_reported(self):
+        self.write(self.package / 'chip_prod/va/lib64/liba.so', b'\x7fELF')
+        self.write(self.package / 'chip_prod/vb/lib64/libb.so', b'\x7fELF')
+        r = self.scan()
+        self.assertEqual(r.hdis, ())
+        self.assertIn('HDI_CHIP_PRODUCT_AMBIGUOUS', self.codes(r))
+        self.assertEqual(r.snapshot['status'], 'degraded')
+
+    def test_requested_chip_product_absent_is_reported(self):
+        self.install(partition='chip_prod/va')
+        self.with_chip_product('vb')
+        r = self.scan()
+        self.assertEqual(r.hdis, ())
+        self.assertIn('HDI_CHIP_PRODUCT_MISSING', self.codes(r))
+        self.assertEqual(r.snapshot['status'], 'degraded')
+
+    def test_flat_chip_prod_is_a_partition_of_its_own(self):
+        # Single-level chip_prod (chip_prod/etc, chip_prod/lib64) installs no
+        # per-product trees; dropping it would erase a real partition silently.
+        chip_raw = dict(self.raw, serviceName='chip_example', moduleName='libchip.so')
+        self.install()                                    # vendor, the normal case
+        self.install(partition='chip_prod', host='chiphost', raws=[chip_raw])
+        self.write(self.package / 'vendor/etc/init/chip.cfg',
+                   {'services': [{'name': 'chiphost',
+                                  'path': ['/vendor/bin/hdf_devhost', '-i', '0', '-n', 'chiphost']}]})
+        self.write(self.package / 'vendor/lib/libexample.so', b'\x7fELFfixture')
+        self.write(self.package / 'chip_prod/lib64/libchip.so', b'\x7fELFfixture')
+        self.service()
+        self.owner(rows=[dict(self.row, dest=['vendor/lib/libexample.so']),
+                         dict(self.row, dest=['chip_prod/lib64/libchip.so'])])
+        r = self.scan()
+        self.assertEqual(sorted(h['hcb'] for h in r.hdis),
+                         ['chip_prod/etc/hdfconfig/hdf_default.hcb',
+                          'vendor/etc/hdfconfig/hdf_default.hcb'])
+        self.assertEqual(sorted(str(h['library']) for h in r.hdis),
+                         ['chip_prod/lib64/libchip.so', 'vendor/lib/libexample.so'])
+        self.assertEqual(r.snapshot['status'], 'complete')
+        self.assertEqual(r.snapshot.get('issues', ()), ())
+
+    def test_host_cfg_in_flat_partition_links_chip_device(self):
+        # The tree preference is a tie-break, not a restriction: a host declared
+        # in a flat partition still hosts a device declared under chip_prod.
+        self.library = self.package / 'chip_prod/va/lib64/libexample.so'
+        self.row = dict(self.row, dest=['chip_prod/va/lib64/libexample.so'])
+        self.cfg = self.package / 'vendor/etc/init/host.cfg'
+        self.install(partition='chip_prod/va')
+        self.service()
+        self.owner()
+        r = self.scan()
+        self.assertEqual([h['service'] for h in r.hdis],
+                         [{'cfg': 'vendor/etc/init/host.cfg', 'name': 'host'}])
+        self.assertEqual(r.snapshot['status'], 'complete')
+
     def test_invalid_file_does_not_erase_other_partition(self):
         self.full()
         self.install(partition='system')

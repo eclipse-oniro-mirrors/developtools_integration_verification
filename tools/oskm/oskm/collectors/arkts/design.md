@@ -575,6 +575,7 @@ class ArktsCollector(BaseCollector):
 | `ARKTS_TAG_WITHOUT_FILE` | warning / false | 孤立 `@kit`，无同块 `@file`，记为 candidate |
 | `ARKTS_KIT_NAME_CONFLICT` | warning / **true** | 入口标签与文件名不一致；已读懂的冲突 |
 | `ARKTS_SOURCE_UNAVAILABLE` | info / **true** | 可选仓元数据缺失 |
+| `ARKTS_SDK_UNAVAILABLE` | error / false | SDK 根不存在；本域为空，扫描 degraded |
 
 label_only、明确的外部引用、无标签三种情况**不发 issue**——它们通过行状态和统计表达，
 是正常的范围差异，不是扫描缺陷。
@@ -590,7 +591,8 @@ label_only、明确的外部引用、无标签三种情况**不发 issue**——
 
 | 情况 | 要求 | 完整性影响 |
 |---|---|---|
-| 根不存在/越界 | `RequestError`，不输出"完整空库" | 请求失败 |
+| 根不存在 | 记 `ARKTS_SDK_UNAVAILABLE`，本域产出 0 行并 degraded，后续采集器继续 | 本域为空，扫描 degraded |
+| 根越界 | `RequestError`，不输出"完整空库" | 请求失败 |
 | 文件不可读、编码错误、超限 | 保留文件行和原因，继续其余文件 | 对应项 partial |
 | 正文含未知 API 语法 | 不解释正文，正常保留头部 | 不影响 |
 | 无 `@kit` | `no_tag`，不猜归属 | 正常结果 |
@@ -666,6 +668,13 @@ ORDER BY t.module_key LIMIT :limit_plus_one;
 `input_digest` 覆盖**所有会改变结果的身份**：源码内容摘要、发现状态、后端身份、
 解析核心与投射代码的摘要、profile 和有效预算。改一个字节或升一个版本，摘要就变，
 旧分页游标随之失效。它表示输入身份，不证明源码树有全仓原子快照。
+
+SDK 根缺失的降级 scope 是同一契约的空输入版本：树级字段取空值
+（`repos={}`、`discovery.complete=false`、`files_digest` 为空集摘要、
+`counts`/`coverage`/`quality` 为空、`evidence_bytes=0`），但**扫描器级身份一个不少**
+（`adapter_digest`、`projection_digest`、`schema_digest`、`napi_map`、`limits`、
+`scan_limits`）——否则"升一个版本摘要就变"会对恰好没有行的扫描失效，
+旧游标将跨版本存活。唯一没有的是 `backend`：握手需要 node，而降级的前提就是它不在。
 
 `repo_id` 只是可选导航外键。scope 保留扫描当时的 repo 名、remote、revision；
 仓表重扫后查询标识 `source_metadata_stale`，不无提示用新 revision 替换旧证据链接。

@@ -32,6 +32,23 @@ def host_argument(service):
     return names[0]
 
 
+def service_tree(cfg):
+    """Installation tree a service cfg belongs to, for the chip_prod layout.
+
+    In the two-level chip_prod layout every packed variant carries its own
+    hdf_devhost.cfg with identical host names; a declaration under
+    chip_prod/<product> must prefer hosts installed in the same tree, or every
+    host looks ambiguous. The preference is a tie-break, not a restriction:
+    when the same tree declares no host, the global index still applies, so a
+    host cfg in a flat partition (vendor, system) links to a device declared
+    under chip_prod exactly as it does in the flat layout.
+    """
+    parts = cfg.split('/')
+    if parts[0] == 'chip_prod' and len(parts) > 1:
+        return '/'.join(parts[:2])
+    return None
+
+
 def link_services(ctx, records):
     if not records:
         return
@@ -43,6 +60,7 @@ def link_services(ctx, records):
         return
     complete = ctx.upstream.inventory_complete('services')
     index = defaultdict(list)
+    trees = defaultdict(list)
     for identifier, service in ctx.upstream.identified('services'):
         if service.get('type') != 'hdf' or service.get('executable', '').rsplit('/', 1)[-1] != 'hdf_devhost':
             continue
@@ -50,6 +68,9 @@ def link_services(ctx, records):
             host = host_argument(service)
             if host is not None:
                 index[host].append((identifier, service))
+                tree = service_tree(service['cfg'])
+                if tree is not None:
+                    trees[(tree, host)].append((identifier, service))
         except ValueError:
             complete = False
             ctx.issue(ctx.package / service['cfg'], 'HOST_ARGUMENT_INVALID')
@@ -63,7 +84,10 @@ def link_services(ctx, records):
             continue
         if not complete:
             continue
-        hits = index.get(process, [])
+        tree = service_tree(record['hcb'])
+        hits = trees.get((tree, process), []) if tree is not None else []
+        if not hits:
+            hits = index.get(process, [])
         if len(hits) != 1:
             ctx.issue(path, 'SERVICE_UNMATCHED' if not hits else 'SERVICE_AMBIGUOUS', pointer)
         elif not isinstance(hits[0][1].get('name'), str) or not hits[0][1]['name']:

@@ -6,6 +6,11 @@ schema 2.0.0 | 依赖：components, install_modules, services
 
 扫描 `system/profile/*.json` 中的 `systemability[]` 数组。每条声明提取 name（saId）、process、libpath、run-on-create、distributed 等字段，其余保留在 record 中。
 
+包根（`out/<product>/packages/phone`）缺失是坏请求（`RequestError`）；**包根在而
+`system/profile` 不在**是范围差异：记 `SA_PROFILE_UNAVAILABLE`（error），本域 0 行、
+扫描 degraded，其余采集器继续。目录在但为空则是"读得很完整、本产品确实不装 SA"，
+同码降为 info/advisory，扫描保持 complete。
+
 ## 表结构
 
 ```sql
@@ -56,4 +61,6 @@ query.aggregate_sas(group_by=('subsystem',))
 | saId 重复 | `SA_ID_DUPLICATE`（advisory） |
 | process/libpath 缺失或非法 | `SA_FIELD_INVALID` |
 | profile 无匹配 service | `SERVICE_UNMATCHED` / `SERVICE_AMBIGUOUS` |
+| `system/profile` 目录缺失 | `SA_PROFILE_UNAVAILABLE`（error，本域 degraded） |
+| `system/profile` 存在但为空 | `SA_PROFILE_UNAVAILABLE`（info/advisory） |
 | libpath 无安装模块 | `LIBRARY_UNMATCHED` |

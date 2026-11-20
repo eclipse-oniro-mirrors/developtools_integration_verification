@@ -44,6 +44,15 @@ class HDIContext(ScanContext):
     def setup(self):
         if not self.package.is_dir():
             raise RequestError('INPUT_ROOT_MISSING')
+        options = self.request.options.get('hdi', {})
+        if set(options) - {'chip_product'}:
+            raise RequestError('HDI_OPTION_UNKNOWN')
+        self.chip_product = options.get('chip_product')
+        if self.chip_product is not None and not (
+                isinstance(self.chip_product, str) and len(self.chip_product.split('/')) == 1
+                and self.chip_product not in ('', '.', '..')):
+            raise RequestError('HDI_INVALID_CHIP_PRODUCT')
+        self.chip_product_decision = (None, (), None, {})
 
 
 @register
@@ -62,6 +71,9 @@ class HDICollector(BaseCollector):
     SERVICE_COLUMN = 'service_id'
     INSTALL_COLUMN = 'install_module_id'
     EXPORT_ORDER = 'position'
+    # The chip-product decision carries its candidates in details; without them
+    # HDI_CHIP_PRODUCT_AMBIGUOUS would not say what to choose between.
+    ISSUE_FIELDS = ('path', 'pointer', 'code', 'severity', 'advisory', 'details')
 
     def collect(self, ctx):
         ctx.progress('hdi-discovery', 0)

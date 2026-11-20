@@ -39,6 +39,45 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
+class MissingProfileRootTest(unittest.TestCase):
+    """A product image without installed SA profiles degrades, not aborts."""
+
+    def workspace(self, build):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        root = Path(temp.name)
+        build(root / 'out/test/packages/phone')
+        return root
+
+    def codes(self, result):
+        return {i['code']: i for i in result.snapshot.get('issues', ())}
+
+    def test_missing_profile_directory_degrades_the_domain(self):
+        root = self.workspace(lambda pkg: pkg.mkdir(parents=True))
+        result = _scan_one('sas', SAScanRequest(root, 'test'))
+        self.assertEqual(result.snapshot['status'], 'degraded')
+        self.assertEqual(result.sas, ())
+        issue = self.codes(result)['SA_PROFILE_UNAVAILABLE']
+        self.assertFalse(issue.get('advisory'))
+
+    def test_empty_profile_directory_is_advisory_only(self):
+        def build(pkg):
+            (pkg / 'system/profile').mkdir(parents=True)
+        root = self.workspace(build)
+        result = _scan_one('sas', SAScanRequest(root, 'test'))
+        # Read perfectly, found nothing: the scan stays complete and the
+        # finding is advisory, so "this product ships no profiles" is visible
+        # without pretending the scan fell short.
+        self.assertEqual(result.snapshot['status'], 'complete')
+        issue = self.codes(result)['SA_PROFILE_UNAVAILABLE']
+        self.assertTrue(issue['advisory'])
+
+    def test_missing_package_is_still_a_bad_request(self):
+        root = self.workspace(lambda pkg: None)
+        with self.assertRaisesRegex(RequestError, 'INPUT_ROOT_MISSING'):
+            _scan_one('sas', SAScanRequest(root, 'test'))
+
+
 class SATest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
