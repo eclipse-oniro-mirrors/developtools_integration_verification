@@ -49,6 +49,71 @@ def service_tree(cfg):
     return None
 
 
+def _is_devhost_service(service):
+    if service.get('type') != 'hdf':
+        return False
+    executable = service.get('executable', '')
+    return executable.rsplit('/', 1)[-1] == 'hdf_devhost'
+
+
+def _index_host(ctx, identifier, service, index, trees):
+    try:
+        host = host_argument(service)
+    except ValueError:
+        ctx.issue(ctx.package / service['cfg'], 'HOST_ARGUMENT_INVALID')
+        return False
+    if host is None:
+        return True
+    index[host].append((identifier, service))
+    tree = service_tree(service['cfg'])
+    if tree is not None:
+        trees[(tree, host)].append((identifier, service))
+    return True
+
+
+def _build_service_index(ctx):
+    complete = ctx.upstream.inventory_complete('services')
+    index = defaultdict(list)
+    trees = defaultdict(list)
+    for identifier, service in ctx.upstream.identified('services'):
+        if not _is_devhost_service(service):
+            continue
+        if not _index_host(ctx, identifier, service, index, trees):
+            complete = False
+    if not complete:
+        ctx.issue(ctx.package, 'SERVICE_INDEX_INCOMPLETE')
+    return index, trees, complete
+
+
+def _service_hits(record, process, index, trees):
+    tree = service_tree(record['hcb'])
+    hits = trees.get((tree, process), []) if tree is not None else []
+    return hits or index.get(process, [])
+
+
+def _link_record(ctx, record, index, trees, complete):
+    path = ctx.package / record['hcb']
+    pointer = record['node']
+    process = record.get('process')
+    if not isinstance(process, str) or not process:
+        ctx.issue(path, 'HOST_NAME_INVALID', pointer)
+        return
+    if not complete:
+        return
+    hits = _service_hits(record, process, index, trees)
+    if len(hits) != 1:
+        ctx.issue(path, 'SERVICE_UNMATCHED' if not hits else 'SERVICE_AMBIGUOUS', pointer)
+        return
+    if not isinstance(hits[0][1].get('name'), str) or not hits[0][1]['name']:
+        ctx.issue(path, 'SERVICE_NAME_INVALID', pointer)
+        return
+    identifier, host_service = hits[0]
+    record['service'] = dict(cfg=host_service['cfg'], name=host_service['name'])
+    record['service_id'] = identifier
+    if record['service']['name'] != process:
+        ctx.issue(path, 'PROCESS_NAME_MISMATCH', pointer)
+
+
 def link_services(ctx, records):
     if not records:
         return
@@ -58,43 +123,7 @@ def link_services(ctx, records):
     if not ctx.upstream.ran('services'):
         ctx.issue(ctx.package, 'SERVICE_INDEX_INCOMPLETE')
         return
-    complete = ctx.upstream.inventory_complete('services')
-    index = defaultdict(list)
-    trees = defaultdict(list)
-    for identifier, service in ctx.upstream.identified('services'):
-        if service.get('type') != 'hdf' or service.get('executable', '').rsplit('/', 1)[-1] != 'hdf_devhost':
-            continue
-        try:
-            host = host_argument(service)
-            if host is not None:
-                index[host].append((identifier, service))
-                tree = service_tree(service['cfg'])
-                if tree is not None:
-                    trees[(tree, host)].append((identifier, service))
-        except ValueError:
-            complete = False
-            ctx.issue(ctx.package / service['cfg'], 'HOST_ARGUMENT_INVALID')
-    if not complete:
-        ctx.issue(ctx.package, 'SERVICE_INDEX_INCOMPLETE')
+    index, trees, complete = _build_service_index(ctx)
     for i, record in enumerate(records):
         ctx.progress('hdi-link', i, len(records), record['hcb'])
-        path, pointer, process = ctx.package / record['hcb'], record['node'], record.get('process')
-        if not isinstance(process, str) or not process:
-            ctx.issue(path, 'HOST_NAME_INVALID', pointer)
-            continue
-        if not complete:
-            continue
-        tree = service_tree(record['hcb'])
-        hits = trees.get((tree, process), []) if tree is not None else []
-        if not hits:
-            hits = index.get(process, [])
-        if len(hits) != 1:
-            ctx.issue(path, 'SERVICE_UNMATCHED' if not hits else 'SERVICE_AMBIGUOUS', pointer)
-        elif not isinstance(hits[0][1].get('name'), str) or not hits[0][1]['name']:
-            ctx.issue(path, 'SERVICE_NAME_INVALID', pointer)
-        else:
-            identifier, host_service = hits[0]
-            record['service'] = dict(cfg=host_service['cfg'], name=host_service['name'])
-            record['service_id'] = identifier
-            if record['service']['name'] != process:
-                ctx.issue(path, 'PROCESS_NAME_MISMATCH', pointer)
+        _link_record(ctx, record, index, trees, complete)
