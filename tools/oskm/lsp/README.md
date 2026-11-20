@@ -4,6 +4,30 @@
 
 日常使用分三步：**在源码根目录打开 OpenCode，等待索引加载，然后在对话框中描述要查询的问题。**
 
+## 使用前检查 bwrap（一般已安装）
+
+CodeSpace 环境一般已经安装 bwrap（软件包名为 `bubblewrap`），已安装时可以直接继续，无需重复安装。LSP 的可迁移索引通过 bwrap 保持流水线和当前工作区的路径视图一致。
+
+先在终端检查：
+
+```bash
+command -v bwrap
+```
+
+如果输出 bwrap 的可执行文件路径，说明已经安装。只有未找到命令时，才需要在 Ubuntu / Debian 环境中使用 sudo 安装：
+
+```bash
+sudo apt update && sudo apt install -y bubblewrap
+```
+
+安装完成后确认命令可用：
+
+```bash
+bwrap --version
+```
+
+如果没有 sudo 权限，请联系环境提供方安装。确认可用后，按下面的步骤从源码根目录启动 OpenCode。
+
 ## 1. 在源码根目录启动 OpenCode
 
 打开终端，进入 OpenHarmony 源码根目录，再启动 OpenCode：
@@ -26,14 +50,14 @@ opencode
 等待后，在 **OpenCode 对话框** 中输入：
 
 ```text
-请用 LSP 检查当前 C/C++ 语言服务是否正常运行，
+请用 lsp 检查当前 C/C++ 语言服务是否正常运行，
 并告诉我它对应的是哪个源码根目录。
 ```
 
 确认服务正常、源码目录正确后，可以试一次查询：
 
 ```text
-请用 LSP 查找 ServiceWatchForStatus 的定义，
+请用 lsp 查找 ServiceWatchForStatus 的定义，
 再查找其他文件中对它的引用，列出文件路径和行号。
 ```
 
@@ -42,7 +66,7 @@ opencode
 若服务尚未启动，可以先让 OpenCode 查询一个具体文件：
 
 ```text
-请用 LSP 列出下面文件中的函数：
+请用 lsp 列出下面文件中的函数：
 /path/to/openharmony/base/startup/init/interfaces/innerkits/service_watcher/service_watcher.c
 ```
 
@@ -52,40 +76,40 @@ opencode
 
 下面的示例都直接输入 **OpenCode 对话框**。把函数名、类名或文件路径替换成自己要分析的对象即可，工具参数由 OpenCode 自动填写。
 
-建议在提问中包含“请用 LSP”，并要求附上文件路径和行号。如果只做分析，可以加上“只查询，不修改代码”。
+建议在提问中包含“请用 lsp”，并要求附上文件路径和行号。如果只做分析，可以加上“只查询，不修改代码”。
 
 ### 查函数、类或变量在哪里定义
 
 ```text
-请用 LSP 查找 ServiceWatchForStatus 的定义，
+请用 lsp 查找 ServiceWatchForStatus 的定义，
 告诉我它在哪个文件、第几行，并说明函数参数和返回值。
 ```
 
 有多个同名符号时，补充所属文件、类或命名空间：
 
 ```text
-请用 LSP 查找 service_watcher.c 中的 ServiceWatchForStatus，
+请用 lsp 查找 service_watcher.c 中的 ServiceWatchForStatus，
 只分析这个文件中的同名函数。
 ```
 
 ### 查谁调用了这个函数
 
 ```text
-请用 LSP 查找哪些函数直接调用了 ServiceWatchForStatus，
+请用 lsp 查找哪些函数直接调用了 ServiceWatchForStatus，
 按“调用者 → ServiceWatchForStatus”列出关系，附上调用位置。
 ```
 
 ### 查这个函数调用了哪些函数
 
 ```text
-请用 LSP 分析 ServiceWatchForStatus 直接调用了哪些函数，
+请用 lsp 分析 ServiceWatchForStatus 直接调用了哪些函数，
 按“ServiceWatchForStatus → 被调用函数”列出关系，附上调用位置。
 ```
 
 ### 继续向上或向下追踪调用链
 
 ```text
-请用 LSP 从 ServiceWatchForStatus 开始，向下追踪两层调用关系。
+请用 lsp 从 ServiceWatchForStatus 开始，向下追踪两层调用关系。
 逐层查询，列出调用链和代码位置；重复节点不重复展开，遇到环路停止。
 ```
 
@@ -94,7 +118,7 @@ opencode
 ### 查函数或变量在哪些地方使用
 
 ```text
-请用 LSP 查找 ServiceWatchForStatus 的所有引用，
+请用 lsp 查找 ServiceWatchForStatus 的所有引用，
 按文件分组列出位置。如果结果分批返回，请继续查询剩余结果。
 ```
 
@@ -103,7 +127,7 @@ opencode
 ### 看文件结构
 
 ```text
-请用 LSP 列出下面文件中的函数、类和成员，
+请用 lsp 列出下面文件中的函数、类和成员，
 先给出结构概览，再说明主要函数的作用：
 <源码文件的绝对路径>
 ```
@@ -113,15 +137,15 @@ opencode
 ### 看类型、实现和继承关系
 
 ```text
-请用 LSP 查看这个变量的类型，并跳转到它的类型定义。
+请用 lsp 查看这个变量的类型，并跳转到它的类型定义。
 ```
 
 ```text
-请用 LSP 查找这个虚方法有哪些实现，列出实现所在的文件和行号。
+请用 lsp 查找这个虚方法有哪些实现，列出实现所在的文件和行号。
 ```
 
 ```text
-请用 LSP 查看这个类的父类和子类，列出继承关系。
+请用 lsp 查看这个类的父类和子类，列出继承关系。
 ```
 
 这里的“这个变量”“这个类”应是对话中已经定位的对象。首次提问时，请补上名称和所属文件。
@@ -129,14 +153,14 @@ opencode
 ### 检查修改后的错误和警告
 
 ```text
-请用 LSP 检查我刚修改的这个文件，列出错误和警告的位置及原因。
+请用 lsp 检查我刚修改的这个文件，列出错误和警告的位置及原因。
 只检查，不自动修复。
 ```
 
 检查多个文件时：
 
 ```text
-请用 LSP 打开并检查我刚修改的这些文件，汇总错误和警告，
+请用 lsp 打开并检查我刚修改的这些文件，汇总错误和警告，
 并说明实际检查了哪些文件。
 ```
 
@@ -147,17 +171,17 @@ opencode
 需要修改代码时，先要求展示预览：
 
 ```text
-请用 LSP 将这个函数重命名为 <新名称>。
+请用 lsp 将这个函数重命名为 <新名称>。
 先展示涉及哪些文件、哪些位置，暂不应用修改。
 ```
 
 ```text
-请用 LSP 查看这个报错位置有哪些快速修复建议，
+请用 lsp 查看这个报错位置有哪些快速修复建议，
 先列出建议，不应用修改。
 ```
 
 ```text
-请用 LSP 预览这个文件的格式化结果，暂不写入文件。
+请用 lsp 预览这个文件的格式化结果，暂不写入文件。
 ```
 
 检查预览后，可以继续说“应用刚才预览的重命名”或“应用第一个修复建议”。应用后检查代码差异，并运行对应编译或测试。
@@ -239,7 +263,7 @@ opencode
 在对话框中补充：
 
 ```text
-请实际调用 LSP 工具后再回答，列出使用的工具和返回的代码位置。
+请实际调用 lsp 工具后再回答，列出使用的工具和返回的代码位置。
 ```
 
 若仍提示没有工具，在另一个终端从源码根目录检查连接：
@@ -267,7 +291,7 @@ opencode mcp list
 先保存文件，再在对话框中输入：
 
 ```text
-请用 LSP 重新读取这个文件，并重新定位目标符号、检查诊断。
+请用 lsp 重新读取这个文件，并重新定位目标符号、检查诊断。
 ```
 
 ### 查询超时或服务启动失败
