@@ -35,8 +35,9 @@ class ArktsContext(ScanContext):
             self.sdk_root = (self.workspace / SDK_PATH).resolve()
             if not self.sdk_root.is_relative_to(self.workspace):
                 raise RequestError('ARKTS_ROOT_OUTSIDE_WORKSPACE')
-            if not self.sdk_root.is_dir():
-                raise RequestError('ARKTS_ROOT_MISSING')
+            # A workspace without the ArkTS SDK is a scope difference, not a bad
+            # request: degrade this domain and let the other collectors run.
+            self.sdk_available = self.sdk_root.is_dir()
             self.backend_root = self.workspace / TYPESCRIPT_PATH
             self.node = self.workspace / NODE_PATH
             self.backend_limits = BackendLimits()
@@ -57,23 +58,39 @@ def _digest(paths, root):
                                      for p in paths})).hexdigest()
 
 
-def _identity(ctx, projection, backend_identity, napi_map):
-    """Everything that decides whether a re-scan would produce the same rows."""
+def _code_identity(ctx, napi_map=None):
+    """Identity that depends on the scanner, not on the scanned tree.
+
+    Shared by the complete and the degraded scope: a scan that found no SDK at
+    all must still invalidate its page tokens when the projection code, the
+    schema, the bundled N-API map or the effective limits change -- otherwise
+    the documented "one byte or one version moves the digest" invariant would
+    silently stop holding for exactly the scans that carry no rows.
+    """
     here = Path(__file__).parent
-    identity = dict(
-        backend=backend_identity,
+    if napi_map is None:
+        napi_map = napi.load()
+    return dict(
         # Hash the adapter's complete implementation as well as the compiler package.
         adapter_digest=_digest(sorted(p for p in NODE_ROOT.rglob('*') if p.is_file() and 'tests' not in p.parts), NODE_ROOT),
         projection_digest=_digest([here / name for name in sorted(PROJECTION_SOURCES)], here),
         schema_digest=_digest(sorted(SCHEMA_SOURCES), Path(oskm_schema.__file__).parent),
-        profile=PROFILE, ir_schema_version=IR_VERSION,
-        sdk_root=ctx.relative(ctx.sdk_root), limits=asdict(ctx.backend_limits), scan_limits=asdict(ctx.limits),
-        discovery=dict(complete=ctx.discovery_complete, issues=sorted(
-            (i['path'], i['code']) for i in ctx.issues.values() if i['code'].startswith('ARKTS_DISCOVERY_'))),
-        repos=projection.repo_snapshots,
         # Bundled reference data is pinned to the scanner, not to the scanned
         # tree, so a new map must change the scan identity.
         napi_map=dict(sha256=napi_map['sha256'], entries=len(napi_map['module_to_so'])),
+        limits=asdict(ctx.backend_limits), scan_limits=asdict(ctx.limits))
+
+
+def _identity(ctx, projection, backend_identity, napi_map):
+    """Everything that decides whether a re-scan would produce the same rows."""
+    identity = dict(
+        **_code_identity(ctx, napi_map),
+        backend=backend_identity,
+        profile=PROFILE, ir_schema_version=IR_VERSION,
+        sdk_root=ctx.relative(ctx.sdk_root),
+        discovery=dict(complete=ctx.discovery_complete, issues=sorted(
+            (i['path'], i['code']) for i in ctx.issues.values() if i['code'].startswith('ARKTS_DISCOVERY_'))),
+        repos=projection.repo_snapshots,
         # Content identity of all discovered files. The per-file list itself is
         # not stored: those hashes are already columns on arkts_sources.
         files_digest=projection.files_digest())
@@ -102,6 +119,20 @@ class ArktsCollector(BaseCollector):
                   ('_source_file', 'arkts_sources', 'source_id'))
 
     def collect(self, ctx):
+        if not ctx.sdk_available:
+            # No SDK root: record why this domain is empty and stay degraded, so
+            # the rest of the scan (and its dependents) still run.
+            ctx.issue(ctx.sdk_root, 'ARKTS_SDK_UNAVAILABLE')
+            identity = dict(**_code_identity(ctx),
+                            profile=PROFILE, ir_schema_version=IR_VERSION,
+                            sdk_root=ctx.relative(ctx.sdk_root), repos={},
+                            discovery=dict(complete=False, issues=[]),
+                            files_digest=hashlib.sha256(canonical({})).hexdigest())
+            ctx.scope_data = {**identity,
+                              'input_digest': hashlib.sha256(canonical(identity)).hexdigest(),
+                              'quality': {}, 'repos_status': ctx.upstream.status('repos'),
+                              'counts': {}, 'coverage': {}, 'evidence_bytes': 0}
+            return
         files = discover(ctx)
         projection = Projection(ctx, files)
         with Backend(ctx.backend_root, ctx.node, limits=ctx.backend_limits, check=ctx.check) as backend:

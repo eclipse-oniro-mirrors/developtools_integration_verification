@@ -41,10 +41,19 @@ FIELDS = (('profile', 'profile', 'text'), ('sa_id', 'name', 'int'),
 
 class SAContext(ScanContext):
     def setup(self):
-        self.directory = self.package / 'system/profile'
-        if not self.directory.is_dir():
+        if not self.package.is_dir():
             raise RequestError('INPUT_ROOT_MISSING')
-        if (self.package / 'system').is_symlink() or self.directory.is_symlink():
+        self.directory = self.package / 'system/profile'
+        # Initialised here, not in sources(): any path that returns before
+        # reading profiles (a missing directory) still owes enrich() a states
+        # map, and profile_elements() a denominator.
+        self.states = {}
+        self.total_profiles = 0
+        # A product that installs no SA profiles is a scope difference, not a
+        # bad request: degrade this domain and let the other collectors run.
+        self.profile_available = self.directory.is_dir()
+        if self.profile_available and (
+                (self.package / 'system').is_symlink() or self.directory.is_symlink()):
             raise RequestError('PROFILE_DIRECTORY_SYMLINK')
         self.scan_directories = {str(self.directory)}
 
@@ -70,7 +79,19 @@ class SACollector(ElementCollector):
     LINK_COLUMNS = ('service_id', 'component_id', 'install_module_id')
 
     def sources(self, ctx):
-        return profile_paths(ctx)
+        if not ctx.profile_available:
+            # No installed profiles: record why this domain is empty and stay
+            # degraded, so the rest of the scan (and its dependents) still run.
+            ctx.issue(ctx.directory, 'SA_PROFILE_UNAVAILABLE',
+                      details={'reason': 'missing'})
+            return []
+        paths = profile_paths(ctx)
+        if not paths:
+            # The directory is there and readable, it just installs nothing:
+            # read perfectly, so advisory, and the scan stays complete.
+            ctx.issue(ctx.directory, 'SA_PROFILE_UNAVAILABLE', severity='info',
+                      advisory=True, details={'reason': 'empty'})
+        return paths
 
     def elements(self, ctx, path):
         return profile_elements(ctx, path)

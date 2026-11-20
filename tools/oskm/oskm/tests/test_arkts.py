@@ -48,6 +48,9 @@ HAS_BACKEND = BACKEND.is_dir() and WORKSPACE_NODE.is_file()
 
 class LinkingTest(unittest.TestCase):
     def link_database(self):
+        # collect() asks the registry whether its dependencies' inventories are
+        # complete, so the registry has to know them.
+        framework.discover()
         connection = sqlite3.connect(':memory:')
         self.addCleanup(connection.close)
         connection.executescript('''
@@ -60,6 +63,8 @@ class LinkingTest(unittest.TestCase):
                 id INTEGER PRIMARY KEY, scan_id INTEGER, install_target_id INTEGER);
             CREATE TABLE collector_runs(
                 scan_id INTEGER, collector TEXT, status TEXT);
+            CREATE TABLE issues(
+                scan_id INTEGER, collector TEXT, code TEXT, advisory INTEGER);
             INSERT INTO arkts_modules(
                 id, scan_id, module_key, impl_so_path, impl_match)
             VALUES(
@@ -158,6 +163,77 @@ class LinkingTest(unittest.TestCase):
         self.assertEqual(found[6], (1, 2))
         self.assertEqual(found[10], (1, 3))
         self.assertEqual(found[len(data)-1], (6, 1))
+
+
+class MissingSdkRootTest(unittest.TestCase):
+    """A workspace without the ArkTS SDK degrades the domain instead of aborting."""
+
+    def scan(self, root, **kwargs):
+        database = Database(root / 'knowledge.db')
+        return database, run(database, ScanRequest(root, 'sdk-source'), **kwargs)
+
+    def test_missing_sdk_root_degrades_and_does_not_abort_the_scan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            database, result = self.scan(root, only=('arkts',), without=('repos',))
+            self.assertEqual(result['arkts'].status, 'degraded')
+            self.assertEqual(result['arkts'].record_count, 0)
+            with database.connect() as connection:
+                codes = [row[0] for row in connection.execute(
+                    'SELECT code FROM issues WHERE scan_id = ?', (result.scan_id,))]
+            self.assertIn('ARKTS_SDK_UNAVAILABLE', codes)
+
+    def test_missing_sdk_root_lets_the_rest_of_the_scan_run(self):
+        # The point of degrading: a full scan of an image tree that carries no
+        # SDK still produces every other domain, instead of dying on the first
+        # selected collector that misses a sub-root.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / 'out/sdk-source/packages/phone'
+            (package / 'system/profile').mkdir(parents=True)
+            (package / 'system_module_info.json').write_bytes(canonical([]))
+            parts = root / 'out/sdk-source/build_configs/parts_info'
+            parts.mkdir(parents=True)
+            (parts / 'components.json').write_bytes(canonical({}))
+            database, result = self.scan(root)
+            self.assertEqual(result.status, 'degraded')
+            self.assertEqual(result['arkts'].status, 'degraded')
+            ran = {r.collector for r in result.runs}
+            self.assertTrue({'repos', 'components', 'services', 'hdi', 'sas',
+                             'install_modules', 'elf_modules'} <= ran, ran)
+            self.assertNotIn('failed', {r.status for r in result.runs})
+
+    def test_degraded_scope_keeps_the_reproducibility_invariant(self):
+        # design.md 7.4: one byte or one version moves input_digest. That must
+        # hold for the degraded scope too, or page tokens of an empty domain
+        # would survive scanner upgrades.
+        def scope_of(**request_changes):
+            with tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                database, result = self.scan(
+                    root, only=('arkts',), without=('repos',))
+                request = None
+                with database.connect() as connection:
+                    row = connection.execute(
+                        'SELECT scope FROM collector_runs WHERE scan_id = ? '
+                        "AND collector = 'arkts'", (result.scan_id,)).fetchone()
+                return json.loads(row[0])
+        scope = scope_of()
+        for key in ('adapter_digest', 'projection_digest', 'schema_digest',
+                    'napi_map', 'limits', 'scan_limits', 'input_digest'):
+            self.assertIn(key, scope)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            database = Database(root / 'knowledge.db')
+            result = run(database, ScanRequest(
+                root, 'sdk-source', limits=ScanLimits(file_bytes=1234)),
+                only=('arkts',), without=('repos',))
+            with database.connect() as connection:
+                row = connection.execute(
+                    'SELECT scope FROM collector_runs WHERE scan_id = ? '
+                    "AND collector = 'arkts'", (result.scan_id,)).fetchone()
+            other = json.loads(row[0])
+        self.assertNotEqual(scope['input_digest'], other['input_digest'])
 
 
 class TransportTest(unittest.TestCase):

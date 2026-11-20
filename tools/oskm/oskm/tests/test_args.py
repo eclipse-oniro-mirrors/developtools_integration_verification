@@ -149,15 +149,69 @@ class TestRunGnArgs(unittest.TestCase):
 
     def test_runs_in_source_root(self):
         with patch('oskm.collectors.args.gn_args.subprocess.run') as run:
-            run.return_value = MagicMock(stdout='[]')
+            run.return_value = MagicMock(stdout=b'[]')
             run_gn_args('/w/gn', '/w/out/p', '/w')
         self.assertEqual(run.call_args.kwargs['cwd'], '/w')
 
     def test_source_root_optional(self):
         with patch('oskm.collectors.args.gn_args.subprocess.run') as run:
-            run.return_value = MagicMock(stdout='[]')
+            run.return_value = MagicMock(stdout=b'[]')
             run_gn_args('/w/gn', '/w/out/p')
         self.assertIsNone(run.call_args.kwargs['cwd'])
+
+
+class TestOutputEncoding(unittest.TestCase):
+    """vendor .gni 的注释被 gn 原样回显，GBK 很常见；一个注释不能杀死整次扫描。"""
+
+    PAYLOAD = ('[{"name": "x", "default": {"file": "//a.gni", "line": 1, '
+               '"value": "true"}, "comment": "兼容终端修改"}]\n')
+
+    def test_utf8_passes_through_unmarked(self):
+        from oskm.collectors.args.gn_args import decode_output
+        text, encoding = decode_output(self.PAYLOAD.encode('utf-8'))
+        self.assertIsNone(encoding)
+        self.assertEqual([i['name'] for i in extract_json(text)], ['x'])
+
+    def test_gbk_comment_survives_intact(self):
+        from oskm.collectors.args.gn_args import decode_output
+        text, encoding = decode_output(self.PAYLOAD.encode('gbk'))
+        self.assertEqual(encoding, 'gbk')
+        # The comment is data, not noise: recovering it beats replacing it.
+        self.assertEqual(extract_json(text)[0]['comment'], '兼容终端修改')
+
+    def test_undecodable_bytes_degrade_instead_of_raising(self):
+        from oskm.collectors.args.gn_args import decode_output
+        raw = b'[{"name": "x"}]\n\xff\xfe not any encoding'
+        text, encoding = decode_output(raw)
+        self.assertEqual(encoding, 'replace')
+        self.assertEqual([i['name'] for i in extract_json(text)], ['x'])
+        self.assertIn('\ufffd', text)
+
+    def test_collector_reports_the_fallback(self):
+        """降级要留痕：用了哪种编码进 details，replace 比 gbk 高一级。"""
+        from oskm.core.api import scan as scan_one
+        from oskm.collectors.args.models import ArgsScanRequest
+        for payload, encoding, severity in (
+                (self.PAYLOAD.encode('gbk'), 'gbk', 'info'),
+                (b'[{"name": "x", "default": {"file": "//a.gni", "line": 1, '
+                 b'"value": "true"}, "comment": "\xff\xfe"}]\n', 'replace', 'warning')):
+            with self.subTest(encoding=encoding), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                gn = root / 'prebuilts/build-tools/linux-x86/bin/gn'
+                gn.parent.mkdir(parents=True)
+                gn.write_text('#!/usr/bin/env python3\nimport sys\n'
+                              'sys.stdout.buffer.write(%r)\n' % payload)
+                gn.chmod(0o755)
+                (root / 'out/test').mkdir(parents=True)
+                (root / 'out/test/args.gn').write_text('x = 1\n')
+                result = scan_one('args', ArgsScanRequest(root, 'test'))
+                issues = result.snapshot.get('issues', ())
+                hit = [i for i in issues if i['code'] == 'GN_ARGS_ENCODING_DEGRADED']
+                self.assertEqual(len(hit), 1)
+                self.assertEqual(hit[0]['details']['encoding'], encoding)
+                self.assertEqual(hit[0]['severity'], severity)
+                self.assertTrue(hit[0]['advisory'])
+                self.assertEqual([a['name'] for a in result.gn_args], ['x'])
 
 
 class TestCollectorRegistration(unittest.TestCase):

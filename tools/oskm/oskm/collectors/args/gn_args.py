@@ -50,12 +50,36 @@ def run_gn_args(gn_path, out_dir, source_root=None):
     try:
         result = subprocess.run(
             [gn_path, 'args', str(out_dir), '--list', '--json'],
-            capture_output=True, text=True, timeout=_TIMEOUT,
+            capture_output=True, timeout=_TIMEOUT,
             cwd=str(source_root) if source_root else None,
         )
-        return result.stdout
     except (subprocess.TimeoutExpired, OSError):
         return None
+    return decode_output(result.stdout)
+
+
+def decode_output(raw):
+    """(text, encoding) for gn's stdout, which is not reliably UTF-8.
+
+    gn echoes the comments of vendor .gni files verbatim, and those are often
+    GBK. Decoding strictly -- which `text=True` did -- raised UnicodeDecodeError
+    out of subprocess.run, past both except clauses here and past the runner's
+    (ScanFatalError, RequestError) handler, so one such comment aborted the
+    whole scan without leaving a single row or issue behind.
+
+    The JSON structure itself is ASCII, so the chain loses nothing in practice:
+    UTF-8 first, GBK for the common vendor case (comments come back intact),
+    and only then replacement characters -- which the collector reports as
+    GN_ARGS_ENCODING_DEGRADED instead of storing mojibake silently.
+    """
+    try:
+        return raw.decode('utf-8'), None
+    except UnicodeDecodeError:
+        pass
+    try:
+        return raw.decode('gbk'), 'gbk'
+    except UnicodeDecodeError:
+        return raw.decode('utf-8', 'replace'), 'replace'
 
 
 def extract_json(output):

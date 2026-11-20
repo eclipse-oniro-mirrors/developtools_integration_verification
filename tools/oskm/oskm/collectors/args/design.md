@@ -106,7 +106,10 @@ class ArgsCollector(BaseCollector):
 
 1. `find_gn(workspace)` 检测平台并返回 gn 路径，找不到发 `GN_TOOL_NOT_FOUND` advisory 后返回
 2. 检查 `{build_root}/args.gn` 存在性，缺失发 `GN_BUILD_DIR_MISSING` advisory 后返回
-3. `run_gn_args()` 调用 `gn args --list --json`（超时 120s），超时发 `GN_ARGS_TIMEOUT` advisory
+3. `run_gn_args()` 调用 `gn args --list --json`（超时 120s），超时发 `GN_ARGS_TIMEOUT` advisory。
+   stdout 按 UTF-8 → GBK → replace 的顺序解码：gn 会原样回显 vendor `.gni` 的注释，
+   而那些注释常见 GBK；严格解码（原先 `text=True` 的行为）会让一个注释以
+   UnicodeDecodeError 穿透 runner，整次扫描一行不留地崩掉
 4. `extract_json()` 提取 JSON 数组，解析失败发 `GN_ARGS_PARSE_FAILED` advisory
 5. 加载 components 索引并构建 `manifest_directories()`
 6. 逐 arg 解析 default/current 值，关联 component_id，emit
@@ -120,6 +123,8 @@ class ArgsCollector(BaseCollector):
 | `gn` 可执行文件不存在 | `GN_TOOL_NOT_FOUND` | advisory |
 | `{build_root}/args.gn` 不存在 | `GN_BUILD_DIR_MISSING` | advisory |
 | `gn args` 超时（120s） | `GN_ARGS_TIMEOUT` | advisory |
+| stdout 非 UTF-8，按 GBK 解出 | `GN_ARGS_ENCODING_DEGRADED` | info / advisory，details 带 encoding |
+| stdout 连 GBK 也解不出，用替换符 | `GN_ARGS_ENCODING_DEGRADED` | warning / advisory，details 带 encoding |
 | JSON 解析失败 | `GN_ARGS_PARSE_FAILED` | advisory |
 | arg 无法关联到 component | 不发 issue（null component_id 合法） |
 
