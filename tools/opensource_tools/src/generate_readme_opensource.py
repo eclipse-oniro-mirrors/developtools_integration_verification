@@ -62,7 +62,7 @@ def ask_question(prompt: str, default_value: Optional[str] = None) -> str:
 
 def ask_for_list(prompt: str) -> List[str]:
     """Prompt user for a list of items separated by commas."""
-    value = input(f"{prompt} (多个项请用逗号分隔): ").strip()
+    value = input(f"{prompt} (多个项请用逗号分隔；(Separate multiple items with commas)): ").strip()
     return [item.strip() for item in value.split(",")] if value else []
 
 
@@ -78,8 +78,8 @@ def process_license_info(
     Returns:
         Tuple of (license_list, license_file_list).
     """
-    licenses = ask_question("请输入许可证名称（如有多个，用分号分隔）")
-    license_files = ask_question("请输入许可证文件路径（如果有多个，请使用分号分隔）")
+    licenses = ask_question("请输入许可证名称（如有多个，用分号分隔）(Enter license names (separate multiple entries with semicolons))")
+    license_files = ask_question("请输入许可证文件路径（如果有多个，请使用分号分隔）(Enter license file paths (separate multiple entries with semicolons))")
 
     license_list = (
         [license.strip() for license in licenses.split(";")] if licenses else []
@@ -90,7 +90,7 @@ def process_license_info(
 
     # Validate input
     if not license_list or not license_file_list:
-        raise ValueError("许可证和许可证文件路径不能为空。")
+        raise ValueError("许可证和许可证文件路径不能为空。(License and license file path cannot be empty.)")
 
     # Check license and file path matching
     if len(license_list) != len(license_file_list):
@@ -100,7 +100,7 @@ def process_license_info(
             or (len(license_list) > 1 and len(license_file_list) == 1)
         ):
             raise ValueError(
-                "许可证和许可证文件的数量不匹配，必须是一对一、一对多或多对一的关系。"
+                "许可证和许可证文件的数量不匹配，必须是一对一、一对多或多对一的关系。(The number of licenses does not match the number of license file paths; they must follow a one-to-one, one-to-many, or many-to-one relationship)."
             )
 
     # Convert licenses to SPDX standard if converter is available
@@ -111,7 +111,7 @@ def process_license_info(
         # Log conversions
         for orig, new in zip(original_list, license_list):
             if orig != new:
-                logger.info(f"许可证转换: '{orig}' -> '{new}'")
+                logger.info(f"许可证转换(License Conversion): '{orig}' -> '{new}'")
 
     return license_list, license_file_list
 
@@ -131,7 +131,7 @@ def generate_readme_opensource(
     """
     components = []
 
-    print("请输入开源组件的信息（输入完成后，可选择继续添加另一个组件）：")
+    print("请输入开源组件的信息（输入完成后，可选择继续添加另一个组件）(Enter information about open-source components (you may add another component after finishing input))：")
     while True:
         component = {}
 
@@ -148,7 +148,7 @@ def generate_readme_opensource(
         component["License File"] = "; ".join(license_file_list)
 
         # Get dependencies (optional)
-        dependencies = ask_for_list("请输入该软件的依赖项（如果有多个，请用逗号分隔）")
+        dependencies = ask_for_list("请输入该软件的依赖项（如果有多个，请用逗号分隔）(Enter the dependencies of this software (separate multiple items with commas))")
         if dependencies:
             component["Dependencies"] = dependencies
 
@@ -156,7 +156,7 @@ def generate_readme_opensource(
 
         # Ask if user wants to add another component
         if interactive:
-            add_more = ask_question("是否添加另一个组件？(y/n): ").lower()
+            add_more = ask_question("是否添加另一个组件？(Add another component)(y/n): ").lower()
             if add_more != "y":
                 break
         else:
@@ -170,7 +170,7 @@ def generate_readme_opensource(
     with open(readme_path, "w", encoding="utf-8") as f:
         json.dump(components, f, indent=2, ensure_ascii=False)
 
-    logger.info(f"已生成 {readme_path}")
+    logger.info(f"已生成 (Generated){readme_path}")
 
     # Validate SPDX licenses if converter is available
     if converter and SPDX_AVAILABLE:
@@ -190,33 +190,33 @@ def validate_spdx_licenses(components: List[Dict]) -> None:
         for lic in licenses:
             if not converter.validate_spdx_id(lic):
                 logger.warning(
-                    f"组件 '{component.get('Name')}' 的许可证可能不是有效的 SPDX 标识符: {lic}"
+                    f"组件(component) '{component.get('Name')}' 的许可证可能不是有效的 SPDX 标识符(he license may not be a valid SPDX identifier): {lic}"
                 )
                 all_valid = False
 
     if all_valid:
-        logger.info("所有许可证标识符均符合 SPDX 标准")
+        logger.info("所有许可证标识符均符合 SPDX 标准(All license identifiers comply with the SPDX standard.)")
 
 
 def main():
     """Main entry point with command-line argument support."""
     parser = argparse.ArgumentParser(
-        description="生成 README.OpenSource 开源部件配置信息文件"
+        description="生成 README.OpenSource 开源部件配置信息文件(Generate README.OpenSource open-source component configuration file)"
     )
     parser.add_argument(
         "-o", "--output",
         default=".",
-        help="输出目录路径（默认：当前目录）"
+        help="输出目录路径（默认：当前目录）(Output directory path (default: current directory))"
     )
     parser.add_argument(
         "--no-spdx",
         action="store_true",
-        help="禁用 SPDX 许可证标准化"
+        help="禁用 SPDX 许可证标准化(Disable SPDX license normalization)"
     )
     parser.add_argument(
         "-v", "--verbose",
         action="store_true",
-        help="启用详细日志"
+        help="启用详细日志(Enable verbose logging)"
     )
 
     args = parser.parse_args()
@@ -228,7 +228,7 @@ def main():
     converter = None
     if not args.no_spdx and SPDX_AVAILABLE:
         converter = SPDXLicenseConverter()
-        logger.info("SPDX 许可证标准化已启用")
+        logger.info("SPDX 许可证标准化已启用(SPDX license normalization is enabled.)")
 
     generate_readme_opensource(args.output, converter)
 
