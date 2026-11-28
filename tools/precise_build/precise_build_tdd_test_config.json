@@ -22,6 +22,8 @@
         "//base/web/webview/test/unittest/ohos_adapter/ohos_image_adapter:ohos_image_decoder_adapter_test",
         "//commonlibrary/ets_utils/js_sys_module/test:unittest",
         "//commonlibrary/ets_utils/js_sys_module/test:unittest(//build/toolchain/linux:clang_x64)",
+        "//commonlibrary/ets_utils/js_api_module/buffer/test:unittest",
+        "//commonlibrary/ets_utils/js_api_module/buffer/test:unittest(//build/toolchain/linux:clang_x64)",
         "//foundation/ability/ability_runtime/test/unittest/frameworks_kits_ability_native_test:ability_impl_active_test",
         "//foundation/ability/dmsfwk/frameworks/native/distributed_extension/test/unittest/distributed_extension:distributed_connection_test",
         "//foundation/ability/form_fwk/test/unittest/fms_form_set_next_refresh_test:FmsFormSetNextRefreshTest",
